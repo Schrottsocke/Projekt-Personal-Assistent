@@ -1,7 +1,7 @@
 """Telegram Command Handler (/kalender, /notiz, /erinnerung, etc.)"""
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 from telegram import Update
 from telegram.ext import CommandHandler, ContextTypes, Application
@@ -38,6 +38,8 @@ async def cmd_hilfe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/gedaechtnis – Was ich über dich weiß\n"
         "/autonomie – Einstellen was ich direkt ausführe\n"
         "/profil – Dein Persönlichkeitsprofil\n"
+        "/fokus – Fokus-Modus aktivieren\n"
+        "/fokus\\_ende – Fokus-Modus beenden\n"
         "/hilfe – Diese Hilfe\n\n"
         "🎤 *Sprache:* Schick mir Sprachnachrichten – ich verstehe sie!\n\n"
         "🧠 *Ich lerne mit:*\n"
@@ -558,6 +560,101 @@ async def cmd_praesentation(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Präsentation konnte nicht erstellt werden.")
 
 
+async def cmd_fokus(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Aktiviert den Fokus-Modus für eine bestimmte Dauer."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    args = context.args
+    user_key = bot.name.lower()
+    tz = pytz.timezone(settings.TIMEZONE)
+    now = datetime.now(tz)
+
+    if not args:
+        await update.message.reply_text(
+            "🎯 *Fokus-Modus:*\n\n"
+            "`/fokus 25` – 25 Minuten Fokus\n"
+            "`/fokus 90` – 90 Minuten Fokus\n"
+            "`/fokus 16:00` – Fokus bis 16:00 Uhr\n\n"
+            "Während des Fokus-Modus halte ich Nachrichten zurück.\n"
+            "Dringende Erinnerungen (mit 'dringend') kommen trotzdem durch.\n\n"
+            "Beenden: `/fokus_ende`",
+            parse_mode="Markdown",
+        )
+        return
+
+    try:
+        from src.services.database import UserProfile, get_db
+
+        raw = args[0].strip()
+        if ":" in raw:
+            # Uhrzeit-Format: "16:00"
+            h, m = (int(x) for x in raw.split(":"))
+            until = now.replace(hour=h, minute=m, second=0, microsecond=0)
+            if until <= now:
+                until += timedelta(days=1)
+            label = until.strftime("%H:%M Uhr")
+        else:
+            # Minuten-Format: "90"
+            minutes = int(raw)
+            if minutes <= 0 or minutes > 480:
+                await update.message.reply_text("❓ Bitte eine Dauer zwischen 1 und 480 Minuten angeben.")
+                return
+            until = now + timedelta(minutes=minutes)
+            label = f"{until.strftime('%H:%M')} Uhr ({minutes} Min.)"
+
+        with get_db()() as session:
+            profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+            if not profile:
+                await update.message.reply_text("❌ Profil nicht gefunden. /start ausführen.")
+                return
+            # Als UTC in DB speichern
+            profile.focus_mode_until = until.astimezone(pytz.utc).replace(tzinfo=None)
+
+        await update.message.reply_text(
+            f"🎯 *Fokus-Modus aktiv bis {label}*\n\n"
+            "Ich halte Nachrichten und proaktive Benachrichtigungen zurück.\n"
+            "Viel Fokus! 💪\n\n"
+            "Beenden: `/fokus_ende`",
+            parse_mode="Markdown",
+        )
+
+    except (ValueError, IndexError):
+        await update.message.reply_text(
+            "❓ Format: `/fokus 90` (Minuten) oder `/fokus 16:00` (Uhrzeit)",
+            parse_mode="Markdown",
+        )
+    except Exception as e:
+        logger.error(f"Fokus-Fehler: {e}")
+        await update.message.reply_text("❌ Fokus-Modus konnte nicht gesetzt werden.")
+
+
+async def cmd_fokus_ende(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Beendet den Fokus-Modus vorzeitig."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    user_key = bot.name.lower()
+    try:
+        from src.services.database import UserProfile, get_db
+        with get_db()() as session:
+            profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+            if profile and profile.focus_mode_until:
+                profile.focus_mode_until = None
+                await update.message.reply_text(
+                    "✅ *Fokus-Modus beendet.*\n\n"
+                    "Willkommen zurück! Was kann ich für dich tun?",
+                    parse_mode="Markdown",
+                )
+            else:
+                await update.message.reply_text("ℹ️ Kein aktiver Fokus-Modus.")
+    except Exception as e:
+        logger.error(f"Fokus-Ende-Fehler: {e}")
+        await update.message.reply_text("❌ Fehler beim Beenden des Fokus-Modus.")
+
+
 def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("hilfe", cmd_hilfe))
     app.add_handler(CommandHandler("help", cmd_hilfe))
@@ -576,6 +673,8 @@ def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("vorschlaege", cmd_vorschlaege))
     app.add_handler(CommandHandler("tabelle", cmd_tabelle))
     app.add_handler(CommandHandler("praesentation", cmd_praesentation))
+    app.add_handler(CommandHandler("fokus", cmd_fokus))
+    app.add_handler(CommandHandler("fokus_ende", cmd_fokus_ende))
 
 
 async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):

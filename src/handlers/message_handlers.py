@@ -4,10 +4,13 @@ entscheidet, ob Kalender, Notiz, Erinnerung oder normaler Chat gemeint ist.
 """
 
 import logging
+from datetime import datetime
+import pytz
 from telegram import Update
 from telegram.ext import MessageHandler, filters, ContextTypes, Application
 
 from src.services.rate_limiter import rate_limiter
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +56,32 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"✂️ _Deine Nachricht war sehr lang und wurde auf {MAX_MESSAGE_LENGTH} Zeichen gekürzt._",
             parse_mode="Markdown",
         )
+
+    # 3. Fokus-Modus prüfen
+    try:
+        from src.services.database import UserProfile, get_db
+        with get_db()() as session:
+            profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+            if profile and profile.focus_mode_until:
+                tz = pytz.timezone(settings.TIMEZONE)
+                now = datetime.now(tz)
+                until = profile.focus_mode_until
+                # tzinfo sicherstellen
+                if until.tzinfo is None:
+                    until = tz.localize(until)
+                if now < until:
+                    time_str = until.strftime("%H:%M")
+                    await update.message.reply_text(
+                        f"🎯 *Fokus-Modus aktiv bis {time_str}*\n\n"
+                        "Ich halte deine Nachrichten zurück. Schreib `/fokus_ende` um den Fokus zu beenden.",
+                        parse_mode="Markdown",
+                    )
+                    return
+                else:
+                    # Fokus abgelaufen – automatisch zurücksetzen
+                    profile.focus_mode_until = None
+    except Exception as e:
+        logger.warning(f"Fokus-Modus-Check-Fehler: {e}")
 
     # Typing-Indikator
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
@@ -129,6 +158,113 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Analysiert Fotos und Bilder via Vision-Modell."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    user_key = bot.name.lower()
+    chat_id = update.effective_chat.id
+
+    allowed, _ = rate_limiter.check(user_key)
+    if not allowed:
+        await update.message.reply_text("⏳ Rate-Limit erreicht – bitte kurz warten.")
+        return
+
+    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+
+    try:
+        # Größtes verfügbares Foto herunterladen
+        photo = update.message.photo[-1]
+        photo_file = await photo.get_file()
+        image_bytes = await photo_file.download_as_bytearray()
+
+        # Begleittext als Prompt (falls vorhanden)
+        caption = update.message.caption or ""
+
+        analysis = await bot.ai_service.analyze_image(
+            image_bytes=bytes(image_bytes),
+            user_prompt=caption,
+            user_key=user_key,
+        )
+
+        if not analysis:
+            await update.message.reply_text(
+                "🖼️ Ich kann Bilder leider gerade nicht analysieren. "
+                "Versuche es später nochmal."
+            )
+            return
+
+        await update.message.reply_text(f"🖼️ {analysis}", parse_mode="Markdown")
+
+        # Analyse auch als Nachricht durch Intent-Erkennung laufen lassen
+        # damit z.B. "Rechnung → Aufgabe" oder "Termin → Kalender" erkannt wird
+        if len(analysis) > 50:
+            follow_up = await bot.ai_service.process_message(
+                message=f"[Bildanalyse] {analysis}",
+                user_key=user_key,
+                chat_id=chat_id,
+                bot=bot,
+            )
+            if follow_up:
+                await update.message.reply_text(follow_up, parse_mode="Markdown")
+
+    except Exception as e:
+        logger.error(f"Foto-Handler-Fehler für {bot.name}: {e}", exc_info=True)
+        await update.message.reply_text("❌ Bild konnte nicht verarbeitet werden.")
+
+
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Verarbeitet Dokumente: Bilder als Dateien → Vision, andere → Hinweis."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    user_key = bot.name.lower()
+    chat_id = update.effective_chat.id
+    doc = update.message.document
+
+    IMAGE_MIMETYPES = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"}
+
+    if doc.mime_type in IMAGE_MIMETYPES:
+        allowed, _ = rate_limiter.check(user_key)
+        if not allowed:
+            await update.message.reply_text("⏳ Rate-Limit erreicht – bitte kurz warten.")
+            return
+
+        await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+        try:
+            doc_file = await doc.get_file()
+            image_bytes = await doc_file.download_as_bytearray()
+            caption = update.message.caption or ""
+
+            analysis = await bot.ai_service.analyze_image(
+                image_bytes=bytes(image_bytes),
+                user_prompt=caption,
+                user_key=user_key,
+            )
+
+            if analysis:
+                await update.message.reply_text(f"🖼️ {analysis}", parse_mode="Markdown")
+            else:
+                await update.message.reply_text("❌ Bild konnte nicht analysiert werden.")
+        except Exception as e:
+            logger.error(f"Dokument-Bild-Fehler für {bot.name}: {e}", exc_info=True)
+            await update.message.reply_text("❌ Dokument konnte nicht verarbeitet werden.")
+    else:
+        # Andere Dateitypen: Hinweis geben
+        filename = doc.file_name or "Datei"
+        await update.message.reply_text(
+            f"📎 *{filename}* erhalten.\n\n"
+            "Ich kann aktuell nur Bilder analysieren (JPG, PNG, WEBP).\n"
+            "PDFs und andere Dokumente folgen in einem späteren Update.",
+            parse_mode="Markdown",
+        )
+
+
 def register_message_handlers(app: Application):
+    app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
+    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(MessageHandler(filters.VOICE, handle_voice))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

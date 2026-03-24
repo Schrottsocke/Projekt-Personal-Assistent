@@ -76,6 +76,40 @@ class AIService:
             logger.error(f"Whisper-Transkriptions-Fehler: {e}")
             return None
 
+    async def analyze_image(
+        self, image_bytes: bytes, user_prompt: str = "", user_key: str = ""
+    ) -> Optional[str]:
+        """
+        Analysiert ein Bild via OpenRouter Vision-Modell (Gemini Flash – kostenlos).
+        Gibt eine strukturierte Beschreibung zurück, oder None bei Fehler.
+        """
+        import base64
+        try:
+            image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+            system_instruction = (
+                "Du bist ein hilfreicher Assistent. "
+                "Beschreibe das Bild präzise auf Deutsch. "
+                "Erkenne ob es ein Dokument, eine Rechnung, ein Screenshot, ein Foto oder etwas anderes ist. "
+                "Wenn der Nutzer eine konkrete Frage zum Bild stellt, beantworte diese direkt."
+            )
+            user_text = user_prompt or "Was ist auf diesem Bild zu sehen? Was soll ich damit tun?"
+            messages = [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": f"{system_instruction}\n\nNutzer-Anfrage: {user_text}"},
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"},
+                        },
+                    ],
+                }
+            ]
+            return await self._complete(messages=messages, model=settings.VISION_MODEL)
+        except Exception as e:
+            logger.error(f"Bild-Analyse-Fehler: {e}")
+            return None
+
     @property
     def intelligence(self):
         if self._intelligence is None:
@@ -578,23 +612,28 @@ Antworte NUR mit diesem JSON:
         self, user_key: str, name: str, events: list, reminders: list, memories: list,
         open_tasks: list = None
     ) -> str:
-        """Generiert ein personalisiertes Morgen-Briefing."""
+        """Generiert ein personalisiertes Morgen-Briefing mit Tagesplanung."""
         now = datetime.now(self.tz)
         weekday = now.strftime("%A")
 
         # Profil-Daten für Fokus-Empfehlung laden
         focus_time = None
+        work_start = None
+        work_end = None
         try:
             from src.services.database import UserProfile, get_db
             with get_db()() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 if profile:
                     focus_time = profile.focus_time
+                    work_start = profile.work_start
+                    work_end = profile.work_end
         except Exception:
             pass
 
         events_text = "Keine Termine heute." if not events else "\n".join(
-            f"- {e.get('summary', '(kein Titel)')}" for e in events
+            f"- {e.get('summary', '(kein Titel)')} {self._format_event_time(e)}"
+            for e in events
         )
         reminders_text = "Keine Erinnerungen heute." if not reminders else "\n".join(
             f"- {r['content']}" for r in reminders
@@ -602,6 +641,7 @@ Antworte NUR mit diesem JSON:
         memories_text = "\n".join(f"- {m.get('memory', '')}" for m in memories[:3]) or "Keine"
 
         tasks_text = "Keine offenen Aufgaben."
+        task_count = 0
         if open_tasks:
             from src.services.task_service import PRIORITY_ICONS
             task_lines = []
@@ -609,41 +649,70 @@ Antworte NUR mit diesem JSON:
                 icon = PRIORITY_ICONS.get(t.get("priority", "medium"), "")
                 task_lines.append(f"- {icon} {t['title']}")
             tasks_text = "\n".join(task_lines)
-            if len(open_tasks) > 5:
-                tasks_text += f"\n- ... und {len(open_tasks) - 5} weitere"
+            task_count = len(open_tasks)
+            if task_count > 5:
+                tasks_text += f"\n- ... und {task_count - 5} weitere"
 
-        focus_hint = ""
-        if focus_time:
-            focus_hint = f"\nFokus-Präferenz: {focus_time} – ggf. Fokuszeit im Tagesplan empfehlen."
+        # Tagesplan-Block: nur wenn Termine + Aufgaben vorhanden
+        day_plan_instruction = ""
+        if events and open_tasks:
+            work_hours = ""
+            if work_start and work_end:
+                work_hours = f"Arbeitszeit: {work_start} – {work_end}. "
+            focus_hint = ""
+            if focus_time:
+                focus_hint = f"Bevorzugte Fokuszeit: {focus_time}. "
+            day_plan_instruction = (
+                f"\n\n*TAGESPLANUNG (wichtig!):*\n"
+                f"Erstelle einen konkreten Tagesplan mit Zeitblöcken basierend auf den Terminen und Aufgaben.\n"
+                f"{work_hours}{focus_hint}"
+                f"Format: '09:00–10:00 📋 Aufgabe X' oder '10:00–11:00 📅 Meeting Y'\n"
+                f"Plane realistische Puffer zwischen Terminen ein.\n"
+                f"Schlage die beste Reihenfolge für die Aufgaben vor."
+            )
+        elif focus_time:
+            day_plan_instruction = f"\nFokus-Präferenz: {focus_time} – ggf. Fokuszeit empfehlen."
 
         prompt = f"""Du bist {name}s persönlicher Assistent.
-Schreibe ein freundliches, kurzes Morgen-Briefing.
+Schreibe ein freundliches, motivierendes Morgen-Briefing auf Deutsch.
 
 Heute: {weekday}, {now.strftime('%d.%m.%Y')}
 
-Heutige Termine:
+Heutige Termine (mit Uhrzeit):
 {events_text}
 
 Heutige Erinnerungen:
 {reminders_text}
 
-Offene Aufgaben:
+Offene Aufgaben ({task_count} gesamt):
 {tasks_text}
 
 Was du über {name} weißt:
-{memories_text}{focus_hint}
+{memories_text}{day_plan_instruction}
 
-Das Briefing soll:
-- Kurz und positiv sein (max 10 Sätze)
-- Die wichtigsten Punkte des Tages hervorheben
-- Bei vielen Aufgaben einen kurzen Tagesplan-Vorschlag geben
-- Einen motivierenden Ton haben
-- Auf Deutsch sein
-- Mit "Guten Morgen, {name}! ☀️" beginnen"""
+Struktur des Briefings:
+1. Begrüßung mit "Guten Morgen, {name}! ☀️" (1 Satz)
+2. Kurzer Überblick über den Tag (1–2 Sätze)
+3. {'Konkreter Tagesplan mit Zeitblöcken' if events and open_tasks else 'Die wichtigsten Punkte'}
+4. Abschluss-Motivation (1 Satz)
+
+Halte das Briefing kompakt aber informativ."""
 
         return await self._complete(
             messages=[{"role": "user", "content": prompt}]
         )
+
+    def _format_event_time(self, event: dict) -> str:
+        """Formatiert die Uhrzeit eines Kalender-Events für den Briefing-Kontext."""
+        try:
+            start = event.get("start", {})
+            dt_str = start.get("dateTime", start.get("date", ""))
+            if "T" in dt_str:
+                dt = datetime.fromisoformat(dt_str).astimezone(self.tz)
+                return f"({dt.strftime('%H:%M')})"
+            return "(ganztägig)"
+        except Exception:
+            return ""
 
     async def _get_conversation_history(
         self, user_key: str, limit: int = 6

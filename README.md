@@ -18,6 +18,9 @@ Zwei persönliche KI-Assistenten via Telegram. Jeder Bot hat eine eigene Persön
 | **Trust-System** | Konfigurierbar: was direkt ausgeführt wird vs. Bestätigung |
 | **Tabellen & Präsentationen** | .xlsx und .pptx per KI generiert und gesendet |
 | **Web-Suche** | Wetter, Nachrichten, Preise automatisch gesucht |
+| **Foto-Analyse** | Bilder & Screenshots analysieren, Intent erkennen (Vision) |
+| **Fokus-Modus** | `/fokus 90` – Nachrichten + Proaktiv-Meldungen zurückhalten |
+| **Tagesplanung** | Zeitgeblockte Tagesplanung im Morgen-Briefing |
 | **Proaktives Briefing** | Täglich um 08:00 Uhr |
 | **Quiet Hours** | Keine Nachrichten in der Ruhezeit |
 | **Wochenrückblick** | Sonntags automatisch |
@@ -42,6 +45,8 @@ Zwei persönliche KI-Assistenten via Telegram. Jeder Bot hat eine eigene Persön
 | `/gedaechtnis` | Gespeicherte Fakten mit Konfidenz |
 | `/autonomie` | Trust-Level konfigurieren |
 | `/profil` | Persönlichkeitsprofil anzeigen/bearbeiten |
+| `/fokus` | Fokus-Modus aktivieren (Minuten oder Uhrzeit) |
+| `/fokus_ende` | Fokus-Modus vorzeitig beenden |
 | `/vorschlaege` | Offene Vorschläge anzeigen |
 | `/tabelle` | Tabelle als Chat oder Excel-Datei |
 | `/praesentation` | PowerPoint-Präsentation erstellen |
@@ -224,7 +229,7 @@ main.py
 ├── ReminderService          (SQLite + Startup-Delivery)
 ├── DocumentService          (python-pptx + openpyxl)
 ├── ProposalService          (Human-in-the-Loop + Auto-Approve)
-└── AssistantScheduler       (APScheduler, Briefing, Quiet Hours)
+└── AssistantScheduler       (APScheduler, Briefing, Quiet Hours, Fokus-Modus)
 ```
 
 ---
@@ -238,3 +243,4 @@ main.py
 | Groq (Whisper) | console.groq.com | Kostenlos (7.200 Sek./Tag) |
 | Google Calendar | console.cloud.google.com | Kostenlos |
 | Tavily (Web-Suche) | tavily.com | Kostenlos (1.000 Suchen/Monat) |
+| OpenRouter Vision | openrouter.ai (Gemini Flash) | Kostenlos |

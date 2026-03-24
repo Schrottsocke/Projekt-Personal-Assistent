@@ -92,6 +92,9 @@ class AssistantScheduler:
         """Sendet Morgen-Briefings an alle registrierten Bots."""
         logger.info("Sende Morgen-Briefings...")
         for user_key, bot in self._bots.items():
+            if self._is_focus_mode(user_key):
+                logger.info(f"Briefing für '{user_key}' übersprungen (Fokus-Modus).")
+                continue
             try:
                 await self._send_briefing_to_user(user_key, bot)
             except Exception as e:
@@ -133,10 +136,16 @@ class AssistantScheduler:
         for reminder in due:
             user_key = reminder.get("user_key")
             chat_id = reminder.get("chat_id")
-            content = reminder.get("content")
+            content = reminder.get("content", "")
             reminder_id = reminder.get("id")
 
             if not chat_id:
+                continue
+
+            # Fokus-Modus: nur dringende Erinnerungen sofort senden
+            is_urgent = "dringend" in content.lower()
+            if self._is_focus_mode(user_key) and not is_urgent:
+                logger.info(f"Erinnerung #{reminder_id} für '{user_key}' zurückgehalten (Fokus-Modus).")
                 continue
 
             app = self._applications.get(user_key)
@@ -269,4 +278,19 @@ class AssistantScheduler:
                     return quiet_start_min <= current_minutes < quiet_end_min
         except Exception as e:
             logger.warning(f"Quiet-Hours-Check-Fehler: {e}")
+            return False
+
+    def _is_focus_mode(self, user_key: str) -> bool:
+        """Gibt True zurück wenn der User gerade im Fokus-Modus ist."""
+        try:
+            from src.services.database import UserProfile, get_db
+            with get_db()() as session:
+                profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+                if not profile or not profile.focus_mode_until:
+                    return False
+                tz = pytz.timezone(settings.TIMEZONE)
+                now_utc = datetime.utcnow()
+                return now_utc < profile.focus_mode_until
+        except Exception as e:
+            logger.warning(f"Fokus-Modus-Check-Fehler: {e}")
             return False

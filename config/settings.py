@@ -38,6 +38,9 @@ class Settings:
     GROQ_BASE_URL: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
     WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "whisper-large-v3")
 
+    # Vision (Foto-Analyse via OpenRouter – kostenlos)
+    VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.0-flash-lite-001:free")
+
     # Web Search
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
 

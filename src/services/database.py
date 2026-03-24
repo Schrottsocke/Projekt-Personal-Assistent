@@ -45,6 +45,8 @@ class UserProfile(Base):
     quiet_end = Column(String(10), nullable=True)    # z.B. "07:00"
     focus_time = Column(String(20), nullable=True)   # "morgen" / "mittag" / "abend"
     week_structure = Column(Text, nullable=True)     # Freitext
+    # Fokus-Modus: bis wann aktiv (None = kein Fokus-Modus)
+    focus_mode_until = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -152,6 +154,19 @@ def init_db():
 
     # Tabellen erstellen
     Base.metadata.create_all(bind=_engine)
+
+    # Migrations: neue Spalten zu bestehenden Tabellen hinzufügen (SQLite)
+    if "sqlite" in settings.DATABASE_URL:
+        with _engine.connect() as conn:
+            for col_sql in [
+                "ALTER TABLE user_profiles ADD COLUMN focus_mode_until DATETIME",
+            ]:
+                try:
+                    conn.execute(__import__("sqlalchemy").text(col_sql))
+                    conn.commit()
+                except Exception:
+                    pass  # Spalte existiert bereits
+
     logger.info(f"Datenbank initialisiert: {settings.DATABASE_URL}")
 
 
