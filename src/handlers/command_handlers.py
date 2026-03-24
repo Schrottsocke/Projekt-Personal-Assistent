@@ -44,6 +44,8 @@ async def cmd_hilfe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/tts – Sprachantworten an/aus\n"
         "/spotify – Spotify verbinden & steuern\n"
         "/smarthome – Smart Home Status & Steuerung\n"
+        "/rezept – Rezept auf Chefkoch.de suchen\n"
+        "/drive – Google Drive Dateien verwalten\n"
         "/hilfe – Diese Hilfe\n\n"
         "🎤 *Sprache:* Schick mir Sprachnachrichten – ich verstehe sie!\n\n"
         "🧠 *Ich lerne mit:*\n"
@@ -867,6 +869,112 @@ async def cmd_fokus_ende(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Fehler beim Beenden des Fokus-Modus.")
 
 
+async def cmd_rezept(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Sucht ein Rezept auf Chefkoch.de."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    args = context.args
+    if not args:
+        await update.message.reply_text(
+            "🍳 *Rezept suchen:*\n\n"
+            "`/rezept Pasta Carbonara`\n"
+            "`/rezept Schokoladenkuchen`\n"
+            "`/rezept Was kann ich mit Brokkoli machen?`\n\n"
+            "Oder einfach schreiben: _\"Zeig mir ein Rezept für Schnitzel\"_",
+            parse_mode="Markdown",
+        )
+        return
+
+    query = " ".join(args)
+    await update.message.reply_text(f"🍳 Suche Rezepte für _{query}_...", parse_mode="Markdown")
+
+    ck = getattr(bot, "chefkoch_service", None)
+    if not ck:
+        await update.message.reply_text("❌ Chefkoch-Service nicht verfügbar.")
+        return
+
+    try:
+        result = await ck.search_and_format(query)
+        await update.message.reply_text(result, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Rezept-Befehl-Fehler: {e}")
+        await update.message.reply_text("❌ Rezeptsuche fehlgeschlagen. Bitte nochmal versuchen.")
+
+
+async def cmd_drive(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Google Drive Dateiverwaltung."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    args = context.args
+    user_key = bot.name.lower()
+    drive = getattr(bot, "drive_service", None)
+
+    if not drive:
+        await update.message.reply_text("❌ Drive-Service nicht verfügbar.")
+        return
+
+    # Auth-Code-Handling: /drive auth <code>
+    if args and args[0].lower() == "auth" and len(args) > 1:
+        code = " ".join(args[1:]).strip()
+        success = await drive.exchange_code(user_key, code)
+        if success:
+            await update.message.reply_text(
+                "✅ *Google Drive verbunden!*\n\n"
+                "Du kannst jetzt:\n"
+                "• `/drive` – Dateien anzeigen\n"
+                "• `/drive suche <Begriff>` – Datei suchen\n"
+                "• Generierte Tabellen/Präsentationen werden automatisch in Drive gespeichert",
+                parse_mode="Markdown",
+            )
+        else:
+            await update.message.reply_text("❌ Code ungültig oder abgelaufen. Bitte `/drive` erneut ausführen.")
+        return
+
+    # Nicht verbunden → OAuth-Flow starten
+    if not drive.is_connected(user_key):
+        try:
+            url = await drive.get_auth_url(user_key)
+            await update.message.reply_text(
+                "☁️ *Google Drive verbinden:*\n\n"
+                f"1. Öffne diesen Link:\n{url}\n\n"
+                "2. Melde dich mit deinem Google-Konto an\n"
+                "3. Kopiere den angezeigten Code\n"
+                "4. Sende: `/drive auth <Code>`",
+                parse_mode="Markdown",
+            )
+        except FileNotFoundError:
+            await update.message.reply_text(
+                "❌ Google Credentials nicht gefunden.\n"
+                "Bitte `config/google_credentials.json` von der Google Cloud Console hochladen.",
+            )
+        return
+
+    # Suche
+    if args and args[0].lower() == "suche" and len(args) > 1:
+        query = " ".join(args[1:])
+        await update.message.reply_text(f"🔍 Suche in Drive: _{query}_...", parse_mode="Markdown")
+        try:
+            files = await drive.list_files(user_key=user_key, query=query, limit=10)
+            await update.message.reply_text(drive.format_file_list(files), parse_mode="Markdown")
+        except Exception as e:
+            logger.error(f"Drive-Suche-Fehler: {e}")
+            await update.message.reply_text("❌ Suche fehlgeschlagen.")
+        return
+
+    # Standardmäßig: letzte Dateien anzeigen
+    await update.message.reply_text("☁️ Lade Drive-Dateien...")
+    try:
+        files = await drive.list_files(user_key=user_key, limit=10)
+        await update.message.reply_text(drive.format_file_list(files), parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Drive-List-Fehler: {e}")
+        await update.message.reply_text("❌ Drive-Dateien konnten nicht geladen werden.")
+
+
 def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("hilfe", cmd_hilfe))
     app.add_handler(CommandHandler("help", cmd_hilfe))
@@ -891,6 +999,8 @@ def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("tts", cmd_tts))
     app.add_handler(CommandHandler("spotify", cmd_spotify))
     app.add_handler(CommandHandler("smarthome", cmd_smarthome))
+    app.add_handler(CommandHandler("rezept", cmd_rezept))
+    app.add_handler(CommandHandler("drive", cmd_drive))
 
 
 async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):

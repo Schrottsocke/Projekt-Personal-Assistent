@@ -43,6 +43,8 @@ class BaseAssistantBot:
         self.tts_service = None
         self.spotify_service = None
         self.smarthome_service = None
+        self.chefkoch_service = None
+        self.drive_service = None
 
     def inject_services(
         self,
@@ -57,6 +59,8 @@ class BaseAssistantBot:
         tts_service=None,
         spotify_service=None,
         smarthome_service=None,
+        chefkoch_service=None,
+        drive_service=None,
     ):
         self.ai_service = ai_service
         self.memory_service = memory_service
@@ -69,6 +73,8 @@ class BaseAssistantBot:
         self.tts_service = tts_service
         self.spotify_service = spotify_service
         self.smarthome_service = smarthome_service
+        self.chefkoch_service = chefkoch_service
+        self.drive_service = drive_service
 
     def _is_authorized(self, user_id: int) -> bool:
         """Nur der Owner darf mit diesem Bot interagieren."""
@@ -127,6 +133,8 @@ class BaseAssistantBot:
             BotCommand("tts", "Sprachantworten an/aus"),
             BotCommand("spotify", "Spotify verbinden und steuern"),
             BotCommand("smarthome", "Smart Home Status und Steuerung"),
+            BotCommand("rezept", "Rezept auf Chefkoch.de suchen"),
+            BotCommand("drive", "Google Drive Dateien anzeigen & verwalten"),
         ]
         await self.app.bot.set_my_commands(commands)
         logger.info(f"Bot '{self.name}': Befehle gesetzt.")

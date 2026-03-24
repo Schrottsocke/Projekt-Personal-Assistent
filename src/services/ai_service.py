@@ -31,6 +31,8 @@ INTENT_CHAT = "chat"
 INTENT_BRIEFING = "briefing"
 INTENT_SPOTIFY = "spotify"
 INTENT_SMARTHOME = "smarthome"
+INTENT_RECIPE_SEARCH = "recipe_search"
+INTENT_DRIVE = "drive"
 
 
 class AIService:
@@ -208,6 +210,12 @@ class AIService:
         elif intent == INTENT_SMARTHOME:
             return await self._handle_smarthome(bot, user_key, message, extracted)
 
+        elif intent == INTENT_RECIPE_SEARCH:
+            return await self._handle_recipe_search(bot, user_key, message, extracted)
+
+        elif intent == INTENT_DRIVE:
+            return await self._handle_drive(bot, user_key, message, extracted, chat_id)
+
         else:
             # Normaler Chat mit Kontext-Gedächtnis
             return await self._handle_chat(message, user_key, bot)
@@ -238,11 +246,13 @@ Mögliche Intents:
 - web_search: BEVORZUGE wenn aktuelle/externe Daten gebraucht werden. PFLICHT bei: Wetter (auch "Wetter heute/morgen/diese Woche" → IMMER web_search!), Nachrichten, Preise, Sportergebnisse, Aktienkurse, Börsenkurse, Öffnungszeiten, Rezepte, Definitionen, aktuelle Ereignisse. REGEL: Wenn die Antwort sich täglich ändern kann oder live-Daten benötigt → web_search. Niemals für zeitkritische Fragen chat wählen!
 - spotify: Musik-Steuerung (z.B. "Spiel Musik", "Pause", "Nächster Song", "Spiel Jazz", "Lauter", "Was läuft gerade?")
 - smarthome: Smart Home / Haus-Steuerung (z.B. "Licht aus", "Heizung auf 22 Grad", "Rollos schließen", "Steckdose Küche an")
+- recipe_search: Nutzer sucht ein Rezept oder fragt was er kochen kann (z.B. "Rezept für Pasta Carbonara", "Was kann ich mit Brokkoli kochen?", "Zeig mir ein Kuchenrezept", "Wie macht man Schnitzel?")
+- drive: Google Drive Aktionen (z.B. "Zeig meine Drive-Dateien", "Suche Datei X in Drive", "Was liegt in meinem Drive?")
 - chat: Alles andere (persönliche Fragen, Konversation, Meinungen, Erinnerungen aus Gesprächen)
 
 Antworte NUR mit diesem JSON-Format:
 {{
-  "intent": "calendar_read|calendar_create|note_create|reminder_create|task_create|task_read|task_complete|timer_create|table_create|presentation_create|web_search|spotify|smarthome|chat",
+  "intent": "calendar_read|calendar_create|note_create|reminder_create|task_create|task_read|task_complete|timer_create|table_create|presentation_create|web_search|spotify|smarthome|recipe_search|drive|chat",
   "confidence": 0.0-1.0,
   "extracted": {{
     "content": "extrahierter Kerninhalt",
@@ -768,6 +778,43 @@ Halte das Briefing kompakt aber informativ."""
         command = extracted.get("smarthome_command", message)
         entity = extracted.get("smarthome_entity", "")
         return await ha.execute_command(command, entity)
+
+    # ── Chefkoch Handler ─────────────────────────────────────────────────────
+
+    async def _handle_recipe_search(
+        self, bot, user_key: str, message: str, extracted: dict
+    ) -> str:
+        """Sucht Rezepte auf Chefkoch.de."""
+        ck = getattr(bot, "chefkoch_service", None)
+        if not ck:
+            return "🍳 Chefkoch-Service nicht verfügbar."
+        query = extracted.get("content") or message
+        return await ck.search_and_format(query)
+
+    # ── Google Drive Handler ─────────────────────────────────────────────────
+
+    async def _handle_drive(
+        self, bot, user_key: str, message: str, extracted: dict, chat_id: int
+    ) -> str:
+        """Zeigt Google Drive Dateien."""
+        drive = getattr(bot, "drive_service", None)
+        if not drive:
+            return "☁️ Drive-Service nicht verfügbar."
+        if not drive.is_connected(user_key):
+            url = await drive.get_auth_url(user_key)
+            return (
+                "☁️ *Google Drive noch nicht verbunden.*\n\n"
+                f"1. Öffne: {url}\n"
+                "2. Melde dich an und kopiere den angezeigten Code\n"
+                "3. Sende den Code mit: `/drive auth <Code>`"
+            )
+        query = extracted.get("content", "")
+        try:
+            files = await drive.list_files(user_key=user_key, query=query or None, limit=10)
+            return drive.format_file_list(files)
+        except Exception as e:
+            logger.error(f"Drive-Handler-Fehler: {e}")
+            return "❌ Drive-Dateien konnten nicht geladen werden."
 
     def _format_event_time(self, event: dict) -> str:
         """Formatiert die Uhrzeit eines Kalender-Events für den Briefing-Kontext."""
