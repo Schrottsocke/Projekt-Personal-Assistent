@@ -86,10 +86,10 @@ class AIService:
             return await self._handle_calendar_read(bot, user_key)
 
         elif intent == INTENT_CALENDAR_CREATE:
-            return await self._handle_calendar_create(bot, user_key, extracted)
+            return await self._handle_calendar_create(bot, user_key, extracted, chat_id)
 
         elif intent == INTENT_NOTE_CREATE:
-            return await self._handle_note_create(bot, user_key, extracted)
+            return await self._handle_note_create(bot, user_key, extracted, chat_id)
 
         elif intent == INTENT_REMINDER_CREATE:
             return await self._handle_reminder_create(bot, user_key, chat_id, extracted)
@@ -198,40 +198,54 @@ Antworte NUR mit diesem JSON-Format:
         except Exception as e:
             return "❌ Kalender konnte nicht geladen werden. Google Calendar verbunden?"
 
-    async def _handle_calendar_create(self, bot, user_key: str, extracted: dict) -> str:
+    async def _handle_calendar_create(self, bot, user_key: str, extracted: dict, chat_id: int = None) -> str:
         try:
             result = await self.parse_calendar_event(
                 text=extracted.get("content", ""),
                 user_key=user_key,
                 extracted_hint=extracted,
             )
-            if result:
-                await bot.calendar_service.create_event(
-                    user_key=user_key,
-                    summary=result["summary"],
-                    start=result["start"],
-                    end=result["end"],
-                )
-                return (
-                    f"✅ Termin erstellt!\n"
-                    f"📅 *{result['summary']}*\n"
-                    f"🕐 {result['start'].strftime('%d.%m.%Y %H:%M')}"
-                )
-            return "❓ Konnte den Termin nicht erkennen. Bitte genauer angeben."
+            if not result:
+                return "❓ Konnte den Termin nicht erkennen. Bitte genauer angeben."
+
+            from src.services.proposal_service import TYPE_CALENDAR_CREATE
+            await bot.proposal_service.create_proposal(
+                user_key=user_key,
+                proposal_type=TYPE_CALENDAR_CREATE,
+                title=result["summary"],
+                payload={
+                    "summary": result["summary"],
+                    "start": result["start"].isoformat(),
+                    "end": result["end"].isoformat(),
+                    "description": result.get("description", ""),
+                },
+                created_by="ai",
+                chat_id=str(chat_id),
+            )
+            return ""  # Proposal-Nachricht wurde bereits direkt gesendet
         except Exception as e:
             logger.error(f"Calendar-Create-Fehler: {e}")
-            return "❌ Termin konnte nicht erstellt werden."
+            return "❌ Vorschlag konnte nicht erstellt werden."
 
-    async def _handle_note_create(self, bot, user_key: str, extracted: dict) -> str:
+    async def _handle_note_create(self, bot, user_key: str, extracted: dict, chat_id: int = None) -> str:
         try:
             content = extracted.get("content", "")
             if not content:
                 return "❓ Was soll ich notieren?"
-            await bot.notes_service.create_note(user_key=user_key, content=content)
-            return f"✅ Notiz gespeichert!\n📝 _{content}_"
+
+            from src.services.proposal_service import TYPE_NOTE_CREATE
+            await bot.proposal_service.create_proposal(
+                user_key=user_key,
+                proposal_type=TYPE_NOTE_CREATE,
+                title=f"Notiz: {content[:60]}{'...' if len(content) > 60 else ''}",
+                payload={"content": content, "is_shared": False},
+                created_by="ai",
+                chat_id=str(chat_id),
+            )
+            return ""
         except Exception as e:
             logger.error(f"Note-Create-Fehler: {e}")
-            return "❌ Notiz konnte nicht gespeichert werden."
+            return "❌ Vorschlag konnte nicht erstellt werden."
 
     async def _handle_reminder_create(
         self, bot, user_key: str, chat_id: int, extracted: dict
@@ -242,19 +256,27 @@ Antworte NUR mit diesem JSON-Format:
                 user_key=user_key,
                 extracted_hint=extracted,
             )
-            if result:
-                await bot.reminder_service.create_reminder(
-                    user_key=user_key,
-                    user_chat_id=str(chat_id),
-                    content=result["content"],
-                    remind_at=result["remind_at"],
-                )
-                time_str = result["remind_at"].strftime("%d.%m.%Y um %H:%M Uhr")
-                return f"✅ Erinnerung gesetzt!\n⏰ {time_str}\n📌 _{result['content']}_"
-            return "❓ Konnte Datum/Uhrzeit nicht erkennen. Beispiel: _'Morgen um 10: Zahnarzt'_"
+            if not result:
+                return "❓ Konnte Datum/Uhrzeit nicht erkennen. Beispiel: _'Morgen um 10: Zahnarzt'_"
+
+            from src.services.proposal_service import TYPE_REMINDER_CREATE
+            time_str = result["remind_at"].strftime("%d.%m.%Y %H:%M Uhr")
+            await bot.proposal_service.create_proposal(
+                user_key=user_key,
+                proposal_type=TYPE_REMINDER_CREATE,
+                title=result["content"],
+                description=f"Fällig: {time_str}",
+                payload={
+                    "content": result["content"],
+                    "remind_at": result["remind_at"].isoformat(),
+                },
+                created_by="ai",
+                chat_id=str(chat_id),
+            )
+            return ""
         except Exception as e:
             logger.error(f"Reminder-Create-Fehler: {e}")
-            return "❌ Erinnerung konnte nicht gesetzt werden."
+            return "❌ Vorschlag konnte nicht erstellt werden."
 
     async def parse_reminder(
         self, text: str, user_key: str, extracted_hint: dict = None

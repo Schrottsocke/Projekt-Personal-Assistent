@@ -37,6 +37,7 @@ class BaseAssistantBot:
         self.calendar_service = None
         self.notes_service = None
         self.reminder_service = None
+        self.proposal_service = None
 
     def inject_services(
         self,
@@ -45,12 +46,14 @@ class BaseAssistantBot:
         calendar_service,
         notes_service,
         reminder_service,
+        proposal_service,
     ):
         self.ai_service = ai_service
         self.memory_service = memory_service
         self.calendar_service = calendar_service
         self.notes_service = notes_service
         self.reminder_service = reminder_service
+        self.proposal_service = proposal_service
 
     def _is_authorized(self, user_id: int) -> bool:
         """Nur der Owner darf mit diesem Bot interagieren."""
@@ -72,11 +75,13 @@ class BaseAssistantBot:
         from src.handlers.command_handlers import register_command_handlers
         from src.handlers.message_handlers import register_message_handlers
         from src.handlers.onboarding import register_onboarding_handler
+        from src.handlers.proposal_handlers import register_proposal_handlers
 
         self.app = Application.builder().token(self.token).build()
         self.app.bot_data["bot_instance"] = self
 
-        # Handler registrieren
+        # Reihenfolge wichtig: Proposal-Callbacks zuerst, dann ConversationHandler
+        register_proposal_handlers(self.app)
         register_onboarding_handler(self.app)
         register_command_handlers(self.app)
         register_message_handlers(self.app)
@@ -95,6 +100,7 @@ class BaseAssistantBot:
             BotCommand("erinnerung", "Neue Erinnerung setzen"),
             BotCommand("briefing", "Morgen-Briefing jetzt abrufen"),
             BotCommand("gedaechtnis", "Gespeicherte Infos anzeigen"),
+            BotCommand("vorschlaege", "Offene Vorschläge anzeigen"),
         ]
         await self.app.bot.set_my_commands(commands)
         logger.info(f"Bot '{self.name}': Befehle gesetzt.")

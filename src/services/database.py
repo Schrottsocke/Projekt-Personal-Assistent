@@ -1,6 +1,6 @@
 """
 SQLAlchemy Datenbankmodelle und Session-Management.
-Speichert: Notizen, Erinnerungen, User-Profile, Konversations-History.
+Speichert: Notizen, Erinnerungen, User-Profile, Konversations-History, Proposals.
 """
 
 import logging
@@ -61,6 +61,27 @@ class Reminder(Base):
     is_sent = Column(Boolean, default=False)
     is_shared = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Proposal(Base):
+    """
+    Vorschlag zur manuellen Genehmigung (Human-in-the-Loop).
+    Status: pending → approved/rejected
+    """
+    __tablename__ = "proposals"
+
+    id = Column(Integer, primary_key=True)
+    proposal_type = Column(String(50), nullable=False)  # calendar_create, reminder_create, etc.
+    title = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    payload_json = Column(Text, nullable=False)  # JSON-kodierte Aktionsparameter
+    user_key = Column(String(50), nullable=False)  # Für wen ist der Vorschlag
+    created_by = Column(String(50), nullable=False)  # 'user', 'bot_taake', 'bot_nina', 'ai'
+    status = Column(String(20), default="pending")  # pending, approved, rejected
+    telegram_message_id = Column(String(50), nullable=True)  # Für späteres Editieren
+    telegram_chat_id = Column(String(50), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    decided_at = Column(DateTime, nullable=True)
 
 
 class ConversationHistory(Base):

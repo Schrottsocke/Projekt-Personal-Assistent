@@ -34,7 +34,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=chat_id,
             bot=bot,
         )
-        await update.message.reply_text(response, parse_mode="Markdown")
+        # Leere Antwort = Proposal wurde bereits als eigene Nachricht gesendet
+        if response:
+            await update.message.reply_text(response, parse_mode="Markdown")
 
     except Exception as e:
         logger.error(f"Message-Handler-Fehler für {bot.name}: {e}", exc_info=True)

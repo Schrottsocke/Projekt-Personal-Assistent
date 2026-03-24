@@ -18,6 +18,7 @@ from src.services.notes_service import NotesService
 from src.services.reminder_service import ReminderService
 from src.memory.memory_service import MemoryService
 from src.scheduler.scheduler import AssistantScheduler
+from src.services.proposal_service import ProposalService
 from src.bots.taake_bot import TaakeBot
 from src.bots.nina_bot import NinaBot
 
@@ -72,11 +73,13 @@ async def main():
     calendar_service = CalendarService()
     notes_service = NotesService()
     reminder_service = ReminderService()
+    proposal_service = ProposalService()
 
     await memory_service.initialize()
     await calendar_service.initialize()
     await notes_service.initialize()
     await reminder_service.initialize()
+    await proposal_service.initialize()
 
     logger.info("Services bereit.")
 
@@ -92,11 +95,16 @@ async def main():
             calendar_service=calendar_service,
             notes_service=notes_service,
             reminder_service=reminder_service,
+            proposal_service=proposal_service,
         )
 
     # Telegram Applications bauen
     taake_app = taake_bot.build_application()
     nina_app = nina_bot.build_application()
+
+    # ProposalService braucht die Apps für Bot-übergreifende Proposals
+    proposal_service.register_app("taake", taake_app)
+    proposal_service.register_app("nina", nina_app)
 
     # Scheduler einrichten
     scheduler = AssistantScheduler()
