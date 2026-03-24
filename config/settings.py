@@ -1,0 +1,93 @@
+"""Zentrale Konfiguration - lädt alle Einstellungen aus .env"""
+
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Lade .env Datei
+BASE_DIR = Path(__file__).parent.parent
+load_dotenv(BASE_DIR / ".env")
+
+
+class BotConfig:
+    """Konfiguration für einen einzelnen Bot/User"""
+    def __init__(self, name: str, token: str, user_id: int, google_token_path: str):
+        self.name = name
+        self.token = token
+        self.user_id = user_id
+        self.google_token_path = Path(BASE_DIR / google_token_path)
+
+
+class Settings:
+    # Telegram Bots
+    BOT_TOKEN_TAAKE: str = os.getenv("BOT_TOKEN_TAAKE", "")
+    BOT_TOKEN_NINA: str = os.getenv("BOT_TOKEN_NINA", "")
+    TELEGRAM_USER_ID_TAAKE: int = int(os.getenv("TELEGRAM_USER_ID_TAAKE", "0"))
+    TELEGRAM_USER_ID_NINA: int = int(os.getenv("TELEGRAM_USER_ID_NINA", "0"))
+
+    # AI
+    OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
+    OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
+    AI_MODEL: str = os.getenv("AI_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
+    AI_MODEL_FALLBACK: str = os.getenv("AI_MODEL_FALLBACK", "mistralai/mistral-7b-instruct:free")
+
+    # Memory
+    MEMORY_MODE: str = os.getenv("MEMORY_MODE", "local")
+    MEM0_API_KEY: str = os.getenv("MEM0_API_KEY", "")
+
+    # Google Calendar
+    GOOGLE_CREDENTIALS_PATH: Path = BASE_DIR / os.getenv("GOOGLE_CREDENTIALS_PATH", "config/google_credentials.json")
+    GOOGLE_TOKEN_PATH_TAAKE: Path = BASE_DIR / os.getenv("GOOGLE_TOKEN_PATH_TAAKE", "data/google_token_taake.json")
+    GOOGLE_TOKEN_PATH_NINA: Path = BASE_DIR / os.getenv("GOOGLE_TOKEN_PATH_NINA", "data/google_token_nina.json")
+
+    # Scheduler
+    TIMEZONE: str = os.getenv("TIMEZONE", "Europe/Berlin")
+    MORNING_BRIEFING_TIME: str = os.getenv("MORNING_BRIEFING_TIME", "08:00")
+
+    # Database
+    DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR}/data/assistant.db")
+
+    # Logging
+    LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+    LOG_FILE: Path = BASE_DIR / os.getenv("LOG_FILE", "logs/assistant.log")
+
+    # Bot Configs
+    @classmethod
+    def get_bot_configs(cls) -> dict[str, BotConfig]:
+        return {
+            "taake": BotConfig(
+                name="Taake",
+                token=cls.BOT_TOKEN_TAAKE,
+                user_id=cls.TELEGRAM_USER_ID_TAAKE,
+                google_token_path=str(cls.GOOGLE_TOKEN_PATH_TAAKE.relative_to(BASE_DIR))
+            ),
+            "nina": BotConfig(
+                name="Nina",
+                token=cls.BOT_TOKEN_NINA,
+                user_id=cls.TELEGRAM_USER_ID_NINA,
+                google_token_path=str(cls.GOOGLE_TOKEN_PATH_NINA.relative_to(BASE_DIR))
+            ),
+        }
+
+    @classmethod
+    def get_allowed_user_ids(cls) -> set[int]:
+        return {cls.TELEGRAM_USER_ID_TAAKE, cls.TELEGRAM_USER_ID_NINA}
+
+    @classmethod
+    def validate(cls) -> list[str]:
+        """Gibt Liste von Fehlern zurück wenn Konfiguration unvollständig ist"""
+        errors = []
+        if not cls.BOT_TOKEN_TAAKE:
+            errors.append("BOT_TOKEN_TAAKE fehlt in .env")
+        if not cls.BOT_TOKEN_NINA:
+            errors.append("BOT_TOKEN_NINA fehlt in .env")
+        if not cls.TELEGRAM_USER_ID_TAAKE:
+            errors.append("TELEGRAM_USER_ID_TAAKE fehlt in .env")
+        if not cls.TELEGRAM_USER_ID_NINA:
+            errors.append("TELEGRAM_USER_ID_NINA fehlt in .env")
+        if not cls.OPENROUTER_API_KEY:
+            errors.append("OPENROUTER_API_KEY fehlt in .env")
+        return errors
+
+
+settings = Settings()

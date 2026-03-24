@@ -1,0 +1,41 @@
+# Sensible Daten - NIEMALS committen!
+.env
+config/google_credentials.json
+data/google_token_*.json
+
+# Datenbank & generierte Daten
+data/
+logs/
+*.db
+*.sqlite
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+venv/
+.venv/
+env/
+pip-log.txt
+
+# ChromaDB (Memory-Vektordatenbank)
+data/chroma_db/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Docker
+.dockerignore
