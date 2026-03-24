@@ -31,6 +31,8 @@ async def cmd_hilfe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/erinnerungen – Aktive Erinnerungen\n"
         "/tasks – Offene Aufgaben anzeigen\n"
         "/done <Nr> – Aufgabe abhaken\n"
+        "/tabelle – Tabelle als Chat oder Excel-Datei\n"
+        "/praesentation – PowerPoint-Präsentation erstellen\n"
         "/briefing – Morgen-Briefing jetzt\n"
         "/vorschlaege – Offene Vorschläge anzeigen\n"
         "/gedaechtnis – Was ich über dich weiß\n"
@@ -48,7 +50,9 @@ async def cmd_hilfe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "💬 Schreib oder sprich einfach frei!\n"
         "_z.B. \"Erinnere mich morgen um 10 an Zahnarzt\"_\n"
         "_z.B. \"Timer 25 Minuten\"_\n"
-        "_z.B. \"Aufgabe: Steuer bis Freitag\"_"
+        "_z.B. \"Aufgabe: Steuer bis Freitag\"_\n"
+        "_z.B. \"Erstelle eine Tabelle meiner Aufgaben\"_\n"
+        "_z.B. \"Präsentation zu Remote Work\"_"
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
@@ -467,6 +471,78 @@ async def cmd_vorschlaege(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Vorschläge konnten nicht geladen werden.")
 
 
+async def cmd_tabelle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    args = context.args
+    if not args:
+        await update.message.reply_text(
+            "📊 *Tabelle erstellen:*\n\n"
+            "Schreib mir, was du als Tabelle haben möchtest:\n"
+            "`/tabelle meine offenen Aufgaben`\n"
+            "`/tabelle Termine diese Woche`\n"
+            "`/tabelle Ausgaben: Miete 800, Strom 120, Internet 40`\n\n"
+            "Oder einfach frei: _\"Erstelle eine Tabelle meiner Aufgaben\"_",
+            parse_mode="Markdown",
+        )
+        return
+
+    description = " ".join(args)
+    await update.message.reply_text("📊 Erstelle Tabelle...", parse_mode="Markdown")
+
+    try:
+        response = await bot.ai_service._handle_table_create(
+            bot=bot,
+            user_key=bot.name.lower(),
+            message=description,
+            chat_id=update.effective_chat.id,
+        )
+        if response:
+            await update.message.reply_text(response, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Tabellen-Command-Fehler: {e}")
+        await update.message.reply_text("❌ Tabelle konnte nicht erstellt werden.")
+
+
+async def cmd_praesentation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    args = context.args
+    if not args:
+        await update.message.reply_text(
+            "📊 *Präsentation erstellen:*\n\n"
+            "Nenne mir das Thema:\n"
+            "`/praesentation Remote Work Best Practices`\n"
+            "`/praesentation Meine Projektziele 2025`\n"
+            "`/praesentation Einführung in Python`\n\n"
+            "Oder einfach frei: _\"Erstelle eine Präsentation zu Thema X\"_",
+            parse_mode="Markdown",
+        )
+        return
+
+    topic = " ".join(args)
+    await update.message.reply_text(
+        f"📊 Erstelle Präsentation zu _{topic}_...", parse_mode="Markdown"
+    )
+
+    try:
+        response = await bot.ai_service._handle_presentation_create(
+            bot=bot,
+            user_key=bot.name.lower(),
+            message=topic,
+            chat_id=update.effective_chat.id,
+        )
+        if response:
+            await update.message.reply_text(response, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Präsentation-Command-Fehler: {e}")
+        await update.message.reply_text("❌ Präsentation konnte nicht erstellt werden.")
+
+
 def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("hilfe", cmd_hilfe))
     app.add_handler(CommandHandler("help", cmd_hilfe))
@@ -483,6 +559,8 @@ def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("autonomie", cmd_autonomie))
     app.add_handler(CommandHandler("profil", cmd_profil))
     app.add_handler(CommandHandler("vorschlaege", cmd_vorschlaege))
+    app.add_handler(CommandHandler("tabelle", cmd_tabelle))
+    app.add_handler(CommandHandler("praesentation", cmd_praesentation))
 
 
 async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):

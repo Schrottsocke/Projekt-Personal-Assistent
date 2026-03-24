@@ -20,6 +20,7 @@ from src.memory.memory_service import MemoryService
 from src.scheduler.scheduler import AssistantScheduler
 from src.services.proposal_service import ProposalService
 from src.services.task_service import TaskService
+from src.services.document_service import DocumentService
 from src.bots.taake_bot import TaakeBot
 from src.bots.nina_bot import NinaBot
 
@@ -62,8 +63,9 @@ async def main():
         logger.error("Bitte .env Datei ausfüllen (siehe .env.example)")
         sys.exit(1)
 
-    # Datenbank initialisieren
+    # Verzeichnisse anlegen
     Path("data").mkdir(exist_ok=True)
+    Path("data/documents").mkdir(exist_ok=True)
     Path("logs").mkdir(exist_ok=True)
     init_db()
 
@@ -76,6 +78,7 @@ async def main():
     reminder_service = ReminderService()
     proposal_service = ProposalService()
     task_service = TaskService()
+    document_service = DocumentService()
 
     await memory_service.initialize()
     await calendar_service.initialize()
@@ -83,6 +86,7 @@ async def main():
     await reminder_service.initialize()
     await proposal_service.initialize()
     await task_service.initialize()
+    await document_service.initialize()
 
     logger.info("Services bereit.")
 
@@ -100,6 +104,7 @@ async def main():
             reminder_service=reminder_service,
             proposal_service=proposal_service,
             task_service=task_service,
+            document_service=document_service,
         )
 
     # Telegram Applications bauen

@@ -25,6 +25,8 @@ INTENT_TASK_CREATE = "task_create"
 INTENT_TASK_READ = "task_read"
 INTENT_TASK_COMPLETE = "task_complete"
 INTENT_TIMER_CREATE = "timer_create"
+INTENT_TABLE_CREATE = "table_create"
+INTENT_PRESENTATION_CREATE = "presentation_create"
 INTENT_CHAT = "chat"
 INTENT_BRIEFING = "briefing"
 
@@ -158,6 +160,12 @@ class AIService:
         elif intent == INTENT_TIMER_CREATE:
             return await self._handle_timer(bot, user_key, chat_id, extracted)
 
+        elif intent == INTENT_TABLE_CREATE:
+            return await self._handle_table_create(bot, user_key, message, chat_id)
+
+        elif intent == INTENT_PRESENTATION_CREATE:
+            return await self._handle_presentation_create(bot, user_key, message, chat_id)
+
         else:
             # Normaler Chat mit Kontext-Gedächtnis
             return await self._handle_chat(message, user_key, bot)
@@ -183,12 +191,14 @@ Mögliche Intents:
 - task_read: Nutzer fragt nach offenen Aufgaben (z.B. "Was steht noch an?", "Zeig meine Todos", "Was muss ich noch tun?")
 - task_complete: Nutzer will eine Aufgabe abhaken (z.B. "Aufgabe 3 erledigt", "Habe eingekauft", "Nummer 2 ist fertig")
 - timer_create: Nutzer will einen kurzen Countdown/Timer (z.B. "Timer 25 Minuten", "In 30 Min klingeln", "Pomodoro", "Stoppuhr 45 Min"). NUR bei Zeitangaben < 4 Stunden ohne festen Zeitpunkt.
+- table_create: Nutzer will eine Tabelle oder Excel-Datei erstellen (z.B. "Erstelle eine Tabelle meiner Aufgaben", "Mach mir eine Excel-Tabelle", "Tabelle mit meinen Terminen", "Zeig meine Tasks als Tabelle")
+- presentation_create: Nutzer will eine Präsentation oder PowerPoint erstellen (z.B. "Erstelle eine Präsentation über X", "PowerPoint zu Thema Y", "Erstell mir Slides für Z")
 - web_search: Nutzer fragt nach aktuellen/externen Infos die ein Live-Abruf brauchen (Wetter, Nachrichten, Preise, aktuelle Events, Öffnungszeiten, Rezepte, Definitionen, etc.)
 - chat: Alles andere (persönliche Fragen, Konversation, Meinungen, Erinnerungen aus Gesprächen)
 
 Antworte NUR mit diesem JSON-Format:
 {{
-  "intent": "calendar_read|calendar_create|note_create|reminder_create|task_create|task_read|task_complete|timer_create|web_search|chat",
+  "intent": "calendar_read|calendar_create|note_create|reminder_create|task_create|task_read|task_complete|timer_create|table_create|presentation_create|web_search|chat",
   "confidence": 0.0-1.0,
   "extracted": {{
     "content": "extrahierter Kerninhalt",
@@ -789,3 +799,218 @@ Priorität-Regeln:
         except Exception as e:
             logger.error(f"Task-Parse-Fehler: {e}")
             return {"title": text[:200], "priority": "medium", "due_date": None}
+
+    # ── Tabellen Handler ─────────────────────────────────────────────────────
+
+    async def _handle_table_create(
+        self, bot, user_key: str, message: str, chat_id: int
+    ) -> str:
+        """
+        Erstellt eine Tabelle – entweder als Monospace-Codeblock (klein)
+        oder als .xlsx-Datei (groß/explizit).
+        """
+        try:
+            await bot.app.bot.send_chat_action(chat_id=chat_id, action="upload_document")
+
+            # Kontext aus vorhandenen Daten holen
+            context_data = await self._gather_table_context(bot, user_key, message)
+
+            # KI strukturiert die Tabelle
+            table_data = await self._parse_table_content(message, context_data)
+            if not table_data or not table_data.get("headers"):
+                return "❓ Konnte keine Tabellenstruktur erkennen. Bitte genauer beschreiben."
+
+            headers = table_data["headers"]
+            rows = table_data.get("rows", [])
+            title = table_data.get("title", "Tabelle")
+            fmt = table_data.get("format", "auto")
+
+            # Format-Entscheidung
+            use_excel = (
+                fmt == "excel"
+                or not bot.document_service.is_small_table(headers, rows)
+            )
+
+            if use_excel:
+                path = bot.document_service.create_excel(
+                    title=title, headers=headers, rows=rows
+                )
+                try:
+                    await bot.app.bot.send_document(
+                        chat_id=chat_id,
+                        document=open(path, "rb"),
+                        filename=f"{title}.xlsx",
+                        caption=f"📊 *{title}*",
+                        parse_mode="Markdown",
+                    )
+                finally:
+                    path.unlink(missing_ok=True)
+                return ""
+            else:
+                table_text = bot.document_service.create_markdown_table(headers, rows)
+                return f"📊 *{title}*\n\n{table_text}"
+
+        except Exception as e:
+            logger.error(f"Table-Create-Fehler: {e}", exc_info=True)
+            return "❌ Tabelle konnte nicht erstellt werden."
+
+    async def _gather_table_context(self, bot, user_key: str, message: str) -> str:
+        """Holt relevante Daten (Tasks/Kalender) als Text-Kontext für die KI."""
+        context_parts = []
+        msg_lower = message.lower()
+
+        if any(w in msg_lower for w in ["aufgabe", "task", "todo", "to-do"]):
+            try:
+                tasks = await bot.task_service.get_open_tasks(user_key=user_key)
+                if tasks:
+                    from src.services.task_service import PRIORITY_ICONS
+                    lines = [f"Offene Aufgaben:"]
+                    for t in tasks:
+                        icon = PRIORITY_ICONS.get(t["priority"], "")
+                        lines.append(f"- #{t['id']} {icon} {t['title']} (Priorität: {t['priority']})")
+                    context_parts.append("\n".join(lines))
+            except Exception:
+                pass
+
+        if any(w in msg_lower for w in ["termin", "kalender", "event", "woche"]):
+            try:
+                events = await bot.calendar_service.get_upcoming_events(user_key=user_key, days=7)
+                if events:
+                    from datetime import datetime
+                    lines = ["Kommende Termine (7 Tage):"]
+                    for e in events[:15]:
+                        start = e.get("start", {})
+                        dt_str = start.get("dateTime", start.get("date", ""))
+                        summary = e.get("summary", "(kein Titel)")
+                        lines.append(f"- {dt_str}: {summary}")
+                    context_parts.append("\n".join(lines))
+            except Exception:
+                pass
+
+        return "\n\n".join(context_parts) if context_parts else ""
+
+    async def _parse_table_content(self, message: str, context_data: str = "") -> Optional[dict]:
+        """KI generiert die Tabellenstruktur als JSON."""
+        context_section = f"\nVorhandene Daten:\n{context_data}" if context_data else ""
+        prompt = f"""Erstelle eine strukturierte Tabelle basierend auf dieser Anfrage.
+
+Anfrage: "{message}"{context_section}
+
+Antworte NUR mit diesem JSON:
+{{
+  "title": "Tabellentitel (kurz)",
+  "headers": ["Spalte1", "Spalte2", ...],
+  "rows": [
+    ["Wert1", "Wert2", ...],
+    ...
+  ],
+  "format": "markdown oder excel (excel bei > 5 Spalten oder > 15 Zeilen oder wenn explizit als Datei/Excel gewünscht)"
+}}
+
+Regeln:
+- Nutze die vorhandenen Daten wenn verfügbar, ergänze sie sinnvoll
+- Bei freiem Inhalt (z.B. "Tabelle mit Ausgaben: Miete 800, Strom 120") generiere passende Zeilen
+- Maximal 10 Spalten, maximal 50 Zeilen
+- Alle Werte als Strings
+- Sprache: Deutsch"""
+
+        try:
+            response = await self._complete(
+                messages=[{"role": "user", "content": prompt}],
+                json_mode=True,
+            )
+            return json.loads(response)
+        except Exception as e:
+            logger.error(f"Table-Parse-Fehler: {e}")
+            return None
+
+    # ── Präsentations Handler ────────────────────────────────────────────────
+
+    async def _handle_presentation_create(
+        self, bot, user_key: str, message: str, chat_id: int
+    ) -> str:
+        """Erstellt eine PowerPoint-Präsentation und sendet sie via Telegram."""
+        try:
+            await bot.app.bot.send_chat_action(chat_id=chat_id, action="upload_document")
+
+            pres_data = await self._parse_presentation_content(message, user_key, bot)
+            if not pres_data or not pres_data.get("slides"):
+                return "❓ Konnte keine Präsentationsstruktur erkennen. Bitte Thema genauer beschreiben."
+
+            title = pres_data.get("title", "Präsentation")
+            slides = pres_data["slides"]
+
+            path = bot.document_service.create_presentation(title=title, slides=slides)
+            try:
+                await bot.app.bot.send_document(
+                    chat_id=chat_id,
+                    document=open(path, "rb"),
+                    filename=f"{title}.pptx",
+                    caption=f"📊 *{title}* – {len(slides)} Folien",
+                    parse_mode="Markdown",
+                )
+            finally:
+                path.unlink(missing_ok=True)
+            return ""
+
+        except Exception as e:
+            logger.error(f"Presentation-Create-Fehler: {e}", exc_info=True)
+            return "❌ Präsentation konnte nicht erstellt werden."
+
+    async def _parse_presentation_content(
+        self, message: str, user_key: str, bot
+    ) -> Optional[dict]:
+        """KI generiert die Präsentationsstruktur als JSON."""
+        # Kontext aus vorhandenen Daten holen (Tasks, Memories)
+        context_parts = []
+        try:
+            memories = await bot.memory_service.search_memories(
+                user_key=user_key, query=message, limit=5
+            )
+            if memories:
+                mem_lines = [m.get("memory", "") for m in memories if m.get("memory")]
+                if mem_lines:
+                    context_parts.append("Was ich über den Nutzer weiß:\n" + "\n".join(f"- {m}" for m in mem_lines))
+        except Exception:
+            pass
+
+        context_section = f"\nKontext:\n" + "\n\n".join(context_parts) if context_parts else ""
+
+        prompt = f"""Erstelle eine strukturierte Präsentation basierend auf dieser Anfrage.
+
+Anfrage: "{message}"{context_section}
+
+Antworte NUR mit diesem JSON:
+{{
+  "title": "Präsentationstitel",
+  "slides": [
+    {{
+      "title": "Folientitel",
+      "bullets": [
+        "Stichpunkt 1",
+        "Stichpunkt 2",
+        "Stichpunkt 3"
+      ]
+    }},
+    ...
+  ]
+}}
+
+Regeln:
+- 4 bis 8 Folien (ohne Titelfolie)
+- 3 bis 6 Bullet-Points pro Folie
+- Bullet-Points: kurz und prägnant (max 1 Zeile)
+- Logischer Aufbau: Einleitung → Hauptteil → Fazit
+- Sprache: Deutsch
+- Inhalt: sachlich, professionell"""
+
+        try:
+            response = await self._complete(
+                messages=[{"role": "user", "content": prompt}],
+                json_mode=True,
+                model=self._model,
+            )
+            return json.loads(response)
+        except Exception as e:
+            logger.error(f"Presentation-Parse-Fehler: {e}")
+            return None
