@@ -49,6 +49,40 @@ def setup_logging():
 logger = logging.getLogger(__name__)
 
 
+async def _deliver_missed_reminders(reminder_service, taake_app, nina_app):
+    """
+    Adoption B: Memory-Persistence – Sofortiges Zustellen verpasster Erinnerungen beim Start.
+    Der Scheduler läuft erst nach 1 Minute; diese Funktion liefert sofort alle überfälligen
+    Erinnerungen, die während des Bot-Downtimes fällig wurden.
+    """
+    try:
+        due = await reminder_service.get_due_reminders()
+        if not due:
+            return
+
+        logger.info(f"Startup: {len(due)} verpasste Erinnerungen werden zugestellt...")
+        apps = {"taake": taake_app, "nina": nina_app}
+
+        for reminder in due:
+            user_key = reminder.get("user_key", "")
+            chat_id = reminder.get("chat_id")
+            content = reminder.get("content", "")
+            app = apps.get(user_key)
+            if app and chat_id:
+                try:
+                    await app.bot.send_message(
+                        chat_id=chat_id,
+                        text=f"⏰ *Verpasste Erinnerung:*\n{content}",
+                        parse_mode="Markdown",
+                    )
+                    await reminder_service.mark_sent(reminder["id"])
+                    logger.info(f"Verpasste Erinnerung zugestellt: {user_key} – {content[:40]}")
+                except Exception as e:
+                    logger.error(f"Konnte verpasste Erinnerung nicht senden: {e}")
+    except Exception as e:
+        logger.error(f"Startup-Reminder-Check fehlgeschlagen: {e}")
+
+
 async def main():
     setup_logging()
     logger.info("=" * 60)
@@ -138,6 +172,9 @@ async def main():
 
         # Scheduler starten
         scheduler.start()
+
+        # Adoption B: Memory-Persistence – verpasste Erinnerungen sofort zustellen
+        await _deliver_missed_reminders(reminder_service, taake_app, nina_app)
 
         logger.info("=" * 60)
         logger.info("Beide Bots laufen! Drücke Ctrl+C zum Beenden.")

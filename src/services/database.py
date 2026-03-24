@@ -15,6 +15,7 @@ from sqlalchemy import (
     DateTime,
     Text,
     ForeignKey,
+    Float,
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
@@ -107,6 +108,22 @@ class Task(Base):
     status = Column(String(20), default="open")         # open / in_progress / done
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class MemoryFact(Base):
+    """
+    Gespeicherte Fakten aus Gesprächen mit Bestätigungs-Tracking.
+    Inspiriert vom JARVIS Continuous-Learning / Instinct-System.
+    Fakten die öfter extrahiert oder bestätigt werden, bekommen höhere Konfidenz.
+    """
+    __tablename__ = "memory_facts"
+
+    id = Column(Integer, primary_key=True)
+    user_key = Column(String(50), nullable=False)
+    content = Column(Text, nullable=False)
+    confirmation_count = Column(Integer, default=1)   # Wie oft wurde dieser Fakt extrahiert
+    last_used = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class ConversationHistory(Base):

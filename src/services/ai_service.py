@@ -193,7 +193,7 @@ Mögliche Intents:
 - timer_create: Nutzer will einen kurzen Countdown/Timer (z.B. "Timer 25 Minuten", "In 30 Min klingeln", "Pomodoro", "Stoppuhr 45 Min"). NUR bei Zeitangaben < 4 Stunden ohne festen Zeitpunkt.
 - table_create: Nutzer will eine Tabelle oder Excel-Datei erstellen (z.B. "Erstelle eine Tabelle meiner Aufgaben", "Mach mir eine Excel-Tabelle", "Tabelle mit meinen Terminen", "Zeig meine Tasks als Tabelle")
 - presentation_create: Nutzer will eine Präsentation oder PowerPoint erstellen (z.B. "Erstelle eine Präsentation über X", "PowerPoint zu Thema Y", "Erstell mir Slides für Z")
-- web_search: Nutzer fragt nach aktuellen/externen Infos die ein Live-Abruf brauchen (Wetter, Nachrichten, Preise, aktuelle Events, Öffnungszeiten, Rezepte, Definitionen, etc.)
+- web_search: BEVORZUGE wenn aktuelle/externe Daten gebraucht werden. PFLICHT bei: Wetter (auch "Wetter heute/morgen/diese Woche" → IMMER web_search!), Nachrichten, Preise, Sportergebnisse, Aktienkurse, Börsenkurse, Öffnungszeiten, Rezepte, Definitionen, aktuelle Ereignisse. REGEL: Wenn die Antwort sich täglich ändern kann oder live-Daten benötigt → web_search. Niemals für zeitkritische Fragen chat wählen!
 - chat: Alles andere (persönliche Fragen, Konversation, Meinungen, Erinnerungen aus Gesprächen)
 
 Antworte NUR mit diesem JSON-Format:
@@ -229,13 +229,22 @@ Antworte NUR mit diesem JSON-Format:
         mood = mood_data.get("mood", "neutral")
         tone_adj = mood_data.get("tone_adjustment", "")
 
-        # 2. Relevante Erinnerungen suchen
+        # 2. Relevante Erinnerungen suchen + bestätigte Top-Fakten (Adoption A: Continuous Learning)
         memories = await bot.memory_service.search_memories(user_key=user_key, query=message)
+        top_facts = await bot.memory_service.get_top_facts(user_key=user_key, limit=5)
         memory_context = ""
-        if memories:
-            memory_lines = [m.get("memory", "") for m in memories if m.get("memory")]
-            if memory_lines:
-                memory_context = "Was du über den Nutzer weißt:\n" + "\n".join(f"- {m}" for m in memory_lines)
+        all_memory_lines = []
+        # Bestätigte Fakten zuerst (höchste Konfidenz)
+        for f in top_facts:
+            if f["confirmation_count"] >= 2:  # Nur mehrfach bestätigte Facts bevorzugt
+                all_memory_lines.append(f"[bestätigt ×{f['confirmation_count']}] {f['content']}")
+        # Dann semantisch relevante Memories
+        for m in memories:
+            mem_text = m.get("memory", "")
+            if mem_text and mem_text not in "\n".join(all_memory_lines):
+                all_memory_lines.append(mem_text)
+        if all_memory_lines:
+            memory_context = "Was du über den Nutzer weißt:\n" + "\n".join(f"- {l}" for l in all_memory_lines)
 
         # 3. Gesprächsverlauf aus DB holen
         history = await self._get_conversation_history(user_key, limit=6)
@@ -258,6 +267,8 @@ Antworte NUR mit diesem JSON-Format:
             facts = await self.intelligence.extract_facts(user_key, message, response)
             for fact in facts:
                 await bot.memory_service.add_memory(user_key=user_key, content=fact)
+                # Adoption A: Continuous Learning – Konfidenz-Tracking pro Fakt
+                await bot.memory_service.upsert_fact(user_key=user_key, content=fact)
             await self._save_conversation_turn(user_key, "user", message)
             await self._save_conversation_turn(user_key, "assistant", response)
         except Exception as e:
@@ -889,8 +900,43 @@ Priorität-Regeln:
 
         return "\n\n".join(context_parts) if context_parts else ""
 
+    def _validate_table_data(self, data: dict) -> tuple[bool, str]:
+        """
+        Verification-Loop: Prüft ob die Tabellendaten korrekt strukturiert sind.
+        Returns (valid, error_message).
+        """
+        if not data.get("headers"):
+            return False, "Keine Spaltenüberschriften (headers) vorhanden."
+        headers = data["headers"]
+        rows = data.get("rows", [])
+        if not rows:
+            return False, "Keine Datenzeilen (rows) vorhanden."
+        expected_cols = len(headers)
+        for i, row in enumerate(rows):
+            if len(row) != expected_cols:
+                return False, (
+                    f"Zeile {i+1} hat {len(row)} Werte, erwartet: {expected_cols} "
+                    f"(entsprechend der {expected_cols} Spaltenköpfe)."
+                )
+        return True, ""
+
+    def _validate_presentation_data(self, data: dict) -> tuple[bool, str]:
+        """
+        Verification-Loop: Prüft ob die Präsentationsdaten korrekt strukturiert sind.
+        Returns (valid, error_message).
+        """
+        slides = data.get("slides", [])
+        if len(slides) < 2:
+            return False, f"Zu wenige Folien ({len(slides)}), mindestens 2 erwartet."
+        for i, slide in enumerate(slides):
+            if not slide.get("title"):
+                return False, f"Folie {i+1} hat keinen Titel."
+            if not slide.get("bullets"):
+                return False, f"Folie {i+1} hat keine Bullet-Points."
+        return True, ""
+
     async def _parse_table_content(self, message: str, context_data: str = "") -> Optional[dict]:
-        """KI generiert die Tabellenstruktur als JSON."""
+        """KI generiert die Tabellenstruktur als JSON. Mit Verification-Loop (1 Retry)."""
         context_section = f"\nVorhandene Daten:\n{context_data}" if context_data else ""
         prompt = f"""Erstelle eine strukturierte Tabelle basierend auf dieser Anfrage.
 
@@ -912,26 +958,42 @@ Regeln:
 - Bei freiem Inhalt (z.B. "Tabelle mit Ausgaben: Miete 800, Strom 120") generiere passende Zeilen
 - Maximal 10 Spalten, maximal 50 Zeilen
 - Alle Werte als Strings
+- WICHTIG: Jede Zeile in "rows" muss GENAU so viele Werte haben wie "headers" Einträge
 - Sprache: Deutsch"""
 
-        try:
-            response = await self._complete(
-                messages=[{"role": "user", "content": prompt}],
-                json_mode=True,
-            )
-            return json.loads(response)
-        except Exception as e:
-            logger.error(f"Table-Parse-Fehler: {e}")
-            return None
+        for attempt in range(2):
+            try:
+                response = await self._complete(
+                    messages=[{"role": "user", "content": prompt}],
+                    json_mode=True,
+                )
+                data = json.loads(response)
+                valid, error = self._validate_table_data(data)
+                if valid:
+                    return data
+                if attempt == 0:
+                    # Verification-Loop: Retry mit Fehlerhinweis
+                    logger.warning(f"Tabellen-Validierung fehlgeschlagen: {error}. Retry...")
+                    prompt += f"\n\nFEHLER beim letzten Versuch: {error}\nBitte korrigiere das JSON."
+                else:
+                    logger.error(f"Tabellen-Validierung auch nach Retry fehlgeschlagen: {error}")
+                    return data  # Bestes verfügbares Ergebnis zurückgeben
+            except Exception as e:
+                logger.error(f"Table-Parse-Fehler (Versuch {attempt+1}): {e}")
+        return None
 
     # ── Präsentations Handler ────────────────────────────────────────────────
 
     async def _handle_presentation_create(
         self, bot, user_key: str, message: str, chat_id: int
     ) -> str:
-        """Erstellt eine PowerPoint-Präsentation und sendet sie via Telegram."""
+        """
+        Zweistufiger Präsentations-Flow (JARVIS Content-Engine Pattern):
+        1. KI generiert Outline → zeigt Vorschau via Proposal (✅/❌)
+        2. Nach Bestätigung: .pptx erstellen und senden
+        """
         try:
-            await bot.app.bot.send_chat_action(chat_id=chat_id, action="upload_document")
+            await bot.app.bot.send_chat_action(chat_id=chat_id, action="typing")
 
             pres_data = await self._parse_presentation_content(message, user_key, bot)
             if not pres_data or not pres_data.get("slides"):
@@ -940,17 +1002,22 @@ Regeln:
             title = pres_data.get("title", "Präsentation")
             slides = pres_data["slides"]
 
-            path = bot.document_service.create_presentation(title=title, slides=slides)
-            try:
-                await bot.app.bot.send_document(
-                    chat_id=chat_id,
-                    document=open(path, "rb"),
-                    filename=f"{title}.pptx",
-                    caption=f"📊 *{title}* – {len(slides)} Folien",
-                    parse_mode="Markdown",
-                )
-            finally:
-                path.unlink(missing_ok=True)
+            # Outline als Proposal zeigen (Nutzer bestätigt bevor .pptx erstellt wird)
+            from src.services.proposal_service import TYPE_DOCUMENT_PREVIEW
+            await bot.proposal_service.create_proposal(
+                user_key=user_key,
+                proposal_type=TYPE_DOCUMENT_PREVIEW,
+                title=f"Präsentation: {title}",
+                description=f"{len(slides)} Folien geplant",
+                payload={
+                    "title": title,
+                    "slides": slides,
+                    "chat_id": str(chat_id),
+                },
+                created_by="ai",
+                chat_id=str(chat_id),
+                bot=bot,
+            )
             return ""
 
         except Exception as e:
@@ -1004,13 +1071,23 @@ Regeln:
 - Sprache: Deutsch
 - Inhalt: sachlich, professionell"""
 
-        try:
-            response = await self._complete(
-                messages=[{"role": "user", "content": prompt}],
-                json_mode=True,
-                model=self._model,
-            )
-            return json.loads(response)
-        except Exception as e:
-            logger.error(f"Presentation-Parse-Fehler: {e}")
-            return None
+        for attempt in range(2):
+            try:
+                response = await self._complete(
+                    messages=[{"role": "user", "content": prompt}],
+                    json_mode=True,
+                    model=self._model,
+                )
+                data = json.loads(response)
+                valid, error = self._validate_presentation_data(data)
+                if valid:
+                    return data
+                if attempt == 0:
+                    logger.warning(f"Präsentation-Validierung fehlgeschlagen: {error}. Retry...")
+                    prompt += f"\n\nFEHLER beim letzten Versuch: {error}\nBitte korrigiere das JSON."
+                else:
+                    logger.error(f"Präsentation-Validierung auch nach Retry fehlgeschlagen: {error}")
+                    return data
+            except Exception as e:
+                logger.error(f"Presentation-Parse-Fehler (Versuch {attempt+1}): {e}")
+        return None

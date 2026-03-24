@@ -247,7 +247,9 @@ async def cmd_gedaechtnis(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         memories = await bot.memory_service.get_all_memories(user_key=bot.name.lower())
-        if not memories:
+        top_facts = await bot.memory_service.get_top_facts(user_key=bot.name.lower(), limit=8)
+
+        if not memories and not top_facts:
             await update.message.reply_text(
                 "🧠 Ich habe noch nichts Wichtiges über dich gespeichert.\n"
                 "Erzähl mir etwas über dich!"
@@ -255,8 +257,21 @@ async def cmd_gedaechtnis(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         lines = [f"🧠 *Was ich über {bot.name} weiß:*\n"]
-        for m in memories[:15]:
-            lines.append(f"• {m['memory']}")
+
+        # Bestätigte Fakten mit Konfidenz-Anzeige (Continuous Learning)
+        high_conf = [f for f in top_facts if f["confirmation_count"] >= 2]
+        if high_conf:
+            lines.append("*✨ Bestätigte Fakten:*")
+            for f in high_conf:
+                stars = "⭐" * min(f["confirmation_count"], 5)
+                lines.append(f"• {f['content']} _{stars}_")
+            lines.append("")
+
+        # Alle weiteren mem0-Memories
+        if memories:
+            lines.append("*📝 Weitere Erinnerungen:*")
+            for m in memories[:10]:
+                lines.append(f"• {m['memory']}")
 
         await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
     except Exception as e:

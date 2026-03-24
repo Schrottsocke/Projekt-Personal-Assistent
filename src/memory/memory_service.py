@@ -126,6 +126,50 @@ class MemoryService:
         except Exception as e:
             logger.error(f"Conversation-Memory-Fehler: {e}")
 
+    async def upsert_fact(self, user_key: str, content: str):
+        """
+        Speichert einen Fakt mit Bestätigungs-Tracking (JARVIS Continuous Learning).
+        Wenn der Fakt bereits existiert, wird confirmation_count erhöht.
+        """
+        try:
+            from src.services.database import MemoryFact
+            from datetime import datetime
+            with self._db() as session:
+                existing = session.query(MemoryFact).filter_by(
+                    user_key=user_key, content=content
+                ).first()
+                if existing:
+                    existing.confirmation_count += 1
+                    existing.last_used = datetime.utcnow()
+                else:
+                    session.add(MemoryFact(user_key=user_key, content=content))
+        except Exception as e:
+            logger.error(f"Upsert-Fact-Fehler: {e}")
+
+    async def get_top_facts(self, user_key: str, limit: int = 10) -> list[dict]:
+        """Gibt die bestätigtesten Fakten sortiert nach Konfidenz zurück."""
+        try:
+            from src.services.database import MemoryFact
+            with self._db() as session:
+                facts = (
+                    session.query(MemoryFact)
+                    .filter_by(user_key=user_key)
+                    .order_by(MemoryFact.confirmation_count.desc())
+                    .limit(limit)
+                    .all()
+                )
+                return [
+                    {
+                        "id": f.id,
+                        "content": f.content,
+                        "confirmation_count": f.confirmation_count,
+                    }
+                    for f in facts
+                ]
+        except Exception as e:
+            logger.error(f"Get-Top-Facts-Fehler: {e}")
+            return []
+
     async def mark_onboarded(self, user_key: str):
         """Markiert User als onboardet in der lokalen DB."""
         try:

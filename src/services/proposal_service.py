@@ -24,6 +24,7 @@ TYPE_NOTE_CREATE = "note_create"
 TYPE_TASK_CREATE = "task_create"
 TYPE_AI_SUGGESTION = "ai_suggestion"
 TYPE_SHARED_ACTION = "shared_action"
+TYPE_DOCUMENT_PREVIEW = "document_preview"
 
 # Status
 STATUS_PENDING = "pending"
@@ -38,6 +39,7 @@ TYPE_ICONS = {
     TYPE_TASK_CREATE: "📋",
     TYPE_AI_SUGGESTION: "🤖",
     TYPE_SHARED_ACTION: "🔗",
+    TYPE_DOCUMENT_PREVIEW: "📄",
 }
 
 
@@ -216,6 +218,17 @@ class ProposalService:
             if assigned_by:
                 lines.append(f"_Zugewiesen von {assigned_by.capitalize()}_")
 
+        elif proposal_type == TYPE_DOCUMENT_PREVIEW:
+            slides = payload.get("slides", [])
+            if slides:
+                lines.append(f"\n_{len(slides)} Folien geplant:_")
+                for slide in slides[:6]:
+                    lines.append(f"\n• *{slide.get('title', '')}*")
+                    for bullet in slide.get("bullets", [])[:2]:
+                        lines.append(f"  – {bullet}")
+                if len(slides) > 6:
+                    lines.append(f"\n  _... und {len(slides) - 6} weitere Folien_")
+
         lines.append("\n\nSoll ich das ausführen?")
         return "\n".join(lines)
 
@@ -331,6 +344,23 @@ class ProposalService:
                 description=payload.get("description", ""),
                 assigned_by=payload.get("assigned_by"),
             )
+
+        elif proposal_type == TYPE_DOCUMENT_PREVIEW:
+            # Präsentation erstellen und senden (nach Outline-Bestätigung)
+            title = payload["title"]
+            slides = payload["slides"]
+            target_chat_id = payload.get("chat_id", chat_id)
+            path = bot.document_service.create_presentation(title=title, slides=slides)
+            try:
+                await bot.app.bot.send_document(
+                    chat_id=target_chat_id,
+                    document=open(path, "rb"),
+                    filename=f"{title}.pptx",
+                    caption=f"📊 *{title}* – {len(slides)} Folien",
+                    parse_mode="Markdown",
+                )
+            finally:
+                path.unlink(missing_ok=True)
 
         elif proposal_type in (TYPE_AI_SUGGESTION, TYPE_SHARED_ACTION):
             # Freie Vorschläge: Nur bestätigen, keine weitere Aktion nötig
