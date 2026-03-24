@@ -77,14 +77,56 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Platzhalter für Sprachnachrichten (Phase 2)."""
+    """Verarbeitet Sprachnachrichten via Groq Whisper."""
     bot = get_bot(context)
     if not await bot._check_auth(update):
         return
-    await update.message.reply_text(
-        "🎤 Sprachnachrichten werden in einer späteren Version unterstützt.\n"
-        "Bitte schreib mir deine Nachricht als Text."
-    )
+
+    user_key = bot.name.lower()
+    chat_id = update.effective_chat.id
+
+    allowed, reason = rate_limiter.check(user_key)
+    if not allowed:
+        await update.message.reply_text("⏳ Rate-Limit erreicht – bitte kurz warten.")
+        return
+
+    await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+
+    try:
+        # Audiodatei von Telegram herunterladen
+        voice_file = await update.message.voice.get_file()
+        audio_bytes = await voice_file.download_as_bytearray()
+
+        transcript = await bot.ai_service.transcribe_voice(bytes(audio_bytes))
+
+        if not transcript:
+            await update.message.reply_text(
+                "🎤 Sprachnachrichten werden leider noch nicht unterstützt.\n"
+                "Kein GROQ_API_KEY konfiguriert – bitte als Text schreiben."
+            )
+            return
+
+        # Transkript anzeigen, dann normal verarbeiten
+        await update.message.reply_text(
+            f"🎤 _Verstanden: {transcript}_",
+            parse_mode="Markdown",
+        )
+
+        await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+        response = await bot.ai_service.process_message(
+            message=transcript,
+            user_key=user_key,
+            chat_id=chat_id,
+            bot=bot,
+        )
+        if response:
+            await update.message.reply_text(response, parse_mode="Markdown")
+
+    except Exception as e:
+        logger.error(f"Voice-Handler-Fehler für {bot.name}: {e}", exc_info=True)
+        await update.message.reply_text(
+            "❌ Sprachnachricht konnte nicht verarbeitet werden. Versuche es als Text."
+        )
 
 
 def register_message_handlers(app: Application):

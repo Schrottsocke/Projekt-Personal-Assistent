@@ -38,6 +38,7 @@ class BaseAssistantBot:
         self.notes_service = None
         self.reminder_service = None
         self.proposal_service = None
+        self.task_service = None
 
     def inject_services(
         self,
@@ -47,6 +48,7 @@ class BaseAssistantBot:
         notes_service,
         reminder_service,
         proposal_service,
+        task_service=None,
     ):
         self.ai_service = ai_service
         self.memory_service = memory_service
@@ -54,6 +56,7 @@ class BaseAssistantBot:
         self.notes_service = notes_service
         self.reminder_service = reminder_service
         self.proposal_service = proposal_service
+        self.task_service = task_service
 
     def _is_authorized(self, user_id: int) -> bool:
         """Nur der Owner darf mit diesem Bot interagieren."""
@@ -94,6 +97,8 @@ class BaseAssistantBot:
         commands = [
             BotCommand("start", "Bot starten / Onboarding"),
             BotCommand("hilfe", "Alle Befehle anzeigen"),
+            BotCommand("tasks", "Offene Aufgaben anzeigen"),
+            BotCommand("done", "Aufgabe abhaken"),
             BotCommand("kalender", "Kalender anzeigen"),
             BotCommand("neu_termin", "Neuen Termin erstellen"),
             BotCommand("notiz", "Neue Notiz erstellen"),
@@ -101,6 +106,8 @@ class BaseAssistantBot:
             BotCommand("briefing", "Morgen-Briefing jetzt abrufen"),
             BotCommand("gedaechtnis", "Gespeicherte Infos anzeigen"),
             BotCommand("vorschlaege", "Offene Vorschläge anzeigen"),
+            BotCommand("autonomie", "Direkt-Ausführung konfigurieren"),
+            BotCommand("profil", "Persönlichkeitsprofil anzeigen"),
         ]
         await self.app.bot.set_my_commands(commands)
         logger.info(f"Bot '{self.name}': Befehle gesetzt.")

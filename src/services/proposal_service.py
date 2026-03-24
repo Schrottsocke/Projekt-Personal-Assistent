@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 TYPE_CALENDAR_CREATE = "calendar_create"
 TYPE_REMINDER_CREATE = "reminder_create"
 TYPE_NOTE_CREATE = "note_create"
+TYPE_TASK_CREATE = "task_create"
 TYPE_AI_SUGGESTION = "ai_suggestion"
 TYPE_SHARED_ACTION = "shared_action"
 
@@ -34,6 +35,7 @@ TYPE_ICONS = {
     TYPE_CALENDAR_CREATE: "📅",
     TYPE_REMINDER_CREATE: "⏰",
     TYPE_NOTE_CREATE: "📝",
+    TYPE_TASK_CREATE: "📋",
     TYPE_AI_SUGGESTION: "🤖",
     TYPE_SHARED_ACTION: "🔗",
 }
@@ -60,6 +62,18 @@ class ProposalService:
         """Registriert eine Telegram-Application für einen User."""
         self._apps[user_key] = app
 
+    def _get_auto_approve_types(self, user_key: str) -> set:
+        """Liest die auto_approve_types eines Users aus der DB."""
+        try:
+            from src.services.database import UserProfile
+            with self._db() as session:
+                profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+                if profile and profile.auto_approve_types:
+                    return set(t.strip() for t in profile.auto_approve_types.split(",") if t.strip())
+        except Exception as e:
+            logger.warning(f"Auto-Approve-Types Lesefehler: {e}")
+        return {"timer_create"}  # Fallback: Timer immer auto-approve
+
     async def create_proposal(
         self,
         user_key: str,
@@ -69,12 +83,29 @@ class ProposalService:
         created_by: str,
         chat_id: str,
         description: str = "",
+        bot=None,
     ) -> Optional[dict]:
         """
-        Erstellt einen neuen Vorschlag, speichert ihn in der DB
-        und sendet eine Telegram-Nachricht mit Genehmigungsbuttons.
+        Erstellt einen neuen Vorschlag.
+        Wenn der Typ in auto_approve_types liegt, wird die Aktion direkt ausgeführt.
+        Andernfalls: Telegram-Nachricht mit ✅/❌ Buttons.
         """
         from src.services.database import Proposal
+
+        # Auto-Approve prüfen
+        auto_types = self._get_auto_approve_types(user_key)
+        if proposal_type in auto_types and bot is not None:
+            try:
+                await self._execute(proposal_type, payload, user_key, str(chat_id), bot)
+                confirm = self._format_auto_confirm(proposal_type, title, payload)
+                app = self._apps.get(user_key)
+                if app:
+                    await app.bot.send_message(chat_id=chat_id, text=confirm, parse_mode="Markdown")
+                logger.info(f"Auto-approved '{proposal_type}' für '{user_key}': {title}")
+                return {"id": None, "title": title, "type": proposal_type, "auto_approved": True}
+            except Exception as e:
+                logger.error(f"Auto-Approve Ausführungsfehler: {e}")
+                # Fallback: normaler Proposal-Flow
 
         payload_json = json.dumps(payload, default=str, ensure_ascii=False)
         icon = TYPE_ICONS.get(proposal_type, "📋")
@@ -125,6 +156,24 @@ class ProposalService:
         logger.info(f"Proposal #{proposal_id} erstellt: {title} für '{user_key}' von '{created_by}'")
         return {"id": proposal_id, "title": title, "type": proposal_type}
 
+    def _format_auto_confirm(self, proposal_type: str, title: str, payload: dict) -> str:
+        """Bestätigungsnachricht für auto-approved Aktionen."""
+        icon = TYPE_ICONS.get(proposal_type, "✅")
+        lines = [f"{icon} *Direkt erledigt:* {title}"]
+        if proposal_type == TYPE_REMINDER_CREATE:
+            remind_at = payload.get("remind_at", "")
+            if remind_at:
+                try:
+                    dt = datetime.fromisoformat(str(remind_at))
+                    lines.append(f"⏰ {dt.strftime('%d.%m.%Y %H:%M Uhr')}")
+                except Exception:
+                    pass
+        elif proposal_type == TYPE_TASK_CREATE:
+            from src.services.task_service import PRIORITY_ICONS
+            priority = payload.get("priority", "medium")
+            lines.append(f"{PRIORITY_ICONS.get(priority, '')} Priorität: {priority}")
+        return "\n".join(lines)
+
     def _format_proposal_message(
         self, icon: str, title: str, description: str, proposal_type: str, payload: dict
     ) -> str:
@@ -157,6 +206,15 @@ class ProposalService:
             content = payload.get("content", "")
             if content:
                 lines.append(f"\n📝 _{content[:100]}_")
+
+        elif proposal_type == TYPE_TASK_CREATE:
+            priority = payload.get("priority", "medium")
+            from src.services.task_service import PRIORITY_ICONS
+            p_icon = PRIORITY_ICONS.get(priority, "")
+            lines.append(f"\n{p_icon} Priorität: {priority}")
+            assigned_by = payload.get("assigned_by")
+            if assigned_by:
+                lines.append(f"_Zugewiesen von {assigned_by.capitalize()}_")
 
         lines.append("\n\nSoll ich das ausführen?")
         return "\n".join(lines)
@@ -263,6 +321,15 @@ class ProposalService:
                 user_key=user_key,
                 content=payload["content"],
                 is_shared=payload.get("is_shared", False),
+            )
+
+        elif proposal_type == TYPE_TASK_CREATE:
+            await bot.task_service.create_task(
+                user_key=user_key,
+                title=payload["title"],
+                priority=payload.get("priority", "medium"),
+                description=payload.get("description", ""),
+                assigned_by=payload.get("assigned_by"),
             )
 
         elif proposal_type in (TYPE_AI_SUGGESTION, TYPE_SHARED_ACTION):

@@ -33,6 +33,11 @@ class Settings:
     AI_MODEL: str = os.getenv("AI_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
     AI_MODEL_FALLBACK: str = os.getenv("AI_MODEL_FALLBACK", "mistralai/mistral-7b-instruct:free")
 
+    # Voice / Whisper (Groq – kostenlos, 7.200 Sek./Tag)
+    GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
+    GROQ_BASE_URL: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1")
+    WHISPER_MODEL: str = os.getenv("WHISPER_MODEL", "whisper-large-v3")
+
     # Web Search
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
 

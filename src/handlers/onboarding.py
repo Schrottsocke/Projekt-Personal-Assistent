@@ -20,7 +20,7 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 # Zustände des Onboarding-Flows
-WELCOME, ASK_STYLE, ASK_INTERESTS, ASK_CALENDAR, CALENDAR_SETUP, DONE = range(6)
+WELCOME, ASK_STYLE, ASK_INTERESTS, ASK_SCHEDULE, ASK_CALENDAR, CALENDAR_SETUP, DONE = range(7)
 
 
 def get_bot(context: ContextTypes.DEFAULT_TYPE):
@@ -93,12 +93,45 @@ async def ask_interests_callback(update: Update, context: ContextTypes.DEFAULT_T
         f"_(z.B. Arbeit, Sport, Kochen, Reisen, Familie... schreib einfach frei)_",
         parse_mode="Markdown",
     )
+    return ASK_SCHEDULE
+
+
+async def ask_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Fragt nach Arbeitszeiten und Quiet Hours."""
+    context.user_data["interests"] = update.message.text.strip()
+
+    keyboard = [
+        [
+            InlineKeyboardButton("🌅 Morgens (6–14 Uhr)", callback_data="focus_morgen"),
+            InlineKeyboardButton("☀️ Mittags (10–18 Uhr)", callback_data="focus_mittag"),
+        ],
+        [
+            InlineKeyboardButton("🌆 Abends (14–22 Uhr)", callback_data="focus_abend"),
+            InlineKeyboardButton("⏭ Überspringen", callback_data="focus_skip"),
+        ],
+    ]
+    await update.message.reply_text(
+        f"Super! 🙌\n\n"
+        f"Wann bist du am produktivsten?\n"
+        f"_(Hilft mir beim Tagesplan und damit ich dich nicht zur falschen Zeit störe)_",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode="Markdown",
+    )
     return ASK_CALENDAR
 
 
 async def ask_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    bot = get_bot(context)
-    context.user_data["interests"] = update.message.text.strip()
+    """Wird durch Callback von ask_schedule aufgerufen."""
+    query = update.callback_query
+    await query.answer()
+
+    focus_map = {
+        "focus_morgen": "morgen",
+        "focus_mittag": "mittag",
+        "focus_abend": "abend",
+        "focus_skip": None,
+    }
+    context.user_data["focus_time"] = focus_map.get(query.data)
 
     keyboard = [
         [
@@ -106,8 +139,8 @@ async def ask_calendar(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("⏭ Später", callback_data="calendar_skip"),
         ]
     ]
-    await update.message.reply_text(
-        f"Danke! Das hilft mir, dich besser zu verstehen. 🙂\n\n"
+    await query.edit_message_text(
+        f"Notiert! 📝\n\n"
         f"Möchtest du jetzt Google Calendar verbinden?\n"
         f"_(Damit kann ich Termine erstellen, anzeigen und dich daran erinnern)_",
         reply_markup=InlineKeyboardMarkup(keyboard),
@@ -186,17 +219,20 @@ async def _finish_onboarding(bot, chat_id: int, context: ContextTypes.DEFAULT_TY
     nickname = context.user_data.get("nickname", bot.name)
     style = context.user_data.get("style", "locker")
     interests = context.user_data.get("interests", "")
+    focus_time = context.user_data.get("focus_time")
 
     # Im Gedächtnis speichern + Chat-ID für proaktive Nachrichten
     try:
-        await bot.memory_service.add_memory(
-            user_key=user_key,
-            content=f"Der Nutzer heißt {nickname}. Kommunikationsstil: {style}. "
-                    f"Interessen und Fokus: {interests}.",
+        memory_text = (
+            f"Der Nutzer heißt {nickname}. Kommunikationsstil: {style}. "
+            f"Interessen und Fokus: {interests}."
         )
+        if focus_time:
+            memory_text += f" Ist am produktivsten am {focus_time}."
+        await bot.memory_service.add_memory(user_key=user_key, content=memory_text)
         await bot.memory_service.mark_onboarded(user_key=user_key)
 
-        # Chat-ID speichern (für Briefing, Erinnerungen, proaktive Nachrichten)
+        # Chat-ID + Profil-Daten speichern
         from src.services.database import UserProfile, get_db
         with get_db()() as session:
             profile = session.query(UserProfile).filter_by(user_key=user_key).first()
@@ -205,6 +241,8 @@ async def _finish_onboarding(bot, chat_id: int, context: ContextTypes.DEFAULT_TY
                 profile.nickname = nickname
                 profile.communication_style = style
                 profile.interests = interests
+                if focus_time:
+                    profile.focus_time = focus_time
     except Exception as e:
         logger.error(f"Onboarding-Speicher-Fehler: {e}")
 
@@ -246,8 +284,11 @@ def register_onboarding_handler(app: Application):
             ASK_INTERESTS: [
                 CallbackQueryHandler(ask_interests_callback, pattern="^style_")
             ],
+            ASK_SCHEDULE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, ask_schedule)
+            ],
             ASK_CALENDAR: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, ask_calendar)
+                CallbackQueryHandler(ask_calendar, pattern="^focus_")
             ],
             CALENDAR_SETUP: [
                 CallbackQueryHandler(calendar_setup_callback, pattern="^calendar_")

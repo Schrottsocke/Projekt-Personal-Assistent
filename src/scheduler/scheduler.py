@@ -158,6 +158,10 @@ class AssistantScheduler:
 
         for user_key, bot in self._bots.items():
             try:
+                if self._is_quiet_hours(user_key):
+                    logger.info(f"Mustererkennung für '{user_key}' übersprungen (Ruhezeit).")
+                    continue
+
                 chat_id = await self._get_chat_id(user_key)
                 if not chat_id:
                     continue
@@ -197,6 +201,10 @@ class AssistantScheduler:
 
         for user_key, bot in self._bots.items():
             try:
+                if self._is_quiet_hours(user_key):
+                    logger.info(f"Wochenrückblick für '{user_key}' übersprungen (Ruhezeit).")
+                    continue
+
                 chat_id = await self._get_chat_id(user_key)
                 if not chat_id:
                     continue
@@ -229,3 +237,36 @@ class AssistantScheduler:
         except Exception as e:
             logger.warning(f"Chat-ID-Abruf-Fehler: {e}")
             return None
+
+    def _is_quiet_hours(self, user_key: str) -> bool:
+        """
+        Gibt True zurück wenn der User gerade Ruhezeit hat.
+        Gilt nur für proaktive Nachrichten (Muster, Weekly Review) –
+        nicht für explizit gesetzte Erinnerungen.
+        """
+        try:
+            from src.services.database import UserProfile, get_db
+            with get_db()() as session:
+                profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+                if not profile or not profile.quiet_start:
+                    return False
+
+                tz = pytz.timezone(settings.TIMEZONE)
+                now = datetime.now(tz)
+                current_minutes = now.hour * 60 + now.minute
+
+                quiet_h, quiet_m = (int(x) for x in profile.quiet_start.split(":"))
+                quiet_start_min = quiet_h * 60 + quiet_m
+
+                quiet_end_str = profile.quiet_end or "07:00"
+                end_h, end_m = (int(x) for x in quiet_end_str.split(":"))
+                quiet_end_min = end_h * 60 + end_m
+
+                if quiet_start_min > quiet_end_min:
+                    # Über Mitternacht (z.B. 22:00 – 07:00)
+                    return current_minutes >= quiet_start_min or current_minutes < quiet_end_min
+                else:
+                    return quiet_start_min <= current_minutes < quiet_end_min
+        except Exception as e:
+            logger.warning(f"Quiet-Hours-Check-Fehler: {e}")
+            return False

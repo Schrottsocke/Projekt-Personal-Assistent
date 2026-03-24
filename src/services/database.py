@@ -35,6 +35,15 @@ class UserProfile(Base):
     communication_style = Column(String(50), default="casual")
     interests = Column(Text, nullable=True)
     chat_id = Column(String(50), nullable=True)  # Telegram Chat-ID für Proaktive Nachrichten
+    # Trust-System: Komma-getrennte Proposal-Typen die auto-approved werden
+    auto_approve_types = Column(Text, default="timer_create")
+    # Persönlichkeitsprofil (Onboarding 2.0)
+    work_start = Column(String(10), nullable=True)   # z.B. "09:00"
+    work_end = Column(String(10), nullable=True)     # z.B. "18:00"
+    quiet_start = Column(String(10), nullable=True)  # z.B. "22:00"
+    quiet_end = Column(String(10), nullable=True)    # z.B. "07:00"
+    focus_time = Column(String(20), nullable=True)   # "morgen" / "mittag" / "abend"
+    week_structure = Column(Text, nullable=True)     # Freitext
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -82,6 +91,22 @@ class Proposal(Base):
     telegram_chat_id = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     decided_at = Column(DateTime, nullable=True)
+
+
+class Task(Base):
+    """Aufgaben/To-Do mit Status-Tracking und Cross-Bot-Zuweisung."""
+    __tablename__ = "tasks"
+
+    id = Column(Integer, primary_key=True)
+    user_key = Column(String(50), nullable=False)       # Besitzer der Aufgabe
+    assigned_by = Column(String(50), nullable=True)     # user_key des Zuweisers (cross-bot)
+    title = Column(String(300), nullable=False)
+    description = Column(Text, nullable=True)
+    priority = Column(String(10), default="medium")     # high / medium / low
+    due_date = Column(DateTime, nullable=True)
+    status = Column(String(20), default="open")         # open / in_progress / done
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class ConversationHistory(Base):

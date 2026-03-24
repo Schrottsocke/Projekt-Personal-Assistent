@@ -19,6 +19,7 @@ from src.services.reminder_service import ReminderService
 from src.memory.memory_service import MemoryService
 from src.scheduler.scheduler import AssistantScheduler
 from src.services.proposal_service import ProposalService
+from src.services.task_service import TaskService
 from src.bots.taake_bot import TaakeBot
 from src.bots.nina_bot import NinaBot
 
@@ -74,12 +75,14 @@ async def main():
     notes_service = NotesService()
     reminder_service = ReminderService()
     proposal_service = ProposalService()
+    task_service = TaskService()
 
     await memory_service.initialize()
     await calendar_service.initialize()
     await notes_service.initialize()
     await reminder_service.initialize()
     await proposal_service.initialize()
+    await task_service.initialize()
 
     logger.info("Services bereit.")
 
@@ -96,6 +99,7 @@ async def main():
             notes_service=notes_service,
             reminder_service=reminder_service,
             proposal_service=proposal_service,
+            task_service=task_service,
         )
 
     # Telegram Applications bauen

@@ -28,10 +28,16 @@ async def generate_briefing(bot) -> str:
     except Exception:
         memories = []
 
+    try:
+        open_tasks = await bot.task_service.get_open_tasks(user_key=user_key)
+    except Exception:
+        open_tasks = []
+
     return await bot.ai_service.generate_morning_briefing(
         user_key=user_key,
         name=bot.name,
         events=events,
         reminders=reminders,
         memories=memories,
+        open_tasks=open_tasks,
     )
