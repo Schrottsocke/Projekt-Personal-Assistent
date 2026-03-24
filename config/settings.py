@@ -19,6 +19,8 @@ class BotConfig:
 
 
 class Settings:
+    BASE_DIR: Path = BASE_DIR
+
     # Telegram Bots
     BOT_TOKEN_TAAKE: str = os.getenv("BOT_TOKEN_TAAKE", "")
     BOT_TOKEN_NINA: str = os.getenv("BOT_TOKEN_NINA", "")

@@ -30,9 +30,16 @@ async def cmd_hilfe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/erinnerung – Neue Erinnerung setzen\n"
         "/erinnerungen – Aktive Erinnerungen\n"
         "/briefing – Morgen-Briefing jetzt\n"
+        "/vorschlaege – Offene Vorschläge anzeigen\n"
         "/gedaechtnis – Was ich über dich weiß\n"
         "/hilfe – Diese Hilfe\n\n"
-        "💬 Oder schreib einfach frei – ich verstehe natürliche Sprache!\n"
+        "🧠 *Ich lerne mit:*\n"
+        "• Merke mir Fakten aus Gesprächen\n"
+        "• Erkenne deine Stimmung und passe meinen Ton an\n"
+        "• Schlage proaktiv Termine & Erinnerungen vor\n"
+        "• Wenn du deinen Partner erwähnst, teile ich den Kontext\n"
+        "• Sonntags bekommst du einen Wochenrückblick\n\n"
+        "💬 Schreib einfach frei – ich verstehe natürliche Sprache!\n"
         "_z.B. \"Erinnere mich morgen um 10 an Zahnarzt\"_"
     )
     await update.message.reply_text(text, parse_mode="Markdown")

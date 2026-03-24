@@ -187,7 +187,7 @@ async def _finish_onboarding(bot, chat_id: int, context: ContextTypes.DEFAULT_TY
     style = context.user_data.get("style", "locker")
     interests = context.user_data.get("interests", "")
 
-    # Im Gedächtnis speichern
+    # Im Gedächtnis speichern + Chat-ID für proaktive Nachrichten
     try:
         await bot.memory_service.add_memory(
             user_key=user_key,
@@ -195,6 +195,16 @@ async def _finish_onboarding(bot, chat_id: int, context: ContextTypes.DEFAULT_TY
                     f"Interessen und Fokus: {interests}.",
         )
         await bot.memory_service.mark_onboarded(user_key=user_key)
+
+        # Chat-ID speichern (für Briefing, Erinnerungen, proaktive Nachrichten)
+        from src.services.database import UserProfile, get_db
+        with get_db()() as session:
+            profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+            if profile:
+                profile.chat_id = str(chat_id)
+                profile.nickname = nickname
+                profile.communication_style = style
+                profile.interests = interests
     except Exception as e:
         logger.error(f"Onboarding-Speicher-Fehler: {e}")
 

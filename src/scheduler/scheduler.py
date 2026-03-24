@@ -1,5 +1,6 @@
 """
-APScheduler: Proaktive Nachrichten - Morgen-Briefing & Erinnerungen.
+APScheduler: Proaktive Nachrichten - Morgen-Briefing, Erinnerungen,
+Mustererkennung (alle 2 Tage), Wochenrückblick (Sonntags).
 """
 
 import asyncio
@@ -20,6 +21,8 @@ class AssistantScheduler:
     Verwaltet alle geplanten Aufgaben:
     - Morgen-Briefing (täglich zur konfigurierten Uhrzeit)
     - Erinnerungen (prüft jede Minute auf fällige Erinnerungen)
+    - Proaktive Mustererkennung (alle 2 Tage um 20:00)
+    - Wochenrückblick (jeden Sonntag um 18:00)
     """
 
     def __init__(self):
@@ -56,9 +59,28 @@ class AssistantScheduler:
             name="Erinnerungs-Check",
         )
 
+        # Proaktive Mustererkennung (alle 2 Tage um 20:00)
+        self.scheduler.add_job(
+            self._run_pattern_analysis,
+            CronTrigger(hour=20, minute=0, day="*/2", timezone=settings.TIMEZONE),
+            id="pattern_analysis",
+            replace_existing=True,
+            name="Proaktive Mustererkennung",
+        )
+
+        # Wochenrückblick (jeden Sonntag um 18:00)
+        self.scheduler.add_job(
+            self._send_weekly_reviews,
+            CronTrigger(day_of_week="sun", hour=18, minute=0, timezone=settings.TIMEZONE),
+            id="weekly_review",
+            replace_existing=True,
+            name="Wochenrückblick",
+        )
+
         self.scheduler.start()
         logger.info(
-            f"Scheduler gestartet. Briefing täglich um {settings.MORNING_BRIEFING_TIME} Uhr."
+            f"Scheduler gestartet: Briefing {settings.MORNING_BRIEFING_TIME}, "
+            f"Mustererkennung Mo/Mi/Fr/So 20:00, Wochenrückblick So 18:00."
         )
 
     def stop(self):
@@ -129,6 +151,73 @@ class AssistantScheduler:
                     logger.info(f"Erinnerung #{reminder_id} gesendet an '{user_key}'.")
                 except Exception as e:
                     logger.error(f"Erinnerungs-Send-Fehler für '{user_key}': {e}")
+
+    async def _run_pattern_analysis(self):
+        """Proaktive Mustererkennung: analysiert Daten und erstellt Proposals."""
+        logger.info("Starte proaktive Mustererkennung...")
+
+        for user_key, bot in self._bots.items():
+            try:
+                chat_id = await self._get_chat_id(user_key)
+                if not chat_id:
+                    continue
+
+                intelligence = bot.ai_service.intelligence
+                suggestions = await intelligence.analyze_patterns(
+                    user_key=user_key, bot=bot
+                )
+
+                for suggestion in suggestions:
+                    s_type = suggestion.get("type", "ai_suggestion")
+                    title = suggestion.get("title", "Vorschlag")
+                    desc = suggestion.get("description", "")
+                    payload = suggestion.get("payload", {})
+
+                    await bot.proposal_service.create_proposal(
+                        user_key=user_key,
+                        proposal_type=s_type,
+                        title=title,
+                        description=desc,
+                        payload=payload,
+                        created_by="ai_pattern",
+                        chat_id=chat_id,
+                    )
+
+                if suggestions:
+                    logger.info(
+                        f"Mustererkennung für '{user_key}': "
+                        f"{len(suggestions)} Vorschläge erstellt."
+                    )
+            except Exception as e:
+                logger.error(f"Mustererkennung-Fehler für '{user_key}': {e}")
+
+    async def _send_weekly_reviews(self):
+        """Sendet Wochenrückblick an alle registrierten Bots."""
+        logger.info("Sende Wochenrückblicke...")
+
+        for user_key, bot in self._bots.items():
+            try:
+                chat_id = await self._get_chat_id(user_key)
+                if not chat_id:
+                    continue
+
+                intelligence = bot.ai_service.intelligence
+                review_text = await intelligence.generate_weekly_review(
+                    user_key=user_key,
+                    name=bot.name,
+                    bot=bot,
+                )
+
+                app = self._applications.get(user_key)
+                if app:
+                    await app.bot.send_message(
+                        chat_id=chat_id,
+                        text=review_text,
+                        parse_mode="Markdown",
+                    )
+                    logger.info(f"Wochenrückblick gesendet an '{user_key}'.")
+            except Exception as e:
+                logger.error(f"Wochenrückblick-Fehler für '{user_key}': {e}")
 
     async def _get_chat_id(self, user_key: str) -> str | None:
         """Holt Chat-ID aus DB."""

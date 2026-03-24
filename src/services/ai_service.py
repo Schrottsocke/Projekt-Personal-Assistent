@@ -38,6 +38,14 @@ class AIService:
         self._model = settings.AI_MODEL
         self._fallback_model = settings.AI_MODEL_FALLBACK
         self.tz = pytz.timezone(settings.TIMEZONE)
+        self._intelligence = None  # Lazy init
+
+    @property
+    def intelligence(self):
+        if self._intelligence is None:
+            from src.services.intelligence import IntelligenceEngine
+            self._intelligence = IntelligenceEngine(self)
+        return self._intelligence
 
     @retry(
         stop=stop_after_attempt(2),
@@ -140,8 +148,13 @@ Antworte NUR mit diesem JSON-Format:
             return INTENT_CHAT, {}
 
     async def _handle_chat(self, message: str, user_key: str, bot) -> str:
-        """Normaler Chat mit Kontext aus Gedächtnis."""
-        # Relevante Erinnerungen suchen
+        """Normaler Chat mit Kontext aus Gedächtnis + Stimmungserkennung."""
+        # 1. Stimmung erkennen (parallel mit Memory-Suche)
+        mood_data = await self.intelligence.detect_mood(message)
+        mood = mood_data.get("mood", "neutral")
+        tone_adj = mood_data.get("tone_adjustment", "")
+
+        # 2. Relevante Erinnerungen suchen
         memories = await bot.memory_service.search_memories(user_key=user_key, query=message)
         memory_context = ""
         if memories:
@@ -149,12 +162,15 @@ Antworte NUR mit diesem JSON-Format:
             if memory_lines:
                 memory_context = "Was du über den Nutzer weißt:\n" + "\n".join(f"- {m}" for m in memory_lines)
 
-        # Gesprächsverlauf aus DB holen
+        # 3. Gesprächsverlauf aus DB holen
         history = await self._get_conversation_history(user_key, limit=6)
 
+        # 4. System-Prompt dynamisch anpassen (Stimmung + Gedächtnis)
         system_prompt = bot.get_system_prompt()
         if memory_context:
             system_prompt += f"\n\n{memory_context}"
+        if mood != "neutral" and tone_adj:
+            system_prompt += f"\n\nAktuelle Stimmung des Nutzers: {mood}. {tone_adj}"
 
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(history)
@@ -162,15 +178,58 @@ Antworte NUR mit diesem JSON-Format:
 
         response = await self._complete(messages)
 
-        # Konversation im Gedächtnis speichern (im Hintergrund)
+        # 5. Smarte Fakten-Extraktion (statt rohen Chat speichern)
         try:
-            await bot.memory_service.add_conversation_turn(user_key, message, response)
+            facts = await self.intelligence.extract_facts(user_key, message, response)
+            for fact in facts:
+                await bot.memory_service.add_memory(user_key=user_key, content=fact)
             await self._save_conversation_turn(user_key, "user", message)
             await self._save_conversation_turn(user_key, "assistant", response)
         except Exception as e:
             logger.warning(f"Konversation konnte nicht gespeichert werden: {e}")
 
+        # 6. Cross-User Awareness: Partner-Erwähnung prüfen
+        try:
+            partner_key = "nina" if user_key == "taake" else "taake"
+            mention = await self.intelligence.detect_cross_user_mention(
+                user_key=user_key, message=message, partner_key=partner_key
+            )
+            if mention and mention.get("context"):
+                # Kontext im Gedächtnis des Partners speichern
+                shared_context = f"[Geteilt von {user_key.capitalize()}]: {mention['context']}"
+                await bot.memory_service.add_memory(
+                    user_key=partner_key, content=shared_context
+                )
+                logger.info(f"Cross-User: {user_key} → {partner_key}: {mention['context'][:60]}")
+
+                # Bei gemeinsamen Events: Shared-Proposal für Partner erstellen
+                if mention.get("shared_event") and bot.proposal_service:
+                    from src.services.proposal_service import TYPE_SHARED_ACTION
+                    partner_chat_id = await self._get_partner_chat_id(partner_key)
+                    if partner_chat_id:
+                        await bot.proposal_service.create_proposal(
+                            user_key=partner_key,
+                            proposal_type=TYPE_SHARED_ACTION,
+                            title=f"Info von {user_key.capitalize()}",
+                            description=mention["context"],
+                            payload={"source": user_key, "context": mention["context"]},
+                            created_by=f"bot_{user_key}",
+                            chat_id=partner_chat_id,
+                        )
+        except Exception as e:
+            logger.warning(f"Cross-User-Check fehlgeschlagen: {e}")
+
         return response
+
+    async def _get_partner_chat_id(self, partner_key: str) -> Optional[str]:
+        """Holt die Chat-ID des Partners aus der DB."""
+        try:
+            from src.services.database import UserProfile, get_db
+            with get_db()() as session:
+                profile = session.query(UserProfile).filter_by(user_key=partner_key).first()
+                return profile.chat_id if profile else None
+        except Exception:
+            return None
 
     async def _handle_calendar_read(self, bot, user_key: str) -> str:
         try:
