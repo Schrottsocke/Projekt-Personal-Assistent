@@ -26,6 +26,21 @@ class CalendarService:
     def __init__(self):
         self.tz = pytz.timezone(settings.TIMEZONE)
         self._credentials: dict = {}  # user_key -> Credentials
+        self._cache: dict[str, tuple[list, datetime]] = {}  # key → (data, expires_at)
+
+    def _get_cached(self, key: str) -> list | None:
+        entry = self._cache.get(key)
+        if entry and datetime.utcnow() < entry[1]:
+            return entry[0]
+        return None
+
+    def _set_cached(self, key: str, data: list):
+        ttl = settings.CALENDAR_CACHE_TTL_MINUTES
+        self._cache[key] = (data, datetime.utcnow() + timedelta(minutes=ttl))
+
+    def _invalidate_cache(self, user_key: str):
+        """Löscht alle Cache-Einträge für einen User (nach create/delete)."""
+        self._cache = {k: v for k, v in self._cache.items() if user_key not in k}
 
     async def initialize(self):
         """Lädt bestehende Tokens beim Start."""
@@ -124,7 +139,13 @@ class CalendarService:
     async def get_upcoming_events(
         self, user_key: str, days: int = 7, max_results: int = 15
     ) -> list[dict]:
-        """Gibt kommende Termine zurück."""
+        """Gibt kommende Termine zurück (mit TTL-Cache)."""
+        cache_key = f"upcoming_{user_key}_{days}_{max_results}"
+        cached = self._get_cached(cache_key)
+        if cached is not None:
+            logger.debug(f"Calendar cache hit: {cache_key}")
+            return cached
+
         try:
             service = self._get_service(user_key)
             now = datetime.now(self.tz)
@@ -142,7 +163,9 @@ class CalendarService:
                 )
                 .execute()
             )
-            return events_result.get("items", [])
+            result = events_result.get("items", [])
+            self._set_cached(cache_key, result)
+            return result
 
         except ValueError:
             raise  # Nicht-verbunden Fehler weiterwerfen
@@ -151,7 +174,13 @@ class CalendarService:
             raise
 
     async def get_todays_events(self, user_key: str) -> list[dict]:
-        """Gibt nur heutige Termine zurück."""
+        """Gibt nur heutige Termine zurück (mit TTL-Cache)."""
+        cache_key = f"today_{user_key}"
+        cached = self._get_cached(cache_key)
+        if cached is not None:
+            logger.debug(f"Calendar cache hit: {cache_key}")
+            return cached
+
         try:
             service = self._get_service(user_key)
             now = datetime.now(self.tz)
@@ -170,7 +199,9 @@ class CalendarService:
                 )
                 .execute()
             )
-            return events_result.get("items", [])
+            result = events_result.get("items", [])
+            self._set_cached(cache_key, result)
+            return result
         except Exception as e:
             logger.error(f"Calendar-GetToday-Fehler: {e}")
             return []
@@ -209,6 +240,7 @@ class CalendarService:
             }
 
             created = service.events().insert(calendarId="primary", body=event).execute()
+            self._invalidate_cache(user_key)
             logger.info(f"Event erstellt für '{user_key}': {summary}")
             return created
 
@@ -221,6 +253,7 @@ class CalendarService:
         try:
             service = self._get_service(user_key)
             service.events().delete(calendarId="primary", eventId=event_id).execute()
+            self._invalidate_cache(user_key)
             return True
         except Exception as e:
             logger.error(f"Calendar-DeleteEvent-Fehler: {e}")

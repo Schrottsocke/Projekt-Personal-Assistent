@@ -72,6 +72,12 @@ class Settings:
     # Document Generation
     DOCUMENTS_DIR: Path = BASE_DIR / "data" / "documents"
 
+    # Calendar Cache (TTL in Minuten)
+    CALENDAR_CACHE_TTL_MINUTES: int = int(os.getenv("CALENDAR_CACHE_TTL_MINUTES", "5"))
+
+    # Conversation History Pruning (Einträge älter als N Tage löschen)
+    CONVERSATION_HISTORY_DAYS: int = int(os.getenv("CONVERSATION_HISTORY_DAYS", "30"))
+
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: Path = BASE_DIR / os.getenv("LOG_FILE", "logs/assistant.log")

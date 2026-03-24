@@ -176,6 +176,27 @@ def init_db():
     logger.info(f"Datenbank initialisiert: {settings.DATABASE_URL}")
 
 
+def prune_conversation_history(days: int = 30) -> int:
+    """Löscht Conversation-History-Einträge älter als 'days' Tage.
+    Returns: Anzahl gelöschter Zeilen."""
+    from datetime import timedelta
+    import sqlalchemy
+
+    if _engine is None:
+        return 0
+
+    cutoff = datetime.utcnow() - timedelta(days=days)
+    with _engine.connect() as conn:
+        result = conn.execute(
+            sqlalchemy.text(
+                "DELETE FROM conversation_history WHERE created_at < :cutoff"
+            ),
+            {"cutoff": cutoff},
+        )
+        conn.commit()
+        return result.rowcount
+
+
 def get_db():
     """Gibt einen Session-Factory-Context-Manager zurück."""
     if _SessionLocal is None:

@@ -77,6 +77,15 @@ class AssistantScheduler:
             name="Wochenrückblick",
         )
 
+        # Conversation-History-Pruning (täglich um 03:00)
+        self.scheduler.add_job(
+            self._prune_conversation_history,
+            CronTrigger(hour=3, minute=0, timezone=settings.TIMEZONE),
+            id="conversation_pruning",
+            replace_existing=True,
+            name="Conversation-History-Pruning",
+        )
+
         self.scheduler.start()
         logger.info(
             f"Scheduler gestartet: Briefing {settings.MORNING_BRIEFING_TIME}, "
@@ -279,6 +288,16 @@ class AssistantScheduler:
         except Exception as e:
             logger.warning(f"Quiet-Hours-Check-Fehler: {e}")
             return False
+
+    async def _prune_conversation_history(self):
+        """Löscht Conversation-History-Einträge die älter als CONVERSATION_HISTORY_DAYS sind."""
+        try:
+            from src.services.database import prune_conversation_history
+            days = settings.CONVERSATION_HISTORY_DAYS
+            deleted = prune_conversation_history(days=days)
+            logger.info(f"Conversation-Pruning: {deleted} Einträge gelöscht (> {days} Tage).")
+        except Exception as e:
+            logger.error(f"Conversation-Pruning-Fehler: {e}")
 
     def _is_focus_mode(self, user_key: str) -> bool:
         """Gibt True zurück wenn der User gerade im Fokus-Modus ist."""
