@@ -7,7 +7,16 @@ import logging
 from telegram import Update
 from telegram.ext import MessageHandler, filters, ContextTypes, Application
 
+from src.services.rate_limiter import rate_limiter
+
 logger = logging.getLogger(__name__)
+
+# Maximale Nachrichtenlänge in Zeichen.
+# Längere Nachrichten werden abgeschnitten und der User informiert.
+# Begründung: Ein 10.000-Zeichen-Text würde ~7.500 Tokens kosten –
+# bei jedem API-Call. Die Grenze schützt vor versehentlichem
+# oder absichtlichem Credit-Drain durch sehr lange Eingaben.
+MAX_MESSAGE_LENGTH = 2000
 
 
 def get_bot(context: ContextTypes.DEFAULT_TYPE):
@@ -19,9 +28,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await bot._check_auth(update):
         return
 
-    user_message = update.message.text
     user_key = bot.name.lower()
     chat_id = update.effective_chat.id
+
+    # 1. Rate Limiting prüfen
+    allowed, reason = rate_limiter.check(user_key)
+    if not allowed:
+        if reason == "minute":
+            await update.message.reply_text(
+                "⏳ Kurz durchatmen – so viele Nachrichten auf einmal kann ich nicht verarbeiten.\n"
+                "Warte eine Minute und schreib dann nochmal."
+            )
+        else:
+            await update.message.reply_text(
+                "📊 Tages-Limit erreicht. Morgen bin ich wieder voll dabei!"
+            )
+        return
+
+    # 2. Eingabelänge prüfen und ggf. kürzen
+    user_message = update.message.text
+    if len(user_message) > MAX_MESSAGE_LENGTH:
+        user_message = user_message[:MAX_MESSAGE_LENGTH]
+        await update.message.reply_text(
+            f"✂️ _Deine Nachricht war sehr lang und wurde auf {MAX_MESSAGE_LENGTH} Zeichen gekürzt._",
+            parse_mode="Markdown",
+        )
 
     # Typing-Indikator
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")

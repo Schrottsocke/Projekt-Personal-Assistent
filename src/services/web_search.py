@@ -110,14 +110,59 @@ class WebSearchService:
             logger.error(f"DuckDuckGo-Fehler: {e}")
             return []
 
+    # Muster die auf Prompt-Injection-Versuche hindeuten.
+    # Gefundene Zeilen werden durch einen Platzhalter ersetzt,
+    # nicht still gelöscht, damit das LLM den Kontext nicht verliert.
+    _INJECTION_PATTERNS = [
+        "ignore previous instructions",
+        "ignore all previous",
+        "ignore the above",
+        "disregard previous",
+        "disregard all previous",
+        "forget previous instructions",
+        "new instructions:",
+        "system prompt:",
+        "you are now",
+        "act as",
+        "jailbreak",
+        "ignoriere alle vorherigen",
+        "ignoriere die obigen",
+        "neue anweisungen:",
+        "du bist jetzt",
+        "vergiss alle",
+    ]
+
+    def _sanitize_snippet(self, text: str) -> str:
+        """
+        Entfernt bekannte Prompt-Injection-Muster aus einem Snippet.
+        Arbeitet zeilenweise: verdächtige Zeilen werden markiert,
+        nicht still gelöscht – so bleibt der Kontext erhalten und
+        das LLM weiß, dass hier etwas entfernt wurde.
+        """
+        clean_lines = []
+        for line in text.splitlines():
+            line_lower = line.lower().strip()
+            if any(pattern in line_lower for pattern in self._INJECTION_PATTERNS):
+                clean_lines.append("[Inhalt aus Sicherheitsgründen entfernt]")
+                logger.warning(f"Prompt-Injection-Versuch in Suchergebnis erkannt: {line[:80]!r}")
+            else:
+                clean_lines.append(line)
+        return "\n".join(clean_lines)
+
     def format_for_prompt(self, results: list[dict]) -> str:
-        """Formatiert Suchergebnisse als kompakten Kontext-Block für den LLM-Prompt."""
+        """
+        Formatiert Suchergebnisse als sicheren Kontext-Block für den LLM-Prompt.
+
+        Wichtig: Die Ergebnisse werden in einen expliziten <search_results>-Block
+        eingebettet. Das signalisiert dem Modell klar, dass es sich um externe,
+        nicht vertrauenswürdige Daten handelt – keine Anweisungen.
+        """
         if not results:
             return "Keine Suchergebnisse gefunden."
         lines = []
         for i, r in enumerate(results, 1):
-            title = r.get("title", "")
-            snippet = r.get("snippet", "")
+            title = self._sanitize_snippet(r.get("title", ""))
+            snippet = self._sanitize_snippet(r.get("snippet", ""))
             url = r.get("url", "")
             if url:
                 lines.append(f"[{i}] {title}\n{snippet}\nQuelle: {url}")
