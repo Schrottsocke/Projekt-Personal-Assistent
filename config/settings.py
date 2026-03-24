@@ -33,6 +33,9 @@ class Settings:
     AI_MODEL: str = os.getenv("AI_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
     AI_MODEL_FALLBACK: str = os.getenv("AI_MODEL_FALLBACK", "mistralai/mistral-7b-instruct:free")
 
+    # Web Search
+    TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
+
     # Memory
     MEMORY_MODE: str = os.getenv("MEMORY_MODE", "local")
     MEM0_API_KEY: str = os.getenv("MEM0_API_KEY", "")

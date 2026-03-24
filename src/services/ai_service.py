@@ -20,6 +20,7 @@ INTENT_CALENDAR_READ = "calendar_read"
 INTENT_CALENDAR_CREATE = "calendar_create"
 INTENT_NOTE_CREATE = "note_create"
 INTENT_REMINDER_CREATE = "reminder_create"
+INTENT_WEB_SEARCH = "web_search"
 INTENT_CHAT = "chat"
 INTENT_BRIEFING = "briefing"
 
@@ -39,6 +40,7 @@ class AIService:
         self._fallback_model = settings.AI_MODEL_FALLBACK
         self.tz = pytz.timezone(settings.TIMEZONE)
         self._intelligence = None  # Lazy init
+        self._web_search = None   # Lazy init
 
     @property
     def intelligence(self):
@@ -46,6 +48,13 @@ class AIService:
             from src.services.intelligence import IntelligenceEngine
             self._intelligence = IntelligenceEngine(self)
         return self._intelligence
+
+    @property
+    def web_search(self):
+        if self._web_search is None:
+            from src.services.web_search import WebSearchService
+            self._web_search = WebSearchService()
+        return self._web_search
 
     @retry(
         stop=stop_after_attempt(2),
@@ -102,6 +111,9 @@ class AIService:
         elif intent == INTENT_REMINDER_CREATE:
             return await self._handle_reminder_create(bot, user_key, chat_id, extracted)
 
+        elif intent == INTENT_WEB_SEARCH:
+            return await self._handle_web_search(message, extracted, user_key, bot)
+
         else:
             # Normaler Chat mit Kontext-Gedächtnis
             return await self._handle_chat(message, user_key, bot)
@@ -123,11 +135,12 @@ Mögliche Intents:
 - calendar_create: Nutzer will Termin erstellen (z.B. "Zahnarzt am Montag um 10", "Meeting morgen 14 Uhr")
 - note_create: Nutzer will eine Notiz speichern (z.B. "Notiz: ...", "Merkzettel für ...")
 - reminder_create: Nutzer will erinnert werden (z.B. "Erinnere mich...", "In 2 Stunden...", "Morgen um 9...")
-- chat: Alles andere (Fragen, Konversation, Hilfe)
+- web_search: Nutzer fragt nach aktuellen/externen Infos die ein Live-Abruf brauchen (Wetter, Nachrichten, Preise, aktuelle Events, Öffnungszeiten, Rezepte, Definitionen, etc.)
+- chat: Alles andere (persönliche Fragen, Konversation, Meinungen, Erinnerungen aus Gesprächen)
 
 Antworte NUR mit diesem JSON-Format:
 {{
-  "intent": "calendar_read|calendar_create|note_create|reminder_create|chat",
+  "intent": "calendar_read|calendar_create|note_create|reminder_create|web_search|chat",
   "confidence": 0.0-1.0,
   "extracted": {{
     "content": "extrahierter Kerninhalt",
@@ -218,6 +231,55 @@ Antworte NUR mit diesem JSON-Format:
                         )
         except Exception as e:
             logger.warning(f"Cross-User-Check fehlgeschlagen: {e}")
+
+        return response
+
+    async def _handle_web_search(
+        self, message: str, extracted: dict, user_key: str, bot
+    ) -> str:
+        """Web-Suche + KI-Antwort mit aktuellen Daten als Kontext."""
+        if not self.web_search.available:
+            # Kein Search-Provider → normaler Chat als Fallback
+            return await self._handle_chat(message, user_key, bot)
+
+        query = extracted.get("content") or message
+        logger.info(f"Web-Suche für '{user_key}': {query[:60]}")
+
+        results = await self.web_search.search(query)
+        search_context = self.web_search.format_for_prompt(results)
+
+        # Gedächtnis-Kontext
+        memories = await bot.memory_service.search_memories(user_key=user_key, query=message)
+        memory_context = ""
+        if memories:
+            lines = [m.get("memory", "") for m in memories if m.get("memory")]
+            if lines:
+                memory_context = "Was du über den Nutzer weißt:\n" + "\n".join(f"- {l}" for l in lines)
+
+        system_prompt = bot.get_system_prompt()
+        if memory_context:
+            system_prompt += f"\n\n{memory_context}"
+
+        now = datetime.now(self.tz)
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {
+                "role": "user",
+                "content": (
+                    f"Aktuelle Web-Suchergebnisse (Stand: {now.strftime('%d.%m.%Y %H:%M')}):\n\n"
+                    f"{search_context}\n\n"
+                    f"Frage: {message}"
+                ),
+            },
+        ]
+
+        response = await self._complete(messages)
+
+        try:
+            await self._save_conversation_turn(user_key, "user", message)
+            await self._save_conversation_turn(user_key, "assistant", response)
+        except Exception as e:
+            logger.warning(f"History-Save-Fehler: {e}")
 
         return response
 
