@@ -21,6 +21,9 @@ from src.scheduler.scheduler import AssistantScheduler
 from src.services.proposal_service import ProposalService
 from src.services.task_service import TaskService
 from src.services.document_service import DocumentService
+from src.services.tts_service import TTSService
+from src.services.spotify_service import SpotifyService
+from src.services.smarthome_service import SmartHomeService
 from src.bots.taake_bot import TaakeBot
 from src.bots.nina_bot import NinaBot
 
@@ -113,6 +116,9 @@ async def main():
     proposal_service = ProposalService()
     task_service = TaskService()
     document_service = DocumentService()
+    tts_service = TTSService()
+    spotify_service = SpotifyService()
+    smarthome_service = SmartHomeService()
 
     await memory_service.initialize()
     await calendar_service.initialize()
@@ -139,6 +145,9 @@ async def main():
             proposal_service=proposal_service,
             task_service=task_service,
             document_service=document_service,
+            tts_service=tts_service,
+            spotify_service=spotify_service,
+            smarthome_service=smarthome_service,
         )
 
     # Telegram Applications bauen

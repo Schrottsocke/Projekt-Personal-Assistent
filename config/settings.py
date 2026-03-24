@@ -41,6 +41,15 @@ class Settings:
     # Vision (Foto-Analyse via OpenRouter – kostenlos)
     VISION_MODEL: str = os.getenv("VISION_MODEL", "google/gemini-2.0-flash-lite-001:free")
 
+    # Spotify (optional – nur mit Premium)
+    SPOTIFY_CLIENT_ID: str = os.getenv("SPOTIFY_CLIENT_ID", "")
+    SPOTIFY_CLIENT_SECRET: str = os.getenv("SPOTIFY_CLIENT_SECRET", "")
+    SPOTIFY_REDIRECT_URI: str = os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8888/callback")
+
+    # Smart Home – Home Assistant (optional)
+    HA_URL: str = os.getenv("HA_URL", "")           # z.B. http://homeassistant.local:8123
+    HA_TOKEN: str = os.getenv("HA_TOKEN", "")
+
     # Web Search
     TAVILY_API_KEY: str = os.getenv("TAVILY_API_KEY", "")
 

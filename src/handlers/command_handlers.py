@@ -40,6 +40,10 @@ async def cmd_hilfe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/profil – Dein Persönlichkeitsprofil\n"
         "/fokus – Fokus-Modus aktivieren\n"
         "/fokus\\_ende – Fokus-Modus beenden\n"
+        "/gemeinsam – Gemeinsamer Kalender mit Partner\n"
+        "/tts – Sprachantworten an/aus\n"
+        "/spotify – Spotify verbinden & steuern\n"
+        "/smarthome – Smart Home Status & Steuerung\n"
         "/hilfe – Diese Hilfe\n\n"
         "🎤 *Sprache:* Schick mir Sprachnachrichten – ich verstehe sie!\n\n"
         "🧠 *Ich lerne mit:*\n"
@@ -560,6 +564,214 @@ async def cmd_praesentation(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Präsentation konnte nicht erstellt werden.")
 
 
+async def cmd_gemeinsam(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Zeigt gemeinsame Kalender-Ansicht beider User + erkennt Konflikte."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    await update.message.reply_text("🔗 Lade gemeinsame Kalender...")
+
+    user_key = bot.name.lower()
+    partner_key = "nina" if user_key == "taake" else "taake"
+    partner_name = partner_key.capitalize()
+
+    try:
+        my_events = await bot.calendar_service.get_upcoming_events(user_key=user_key, days=7)
+    except Exception:
+        my_events = []
+    try:
+        partner_events = await bot.calendar_service.get_upcoming_events(user_key=partner_key, days=7)
+    except Exception:
+        partner_events = []
+
+    if not my_events and not partner_events:
+        await update.message.reply_text("📅 Keine Termine in den nächsten 7 Tagen.")
+        return
+
+    tz = pytz.timezone(settings.TIMEZONE)
+
+    def parse_event_dt(event: dict):
+        start = event.get("start", {})
+        dt_str = start.get("dateTime", start.get("date", ""))
+        if not dt_str:
+            return None
+        try:
+            if "T" in dt_str:
+                return datetime.fromisoformat(dt_str).astimezone(tz)
+            return tz.localize(datetime.fromisoformat(dt_str))
+        except Exception:
+            return None
+
+    # Alle Events zusammenführen + sortieren
+    all_events = []
+    for e in my_events:
+        dt = parse_event_dt(e)
+        if dt:
+            all_events.append(("me", dt, e))
+    for e in partner_events:
+        dt = parse_event_dt(e)
+        if dt:
+            all_events.append(("partner", dt, e))
+    all_events.sort(key=lambda x: x[1])
+
+    # Konflikte erkennen: Events im selben 1h-Fenster
+    conflicts = []
+    my_dts = [(parse_event_dt(e), e) for e in my_events if parse_event_dt(e)]
+    partner_dts = [(parse_event_dt(e), e) for e in partner_events if parse_event_dt(e)]
+    for m_dt, m_e in my_dts:
+        for p_dt, p_e in partner_dts:
+            diff = abs((m_dt - p_dt).total_seconds())
+            if diff < 3600:  # innerhalb 1 Stunde
+                conflicts.append((m_e, p_e, m_dt))
+
+    lines = ["🔗 *Gemeinsamer Kalender (7 Tage)*\n"]
+
+    if conflicts:
+        lines.append("⚠️ *Terminüberschneidungen:*")
+        for m_e, p_e, dt in conflicts[:3]:
+            lines.append(
+                f"• {dt.strftime('%a %d.%m. %H:%M')} – "
+                f"_{m_e.get('summary', '?')}_ vs _{p_e.get('summary', '?')}_"
+            )
+        lines.append("")
+
+    lines.append("*Alle Termine:*")
+    for who, dt, event in all_events[:15]:
+        icon = "👤" if who == "me" else f"👥 {partner_name}"
+        lines.append(f"• {dt.strftime('%a %d.%m. %H:%M')} {icon} – {event.get('summary', '?')}")
+
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+
+async def cmd_tts(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Schaltet Text-to-Speech (Sprachantworten) an/aus."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    user_key = bot.name.lower()
+    try:
+        from src.services.database import UserProfile, get_db
+        with get_db()() as session:
+            profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+            if not profile:
+                await update.message.reply_text("❌ Profil nicht gefunden.")
+                return
+
+            tts_svc = getattr(bot, "tts_service", None)
+            if tts_svc and not tts_svc.available:
+                await update.message.reply_text(
+                    "🔇 TTS nicht verfügbar.\n`pip install gTTS` auf dem Server ausführen.",
+                    parse_mode="Markdown",
+                )
+                return
+
+            profile.tts_enabled = not bool(profile.tts_enabled)
+            status = "aktiviert 🔊" if profile.tts_enabled else "deaktiviert 🔇"
+            await update.message.reply_text(
+                f"🎤 *Sprachantworten {status}*\n\n"
+                f"{'Ich antworte jetzt auch als Sprachnachricht.' if profile.tts_enabled else 'Ich antworte nur noch als Text.'}",
+                parse_mode="Markdown",
+            )
+    except Exception as e:
+        logger.error(f"TTS-Toggle-Fehler: {e}")
+        await update.message.reply_text("❌ Einstellung konnte nicht gespeichert werden.")
+
+
+async def cmd_spotify(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Spotify-Verbindung und Steuerung."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    args = context.args
+    user_key = bot.name.lower()
+    sp = getattr(bot, "spotify_service", None)
+
+    if not sp or not sp.available:
+        await update.message.reply_text(
+            "🎵 *Spotify nicht konfiguriert.*\n\n"
+            "Füge in `.env` hinzu:\n"
+            "`SPOTIFY_CLIENT_ID=...`\n"
+            "`SPOTIFY_CLIENT_SECRET=...`\n"
+            "`SPOTIFY_REDIRECT_URI=http://localhost:8888/callback`\n\n"
+            "App erstellen auf: developer.spotify.com/dashboard",
+            parse_mode="Markdown",
+        )
+        return
+
+    # Redirect-URL-Handling: User sendet die vollständige Callback-URL
+    if args and args[0].startswith("http"):
+        redirect_url = " ".join(args)
+        if sp.exchange_code(user_key, redirect_url):
+            await update.message.reply_text(
+                "✅ *Spotify verbunden!*\n\n"
+                "Du kannst jetzt sagen:\n"
+                "• _Spiel entspannende Musik_\n"
+                "• _Pause_\n"
+                "• _Nächster Song_\n"
+                "• _Lautstärke 70%_",
+                parse_mode="Markdown",
+            )
+        else:
+            await update.message.reply_text("❌ Verbindung fehlgeschlagen. URL korrekt?")
+        return
+
+    # Sub-commands
+    if not args:
+        if sp.is_connected(user_key):
+            current = await sp.current(user_key)
+            await update.message.reply_text(
+                f"🎵 *Spotify verbunden*\n\n{current or 'Nichts aktiv.'}\n\n"
+                "Steuerung per Text: _\"Spiel Jazz\"_, _\"Pause\"_, _\"Nächster Song\"_",
+                parse_mode="Markdown",
+            )
+        else:
+            url = sp.get_auth_url(user_key)
+            await update.message.reply_text(
+                f"🎵 *Spotify verbinden:*\n\n"
+                f"1. Öffne: {url}\n"
+                f"2. Melde dich an → Zugriff erlauben\n"
+                f"3. Kopiere die vollständige Redirect-URL (z.B. `http://localhost:8888/callback?code=...`)\n"
+                f"4. Sende sie mit: `/spotify <URL>`",
+                parse_mode="Markdown",
+            )
+        return
+
+    cmd = args[0].lower()
+    if cmd == "pause":
+        result = await sp.pause(user_key)
+    elif cmd in ("skip", "next", "weiter"):
+        result = await sp.skip(user_key)
+    elif cmd == "play":
+        query = " ".join(args[1:])
+        result = await sp.play(user_key, query)
+    else:
+        result = f"❓ Unbekannt: `{cmd}`. Nutze: play, pause, skip"
+    await update.message.reply_text(result or "❌ Spotify-Fehler", parse_mode="Markdown")
+
+
+async def cmd_smarthome(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Smart Home Status und direkte Steuerung via HA."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    ha = getattr(bot, "smarthome_service", None)
+    args = context.args
+
+    if args:
+        # Direktbefehl: /smarthome Licht Wohnzimmer aus
+        command = " ".join(args)
+        result = await ha.execute_command(command) if ha else "❌ Smart Home nicht konfiguriert."
+        await update.message.reply_text(result, parse_mode="Markdown")
+    else:
+        # Status-Übersicht
+        result = await ha.get_status_summary() if ha else "❌ Smart Home nicht konfiguriert."
+        await update.message.reply_text(result, parse_mode="Markdown")
+
+
 async def cmd_fokus(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Aktiviert den Fokus-Modus für eine bestimmte Dauer."""
     bot = get_bot(context)
@@ -675,6 +887,10 @@ def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("praesentation", cmd_praesentation))
     app.add_handler(CommandHandler("fokus", cmd_fokus))
     app.add_handler(CommandHandler("fokus_ende", cmd_fokus_ende))
+    app.add_handler(CommandHandler("gemeinsam", cmd_gemeinsam))
+    app.add_handler(CommandHandler("tts", cmd_tts))
+    app.add_handler(CommandHandler("spotify", cmd_spotify))
+    app.add_handler(CommandHandler("smarthome", cmd_smarthome))
 
 
 async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -87,6 +87,19 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_chat_action(chat_id=chat_id, action="typing")
 
     try:
+        # Spotify-Redirect-URL abfangen (User schickt Callback-URL nach OAuth)
+        sp = getattr(bot, "spotify_service", None)
+        if sp and sp.available and user_message.startswith("http") and "code=" in user_message:
+            if sp.exchange_code(user_key, user_message.strip()):
+                await update.message.reply_text(
+                    "✅ *Spotify verbunden!* Du kannst jetzt Musik steuern.\n"
+                    "Sag z.B. _\"Spiel Jazz\"_ oder _\"Pause\"_",
+                    parse_mode="Markdown",
+                )
+            else:
+                await update.message.reply_text("❌ Spotify-Verbindung fehlgeschlagen. URL korrekt?")
+            return
+
         # Intent-Erkennung + Antwort generieren
         response = await bot.ai_service.process_message(
             message=user_message,
@@ -97,6 +110,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Leere Antwort = Proposal wurde bereits als eigene Nachricht gesendet
         if response:
             await update.message.reply_text(response, parse_mode="Markdown")
+
+            # TTS: Wenn aktiviert → Antwort auch als Sprachnachricht senden
+            tts_svc = getattr(bot, "tts_service", None)
+            if tts_svc and tts_svc.available:
+                try:
+                    from src.services.database import UserProfile, get_db
+                    with get_db()() as session:
+                        profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+                        if profile and profile.tts_enabled:
+                            await tts_svc.send_voice(bot.app, chat_id, response)
+                except Exception as tts_err:
+                    logger.warning(f"TTS-Send-Fehler: {tts_err}")
 
     except Exception as e:
         logger.error(f"Message-Handler-Fehler für {bot.name}: {e}", exc_info=True)

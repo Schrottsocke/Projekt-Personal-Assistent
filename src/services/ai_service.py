@@ -29,6 +29,8 @@ INTENT_TABLE_CREATE = "table_create"
 INTENT_PRESENTATION_CREATE = "presentation_create"
 INTENT_CHAT = "chat"
 INTENT_BRIEFING = "briefing"
+INTENT_SPOTIFY = "spotify"
+INTENT_SMARTHOME = "smarthome"
 
 
 class AIService:
@@ -200,6 +202,12 @@ class AIService:
         elif intent == INTENT_PRESENTATION_CREATE:
             return await self._handle_presentation_create(bot, user_key, message, chat_id)
 
+        elif intent == INTENT_SPOTIFY:
+            return await self._handle_spotify(bot, user_key, message, extracted, chat_id)
+
+        elif intent == INTENT_SMARTHOME:
+            return await self._handle_smarthome(bot, user_key, message, extracted)
+
         else:
             # Normaler Chat mit Kontext-Gedächtnis
             return await self._handle_chat(message, user_key, bot)
@@ -228,11 +236,13 @@ Mögliche Intents:
 - table_create: Nutzer will eine Tabelle oder Excel-Datei erstellen (z.B. "Erstelle eine Tabelle meiner Aufgaben", "Mach mir eine Excel-Tabelle", "Tabelle mit meinen Terminen", "Zeig meine Tasks als Tabelle")
 - presentation_create: Nutzer will eine Präsentation oder PowerPoint erstellen (z.B. "Erstelle eine Präsentation über X", "PowerPoint zu Thema Y", "Erstell mir Slides für Z")
 - web_search: BEVORZUGE wenn aktuelle/externe Daten gebraucht werden. PFLICHT bei: Wetter (auch "Wetter heute/morgen/diese Woche" → IMMER web_search!), Nachrichten, Preise, Sportergebnisse, Aktienkurse, Börsenkurse, Öffnungszeiten, Rezepte, Definitionen, aktuelle Ereignisse. REGEL: Wenn die Antwort sich täglich ändern kann oder live-Daten benötigt → web_search. Niemals für zeitkritische Fragen chat wählen!
+- spotify: Musik-Steuerung (z.B. "Spiel Musik", "Pause", "Nächster Song", "Spiel Jazz", "Lauter", "Was läuft gerade?")
+- smarthome: Smart Home / Haus-Steuerung (z.B. "Licht aus", "Heizung auf 22 Grad", "Rollos schließen", "Steckdose Küche an")
 - chat: Alles andere (persönliche Fragen, Konversation, Meinungen, Erinnerungen aus Gesprächen)
 
 Antworte NUR mit diesem JSON-Format:
 {{
-  "intent": "calendar_read|calendar_create|note_create|reminder_create|task_create|task_read|task_complete|timer_create|table_create|presentation_create|web_search|chat",
+  "intent": "calendar_read|calendar_create|note_create|reminder_create|task_create|task_read|task_complete|timer_create|table_create|presentation_create|web_search|spotify|smarthome|chat",
   "confidence": 0.0-1.0,
   "extracted": {{
     "content": "extrahierter Kerninhalt",
@@ -241,7 +251,12 @@ Antworte NUR mit diesem JSON-Format:
     "priority": "high|medium|low (nur bei task_create, default: medium)",
     "task_id": "Nummer falls task_complete, sonst null",
     "duration_minutes": "Minuten falls timer_create, sonst null",
-    "target_user": "Name des Zielbenutzers falls Aufgabe für jemand anderen, sonst null"
+    "target_user": "Name des Zielbenutzers falls Aufgabe für jemand anderen, sonst null",
+    "spotify_action": "play|pause|skip|current|volume (bei spotify intent)",
+    "spotify_query": "Suche-Query für play (Song, Künstler, Playlist), sonst null",
+    "volume_level": "Lautstärke 0-100 bei volume-Action, sonst null",
+    "smarthome_command": "Rohbefehl für Smart Home (bei smarthome intent)",
+    "smarthome_entity": "Raumname oder Gerätename, falls erkennbar, sonst null"
   }}
 }}"""
 
@@ -701,6 +716,58 @@ Halte das Briefing kompakt aber informativ."""
         return await self._complete(
             messages=[{"role": "user", "content": prompt}]
         )
+
+    # ── Spotify Handler ──────────────────────────────────────────────────────
+
+    async def _handle_spotify(
+        self, bot, user_key: str, message: str, extracted: dict, chat_id: int
+    ) -> str:
+        """Steuert Spotify-Wiedergabe."""
+        sp = getattr(bot, "spotify_service", None)
+        if not sp or not sp.available:
+            return (
+                "🎵 Spotify ist nicht konfiguriert.\n"
+                "Verbinde Spotify mit `/spotify` und setze `SPOTIFY_CLIENT_ID` + `SPOTIFY_CLIENT_SECRET` in .env."
+            )
+        if not sp.is_connected(user_key):
+            url = sp.get_auth_url(user_key)
+            return (
+                f"🎵 Spotify noch nicht verbunden.\n\n"
+                f"1. Öffne diesen Link: {url}\n"
+                f"2. Melde dich an und erlaube den Zugriff\n"
+                f"3. Kopiere die vollständige Redirect-URL und sende sie mir"
+            )
+
+        action = extracted.get("spotify_action", "play")
+        query = extracted.get("spotify_query", "")
+        volume = extracted.get("volume_level")
+
+        if action == "pause":
+            return await sp.pause(user_key) or "❌ Spotify-Fehler"
+        elif action == "skip":
+            return await sp.skip(user_key) or "❌ Spotify-Fehler"
+        elif action == "current":
+            return await sp.current(user_key) or "❌ Spotify-Fehler"
+        elif action == "volume" and volume is not None:
+            return await sp.volume(user_key, int(volume)) or "❌ Spotify-Fehler"
+        else:
+            return await sp.play(user_key, query) or "❌ Spotify-Fehler"
+
+    # ── Smart Home Handler ───────────────────────────────────────────────────
+
+    async def _handle_smarthome(
+        self, bot, user_key: str, message: str, extracted: dict
+    ) -> str:
+        """Steuert Smart Home via Home Assistant."""
+        ha = getattr(bot, "smarthome_service", None)
+        if not ha or not ha.available:
+            return (
+                "🏠 Smart Home nicht konfiguriert.\n"
+                "Setze `HA_URL` und `HA_TOKEN` in .env für Home Assistant."
+            )
+        command = extracted.get("smarthome_command", message)
+        entity = extracted.get("smarthome_entity", "")
+        return await ha.execute_command(command, entity)
 
     def _format_event_time(self, event: dict) -> str:
         """Formatiert die Uhrzeit eines Kalender-Events für den Briefing-Kontext."""

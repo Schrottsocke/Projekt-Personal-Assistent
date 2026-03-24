@@ -40,6 +40,9 @@ class BaseAssistantBot:
         self.proposal_service = None
         self.task_service = None
         self.document_service = None
+        self.tts_service = None
+        self.spotify_service = None
+        self.smarthome_service = None
 
     def inject_services(
         self,
@@ -51,6 +54,9 @@ class BaseAssistantBot:
         proposal_service,
         task_service=None,
         document_service=None,
+        tts_service=None,
+        spotify_service=None,
+        smarthome_service=None,
     ):
         self.ai_service = ai_service
         self.memory_service = memory_service
@@ -60,6 +66,9 @@ class BaseAssistantBot:
         self.proposal_service = proposal_service
         self.task_service = task_service
         self.document_service = document_service
+        self.tts_service = tts_service
+        self.spotify_service = spotify_service
+        self.smarthome_service = smarthome_service
 
     def _is_authorized(self, user_id: int) -> bool:
         """Nur der Owner darf mit diesem Bot interagieren."""
@@ -113,6 +122,11 @@ class BaseAssistantBot:
             BotCommand("profil", "Persönlichkeitsprofil anzeigen"),
             BotCommand("tabelle", "Tabelle oder Excel-Datei erstellen"),
             BotCommand("praesentation", "PowerPoint-Präsentation erstellen"),
+            BotCommand("fokus", "Fokus-Modus aktivieren"),
+            BotCommand("gemeinsam", "Gemeinsamer Kalender mit Partner"),
+            BotCommand("tts", "Sprachantworten an/aus"),
+            BotCommand("spotify", "Spotify verbinden und steuern"),
+            BotCommand("smarthome", "Smart Home Status und Steuerung"),
         ]
         await self.app.bot.set_my_commands(commands)
         logger.info(f"Bot '{self.name}': Befehle gesetzt.")

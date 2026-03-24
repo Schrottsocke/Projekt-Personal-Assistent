@@ -47,6 +47,10 @@ class UserProfile(Base):
     week_structure = Column(Text, nullable=True)     # Freitext
     # Fokus-Modus: bis wann aktiv (None = kein Fokus-Modus)
     focus_mode_until = Column(DateTime, nullable=True)
+    # TTS: Sprachantworten aktiviert (opt-in)
+    tts_enabled = Column(Boolean, default=False)
+    # Spotify: OAuth2-Token als JSON
+    spotify_token_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -160,6 +164,8 @@ def init_db():
         with _engine.connect() as conn:
             for col_sql in [
                 "ALTER TABLE user_profiles ADD COLUMN focus_mode_until DATETIME",
+                "ALTER TABLE user_profiles ADD COLUMN tts_enabled BOOLEAN DEFAULT 0",
+                "ALTER TABLE user_profiles ADD COLUMN spotify_token_json TEXT",
             ]:
                 try:
                     conn.execute(__import__("sqlalchemy").text(col_sql))

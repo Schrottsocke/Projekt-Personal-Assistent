@@ -21,6 +21,10 @@ Zwei persönliche KI-Assistenten via Telegram. Jeder Bot hat eine eigene Persön
 | **Foto-Analyse** | Bilder & Screenshots analysieren, Intent erkennen (Vision) |
 | **Fokus-Modus** | `/fokus 90` – Nachrichten + Proaktiv-Meldungen zurückhalten |
 | **Tagesplanung** | Zeitgeblockte Tagesplanung im Morgen-Briefing |
+| **Spotify** | Musik per Sprache steuern (Play, Pause, Skip, Suche) |
+| **Smart Home** | Home Assistant Steuerung (Licht, Heizung, Rollos) |
+| **Voice Output (TTS)** | `/tts` – Bot antwortet zusätzlich als Sprachnachricht |
+| **Cross-User Sync** | `/gemeinsam` – Gemeinsamer Kalender + Konflikt-Erkennung |
 | **Proaktives Briefing** | Täglich um 08:00 Uhr |
 | **Quiet Hours** | Keine Nachrichten in der Ruhezeit |
 | **Wochenrückblick** | Sonntags automatisch |
@@ -47,6 +51,10 @@ Zwei persönliche KI-Assistenten via Telegram. Jeder Bot hat eine eigene Persön
 | `/profil` | Persönlichkeitsprofil anzeigen/bearbeiten |
 | `/fokus` | Fokus-Modus aktivieren (Minuten oder Uhrzeit) |
 | `/fokus_ende` | Fokus-Modus vorzeitig beenden |
+| `/gemeinsam` | Gemeinsamer Kalender + Terminüberschneidungen |
+| `/tts` | Sprachantworten an/aus |
+| `/spotify` | Spotify verbinden und steuern |
+| `/smarthome` | Smart Home Status und Steuerung |
 | `/vorschlaege` | Offene Vorschläge anzeigen |
 | `/tabelle` | Tabelle als Chat oder Excel-Datei |
 | `/praesentation` | PowerPoint-Präsentation erstellen |
@@ -244,3 +252,5 @@ main.py
 | Google Calendar | console.cloud.google.com | Kostenlos |
 | Tavily (Web-Suche) | tavily.com | Kostenlos (1.000 Suchen/Monat) |
 | OpenRouter Vision | openrouter.ai (Gemini Flash) | Kostenlos |
+| Spotify | developer.spotify.com/dashboard | Kostenlos (Premium für Steuerung) |
+| Home Assistant | homeassistant.local (self-hosted) | Kostenlos |
