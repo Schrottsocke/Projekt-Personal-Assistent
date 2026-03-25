@@ -33,6 +33,8 @@ Zwei persönliche KI-Assistenten via Telegram. Jeder Bot hat eine eigene Persön
 | **Google Drive** | Dateien hochladen, durchsuchen, als Datei-Eingang nutzen |
 | **Dokument-Scanner** | Foto → OCR → durchsuchbares PDF → Drive-Upload → KI-Aktionen per Proposal |
 | **Mobilität** | Fahrzeit berechnen, Abfahrtszeit rückwärts (OpenRouteService) |
+| **REST API** | FastAPI auf Port 8000 – alle Services als JSON-Endpunkte (JWT-Auth) |
+| **Flutter App** | Native iOS/Android App: Dashboard, Einkauf, Rezepte, Chat, Profil |
 
 ---
 
@@ -75,6 +77,41 @@ Zwei persönliche KI-Assistenten via Telegram. Jeder Bot hat eine eigene Persön
 | `/dokumente` | Letzte 10 gescannte Dokumente |
 
 Oder einfach **frei schreiben oder eine Sprachnachricht schicken** – der Bot versteht natürliche Sprache.
+
+---
+
+## REST API + Flutter App
+
+### API-Endpunkte (FastAPI auf Port 8000)
+
+| Endpunkt | Methode | Beschreibung |
+|---|---|---|
+| `/auth/login` | POST | Login mit username + password → JWT |
+| `/auth/refresh` | POST | Neues Access-Token mit Refresh-Token |
+| `/dashboard/today` | GET | Termine, Tasks, Shopping, E-Mails im Überblick |
+| `/chat/message` | POST | Chat-Nachricht senden → KI-Antwort |
+| `/chat/history` | GET | Gesprächshistorie |
+| `/tasks` | GET/POST/PATCH/DELETE | Task-Verwaltung |
+| `/calendar/today` | GET | Heutige Termine |
+| `/calendar/week` | GET | Wochenübersicht |
+| `/calendar/events` | POST | Neuen Termin anlegen |
+| `/shopping/items` | GET/POST/PATCH/DELETE | Einkaufsliste |
+| `/shopping/from-recipe/{id}` | POST | Rezept-Zutaten zur Liste hinzufügen |
+| `/recipes/search` | GET | Chefkoch-Rezepte suchen |
+| `/recipes/saved` | GET/POST/DELETE | Gespeicherte Rezepte |
+| `/recipes/{id}/to-shopping` | POST | Zutaten mit Portionsskalierung übernehmen |
+| `/meal-plan/week` | GET/POST/DELETE | Wochenplan |
+| `/drive/files` | GET | Drive-Dateien auflisten |
+| `/drive/upload` | POST | Datei hochladen |
+
+### Flutter App starten (Entwicklung)
+
+```bash
+cd app
+flutter pub get
+# API-URL in lib/config/api_config.dart anpassen
+flutter run
+```
 
 ---
 
@@ -147,6 +184,14 @@ HOME_ADDRESS=             # z.B. "Musterstraße 1, Berlin" für Fahrzeitberechnu
 DRIVE_DOCUMENTS_FOLDER_ID=   # Google Drive Ordner-ID (leer = "Personal Assistant" Ordner)
 OCR_CONFIDENCE_THRESHOLD=70  # Unter diesem Wert → Vision-API Fallback
 SCAN_SAVE_LOCAL=true         # Lokale Kopie in data/scans/ behalten
+
+# REST API (Flutter App)
+API_SECRET_KEY=              # python -c "import secrets; print(secrets.token_hex(32))"
+API_PASSWORD_TAAKE=          # App-Passwort für Taake
+API_PASSWORD_NINA=           # App-Passwort für Nina
+API_PORT=8000
+API_CORS_ORIGINS=*
+API_TOKEN_EXPIRE_DAYS=30
 ```
 
 ---
@@ -181,20 +226,24 @@ Drive und Gmail werden beim ersten Benutzen im Chat verbunden (`/email_connect`,
 
 ---
 
-### Schritt 4 – Bots starten
+### Schritt 4 – Bots und API starten
 
 ```bash
 # Als root auf dem Server:
 systemctl start personal-assistant
+systemctl start personal-assistant-api
 
 # Live-Logs anzeigen:
 journalctl -u personal-assistant -f
+journalctl -u personal-assistant-api -f
 ```
 
 Erfolgreich wenn du siehst:
 ```
 Beide Bots laufen! Drücke Ctrl+C zum Beenden.
 ```
+
+API erreichbar unter: `http://DEINE_IP:8000/docs` (Swagger UI)
 
 ---
 
@@ -239,6 +288,8 @@ systemctl stop personal-assistant
 | Port bereits belegt | Kein Port nötig – Bot nutzt Telegram-Polling |
 | Tesseract nicht installiert | `apt install -y tesseract-ocr tesseract-ocr-deu` – OCR fällt automatisch auf Vision-API zurück |
 | Drive/Gmail-Scopes fehlen | In Google Cloud Console alle drei APIs aktivieren, `credentials.json` neu herunterladen |
+| API startet nicht | `API_SECRET_KEY` und `API_PASSWORD_*` in .env setzen; Port 8000 in Firewall freigeben |
+| Flutter 401-Fehler | Token abgelaufen → App-Neustart oder `API_TOKEN_EXPIRE_DAYS` erhöhen |
 
 ---
 
@@ -264,7 +315,7 @@ python main.py
 ## Architektur
 
 ```
-main.py
+main.py                      (Telegram Bots)
 ├── TaakeBot / NinaBot       (Telegram Applications)
 ├── AIService                (OpenRouter + Groq Whisper)
 │   ├── Intent-Erkennung     (calendar, task, timer, table, shopping, email, ...)
@@ -283,6 +334,20 @@ main.py
 ├── PdfService               (img2pdf + reportlab + pypdf, searchable PDF)
 ├── MobilityService          (OpenRouteService, Geocoding + Routing)
 └── AssistantScheduler       (APScheduler, Briefing, Quiet Hours, E-Mail-Check)
+
+api/api_main.py              (FastAPI REST-API, Port 8000)
+├── api/auth/                (JWT Auth, Login + Refresh)
+├── api/routers/             (9 Router: dashboard, chat, tasks, calendar, shopping, recipes, mealplan, drive, auth)
+├── api/schemas/             (Pydantic Request/Response-Models)
+├── api/dependencies.py      (Service-Singletons, get_current_user)
+└── api/bot_shim.py          (ApiBotShim – AIService-Proxy ohne Telegram)
+
+app/                         (Flutter Mobile App)
+├── lib/screens/             (Login, Home, Shopping, Recipes, Chat, Profile)
+├── lib/providers/           (Riverpod AsyncNotifierProviders)
+├── lib/services/            (ApiService mit JWT-Interceptor, Auth, Chat, Tasks, Shopping, Recipes)
+├── lib/models/              (Task, CalendarEvent, ShoppingItem, Recipe, MealPlanEntry, ChatMessage)
+└── lib/widgets/             (EventCard, TaskCard, ShoppingItemTile, RecipeCard, ChatBubble)
 ```
 
 ---

@@ -1,0 +1,52 @@
+name: dualmind
+description: DualMind Personal Assistant App
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP Client
+  dio: ^5.4.3
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Sichere Token-Speicherung
+  flutter_secure_storage: ^9.2.2
+
+  # Navigation
+  go_router: ^14.1.4
+
+  # Bilder mit Caching
+  cached_network_image: ^3.3.1
+
+  # Datum/Uhrzeit DE
+  intl: ^0.19.0
+
+  # Audio-Aufnahme (Chat-Sprachnachricht)
+  record: ^5.1.2
+
+  # Berechtigungen (Mikrofon)
+  permission_handler: ^11.3.1
+
+  # Loading-Skeleton
+  shimmer: ^3.0.0
+
+  # Icons
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  build_runner: ^2.4.9
+  riverpod_generator: ^2.3.12
+
+flutter:
+  uses-material-design: true

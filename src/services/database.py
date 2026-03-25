@@ -173,6 +173,41 @@ class ScannedDocument(Base):
     scanned_at = Column(DateTime, default=datetime.utcnow)
 
 
+class SavedRecipe(Base):
+    """Gespeichertes / favorisiertes Rezept (aus Chefkoch-Suche)."""
+    __tablename__ = "saved_recipes"
+
+    id = Column(Integer, primary_key=True)
+    user_key = Column(String(50), nullable=False)
+    chefkoch_id = Column(String(50), nullable=False)
+    title = Column(String(300), nullable=False)
+    image_url = Column(String(500), nullable=True)
+    servings = Column(Integer, default=4)
+    prep_time = Column(Integer, default=0)        # Minuten
+    cook_time = Column(Integer, default=0)        # Minuten
+    difficulty = Column(String(50), nullable=True)
+    ingredients_json = Column(Text, nullable=True)  # JSON-Array
+    is_favorite = Column(Boolean, default=False)
+    source_url = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class MealPlanEntry(Base):
+    """Wochenplan-Eintrag: Rezept zu Tag + Mahlzeit."""
+    __tablename__ = "meal_plan_entries"
+
+    id = Column(Integer, primary_key=True)
+    user_key = Column(String(50), nullable=False)
+    planned_date = Column(String(10), nullable=False)      # YYYY-MM-DD
+    recipe_chefkoch_id = Column(String(50), nullable=True)
+    recipe_title = Column(String(300), nullable=False)
+    recipe_image_url = Column(String(500), nullable=True)
+    meal_type = Column(String(20), default="dinner")       # breakfast|lunch|dinner
+    servings = Column(Integer, default=4)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # Engine & Session Setup
 _engine = None
 _SessionLocal = None

@@ -76,14 +76,21 @@ else
     echo ">>> .env existiert bereits."
 fi
 
-# --- Systemd Service installieren ---
-echo ">>> Systemd Service installieren..."
+# --- Verzeichnis für Scans ---
+sudo -u assistant mkdir -p "$PROJ_DIR/data/scans"
+
+# --- Systemd Services installieren ---
+echo ">>> Systemd Services installieren..."
 cp "$PROJ_DIR/deploy/personal-assistant.service" \
    /etc/systemd/system/personal-assistant.service
 
+cp "$PROJ_DIR/deploy/personal-assistant-api.service" \
+   /etc/systemd/system/personal-assistant-api.service
+
 systemctl daemon-reload
 systemctl enable personal-assistant
-echo ">>> Service aktiviert (startet beim Reboot automatisch)."
+systemctl enable personal-assistant-api
+echo ">>> Services aktiviert (starten beim Reboot automatisch)."
 
 echo ""
 echo "======================================================"
@@ -94,5 +101,7 @@ echo "  1. nano $PROJ_DIR/.env          (Keys eintragen)"
 echo "  2. Google OAuth lokal ausführen (deploy/google_auth_local.py)"
 echo "  3. Tokens hochladen (scp)"
 echo "  4. systemctl start personal-assistant"
-echo "  5. journalctl -u personal-assistant -f  (Logs)"
+echo "  5. systemctl start personal-assistant-api"
+echo "  6. journalctl -u personal-assistant -f  (Bot-Logs)"
+echo "  7. journalctl -u personal-assistant-api -f  (API-Logs)"
 echo "======================================================"

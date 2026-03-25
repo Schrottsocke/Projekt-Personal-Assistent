@@ -91,6 +91,14 @@ class Settings:
     SCAN_SAVE_LOCAL: bool = os.getenv("SCAN_SAVE_LOCAL", "true").lower() == "true"
     SCANS_DIR: Path = BASE_DIR / "data" / "scans"
 
+    # REST API (FastAPI)
+    API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "change-me-in-production-please")
+    API_PASSWORD_TAAKE: str = os.getenv("API_PASSWORD_TAAKE", "")
+    API_PASSWORD_NINA: str = os.getenv("API_PASSWORD_NINA", "")
+    API_PORT: int = int(os.getenv("API_PORT", "8000"))
+    API_CORS_ORIGINS: list = os.getenv("API_CORS_ORIGINS", "*").split(",")
+    API_TOKEN_EXPIRE_DAYS: int = int(os.getenv("API_TOKEN_EXPIRE_DAYS", "30"))
+
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: Path = BASE_DIR / os.getenv("LOG_FILE", "logs/assistant.log")

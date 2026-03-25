@@ -17,11 +17,14 @@ sudo -u assistant bash -c "
     pip install -r requirements.txt -q
 "
 
-echo ">>> Service neustarten..."
+echo ">>> Services neustarten..."
 systemctl restart personal-assistant
+systemctl restart personal-assistant-api
 
 echo ">>> Status:"
 systemctl status personal-assistant --no-pager -l
+systemctl status personal-assistant-api --no-pager -l
 
 echo ""
 echo "Live-Logs: journalctl -u personal-assistant -f"
+echo "API-Logs:  journalctl -u personal-assistant-api -f"

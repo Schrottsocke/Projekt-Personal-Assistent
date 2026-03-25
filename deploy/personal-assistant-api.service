@@ -1,0 +1,20 @@
+[Unit]
+Description=Personal Assistant API (FastAPI)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=assistant
+WorkingDirectory=/home/assistant/projekt-personal-assistent
+Environment=PATH=/home/assistant/projekt-personal-assistent/venv/bin
+ExecStart=/home/assistant/projekt-personal-assistent/venv/bin/python api/api_main.py
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=personal-assistant-api
+
+[Install]
+WantedBy=multi-user.target
