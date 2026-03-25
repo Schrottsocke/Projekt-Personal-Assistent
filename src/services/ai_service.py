@@ -40,6 +40,7 @@ INTENT_SHOPPING_RECIPE = "shopping_recipe"
 INTENT_EMAIL_READ = "email_read"
 INTENT_EMAIL_COMPOSE = "email_compose"
 INTENT_MOBILITY = "mobility"
+INTENT_WEATHER = "weather"
 
 
 class AIService:
@@ -190,6 +191,7 @@ class AIService:
             INTENT_EMAIL_READ: self._handle_email_read,
             INTENT_EMAIL_COMPOSE: self._handle_email_compose,
             INTENT_MOBILITY: self._handle_mobility,
+                        INTENT_WEATHER: self._handle_weather,
         }
 
         handler = handlers.get(intent, self._handle_chat)
@@ -222,6 +224,7 @@ Mögliche Intents:
 - email_read: E-Mails lesen ("E-Mails", "Posteingang", "Neue Mails")
 - email_compose: E-Mail schreiben ("Schreibe Mail", "Sende E-Mail an")
 - mobility: Fahrzeit/Route ("Wie lange", "Fahrzeit nach", "Route zu", "Stau")
+- weather: Wetter abfragen ("Wie ist das Wetter", "Wetter in", "Wird es regnen", "Temperatur heute", "Wettervorhersage")
 - chat: Normales Gespräch (alles andere)
 
 Antworte NUR mit JSON:
@@ -245,6 +248,7 @@ Details je nach Intent:
 - email_read: {"filter": "unread/all/from:name"}
 - email_compose: {"to": "...", "subject": "...", "body": "..."}
 - mobility: {"destination": "...", "origin": "aktueller Standort oder Adresse", "mode": "driving/transit/walking"}
+- weather: {"location": "Stadtname oder Adresse", "type": "current/forecast", "days": 3}
 """
         now = datetime.now(self.tz)
         user_prompt = f"Datum: {now.strftime('%Y-%m-%d %H:%M')}\nNachricht: {message}"
@@ -815,3 +819,32 @@ Formatiere strukturiert und übersichtlich."""
         except Exception as e:
             logger.error(f"Mobility-Handler-Fehler: {e}")
             return "❌ Fahrzeit konnte nicht berechnet werden."
+
+
+    async def _handle_weather(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
+        """Ruft Echtzeit-Wetterdaten via WeatherService ab (Open-Meteo, kein API-Key noetig)."""
+        from src.services.weather_service import WeatherService
+        details = intent_data.get("details", {})
+        location = details.get("location", "")
+        weather_type = details.get("type", "current")
+        days = int(details.get("days", 3))
+
+        if not location:
+            home = getattr(settings, "HOME_ADDRESS", "")
+            location = home.split(",")[0].strip() if home else "Berlin"
+
+        try:
+            weather_svc = WeatherService()
+            if weather_type == "forecast":
+                data = await weather_svc.get_forecast(location, days=days)
+                if not data:
+                    return f"Wettervorhersage fuer {location} konnte nicht abgerufen werden."
+                return weather_svc.format_forecast(data)
+            else:
+                data = await weather_svc.get_current(location)
+                if not data:
+                    return f"Wetter fuer {location} konnte nicht abgerufen werden."
+                return weather_svc.format_current(data)
+        except Exception as e:
+            logger.error(f"Wetter-Handler-Fehler: {e}")
+            return "Wetterdaten konnten nicht abgerufen werden."
