@@ -26,6 +26,10 @@ from src.services.spotify_service import SpotifyService
 from src.services.smarthome_service import SmartHomeService
 from src.services.chefkoch_service import ChefkochService
 from src.services.drive_service import DriveService
+from src.services.shopping_service import ShoppingService
+from src.services.email_service import EmailService
+from src.services.scanner_service import ScannerService
+from src.services.mobility_service import MobilityService
 from src.bots.taake_bot import TaakeBot
 from src.bots.nina_bot import NinaBot
 
@@ -123,6 +127,10 @@ async def main():
     smarthome_service = SmartHomeService()
     chefkoch_service = ChefkochService()
     drive_service = DriveService()
+    shopping_service = ShoppingService()
+    email_service = EmailService()
+    scanner_service = ScannerService()
+    mobility_service = MobilityService()
 
     await memory_service.initialize()
     await calendar_service.initialize()
@@ -132,6 +140,7 @@ async def main():
     await task_service.initialize()
     await document_service.initialize()
     await drive_service.initialize()
+    await email_service.initialize()
 
     logger.info("Services bereit.")
 
@@ -155,6 +164,10 @@ async def main():
             smarthome_service=smarthome_service,
             chefkoch_service=chefkoch_service,
             drive_service=drive_service,
+            shopping_service=shopping_service,
+            email_service=email_service,
+            scanner_service=scanner_service,
+            mobility_service=mobility_service,
         )
 
     # Telegram Applications bauen

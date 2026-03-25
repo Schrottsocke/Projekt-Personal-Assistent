@@ -75,6 +75,13 @@ class Settings:
     # Calendar Cache (TTL in Minuten)
     CALENDAR_CACHE_TTL_MINUTES: int = int(os.getenv("CALENDAR_CACHE_TTL_MINUTES", "5"))
 
+    # Mobility (OpenRouteService)
+    OPENROUTE_API_KEY: str = os.getenv("OPENROUTE_API_KEY", "")
+    HOME_ADDRESS: str = os.getenv("HOME_ADDRESS", "")
+
+    # Email (Gmail) – Check-Intervall in Minuten
+    EMAIL_CHECK_INTERVAL_MINUTES: int = int(os.getenv("EMAIL_CHECK_INTERVAL_MINUTES", "15"))
+
     # Conversation History Pruning (Einträge älter als N Tage löschen)
     CONVERSATION_HISTORY_DAYS: int = int(os.getenv("CONVERSATION_HISTORY_DAYS", "30"))
 

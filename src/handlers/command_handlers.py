@@ -46,6 +46,12 @@ async def cmd_hilfe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/smarthome – Smart Home Status & Steuerung\n"
         "/rezept – Rezept auf Chefkoch.de suchen\n"
         "/drive – Google Drive Dateien verwalten\n"
+        "/einkaufsliste – Einkaufsliste anzeigen\n"
+        "/einkauf <items> – Artikel hinzufügen (komma-getrennt)\n"
+        "/email – Gmail-Posteingang anzeigen\n"
+        "/email\\_connect – Gmail verbinden\n"
+        "/email\\_aktionen – Aufgaben aus E-Mails extrahieren\n"
+        "/fahrzeit <Ziel> – Fahrzeit berechnen\n"
         "/hilfe – Diese Hilfe\n\n"
         "🎤 *Sprache:* Schick mir Sprachnachrichten – ich verstehe sie!\n\n"
         "🧠 *Ich lerne mit:*\n"
@@ -1001,6 +1007,13 @@ def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("smarthome", cmd_smarthome))
     app.add_handler(CommandHandler("rezept", cmd_rezept))
     app.add_handler(CommandHandler("drive", cmd_drive))
+    # Neue Commands: Einkaufsliste, Email, Fahrzeit
+    app.add_handler(CommandHandler("einkaufsliste", cmd_einkaufsliste))
+    app.add_handler(CommandHandler("einkauf", cmd_einkauf))
+    app.add_handler(CommandHandler("email", cmd_email))
+    app.add_handler(CommandHandler("email_connect", cmd_email_connect))
+    app.add_handler(CommandHandler("email_aktionen", cmd_email_aktionen))
+    app.add_handler(CommandHandler("fahrzeit", cmd_fahrzeit))
 
 
 async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1050,3 +1063,228 @@ async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Termin-Fehler: {e}")
         await update.message.reply_text("❌ Termin konnte nicht erstellt werden.")
+
+
+# ── Einkaufsliste Commands ────────────────────────────────────────────────────
+
+async def cmd_einkaufsliste(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Zeigt die aktuelle Einkaufsliste."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    try:
+        if not hasattr(bot, "shopping_service") or not bot.shopping_service:
+            await update.message.reply_text("❌ Einkaufsliste nicht verfügbar.")
+            return
+
+        user_key = bot.name.lower()
+        items = await bot.shopping_service.get_items(user_key)
+        text = bot.shopping_service.format_list(items)
+        await update.message.reply_text(text, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Einkaufsliste-Fehler: {e}")
+        await update.message.reply_text("❌ Einkaufsliste konnte nicht geladen werden.")
+
+
+async def cmd_einkauf(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Fügt Artikel zur Einkaufsliste hinzu. Verwendung: /einkauf Milch, Brot, Butter"""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "🛒 *Einkauf hinzufügen:*\n\n"
+            "Verwendung: `/einkauf Milch, Brot, 500g Butter`\n\n"
+            "Oder schreib einfach: _\"Kauf noch Tomaten\"_",
+            parse_mode="Markdown",
+        )
+        return
+
+    try:
+        if not hasattr(bot, "shopping_service") or not bot.shopping_service:
+            await update.message.reply_text("❌ Einkaufsliste nicht verfügbar.")
+            return
+
+        user_key = bot.name.lower()
+        raw = " ".join(context.args)
+        items_raw = [i.strip() for i in raw.split(",") if i.strip()]
+        items = [{"name": i} for i in items_raw]
+        count = await bot.shopping_service.add_items_bulk(user_key, items)
+        await update.message.reply_text(
+            f"✅ {count} Artikel auf die Einkaufsliste:\n" +
+            "\n".join(f"• {i['name']}" for i in items),
+            parse_mode="Markdown",
+        )
+    except Exception as e:
+        logger.error(f"Einkauf-Add-Fehler: {e}")
+        await update.message.reply_text("❌ Artikel konnten nicht hinzugefügt werden.")
+
+
+# ── Email Commands ────────────────────────────────────────────────────────────
+
+async def cmd_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Zeigt die Gmail-Inbox (letzte 10 ungelesene Mails)."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    try:
+        if not hasattr(bot, "email_service") or not bot.email_service:
+            await update.message.reply_text("❌ E-Mail-Service nicht verfügbar.")
+            return
+
+        user_key = bot.name.lower()
+        if not bot.email_service.is_connected(user_key):
+            await update.message.reply_text(
+                "📭 Gmail nicht verbunden.\n\n"
+                "Verbinden mit: /email\\_connect",
+                parse_mode="Markdown",
+            )
+            return
+
+        await update.message.reply_text("📬 Lade Posteingang...")
+        emails = await bot.email_service.get_inbox(user_key, limit=10, unread_only=True)
+        text = bot.email_service.format_inbox(emails)
+        await update.message.reply_text(text, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Email-Command-Fehler: {e}")
+        await update.message.reply_text("❌ E-Mails konnten nicht geladen werden.")
+
+
+async def cmd_email_connect(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Startet den Gmail OAuth2-Verbindungsflow."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    try:
+        if not hasattr(bot, "email_service") or not bot.email_service:
+            await update.message.reply_text("❌ E-Mail-Service nicht verfügbar.")
+            return
+
+        user_key = bot.name.lower()
+        auth_url = bot.email_service.get_auth_url(user_key)
+        await update.message.reply_text(
+            "📧 *Gmail verbinden:*\n\n"
+            f"1. Öffne diesen Link:\n{auth_url}\n\n"
+            "2. Melde dich mit deinem Google-Konto an\n"
+            "3. Kopiere den Bestätigungscode\n"
+            "4. Schicke mir den Code als nächste Nachricht",
+            parse_mode="Markdown",
+            disable_web_page_preview=True,
+        )
+    except FileNotFoundError as e:
+        await update.message.reply_text(
+            f"❌ Google Credentials fehlen:\n`{e}`\n\n"
+            "Bitte `config/google_credentials.json` von der Google Cloud Console herunterladen.",
+            parse_mode="Markdown",
+        )
+    except Exception as e:
+        logger.error(f"Email-Connect-Fehler: {e}")
+        await update.message.reply_text("❌ Gmail-Verbindung konnte nicht gestartet werden.")
+
+
+async def cmd_email_aktionen(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Extrahiert Aufgaben, Termine und Fristen aus den letzten ungelesenen Mails."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    try:
+        if not hasattr(bot, "email_service") or not bot.email_service:
+            await update.message.reply_text("❌ E-Mail-Service nicht verfügbar.")
+            return
+
+        user_key = bot.name.lower()
+        if not bot.email_service.is_connected(user_key):
+            await update.message.reply_text(
+                "📭 Gmail nicht verbunden. Verbinden mit: /email\\_connect",
+                parse_mode="Markdown",
+            )
+            return
+
+        await update.message.reply_text("🔍 Analysiere E-Mails...")
+        emails = await bot.email_service.get_inbox(user_key, limit=3, unread_only=True)
+        if not emails:
+            await update.message.reply_text("📭 Keine ungelesenen E-Mails.")
+            return
+
+        results = []
+        for mail_ref in emails[:2]:  # Max 2 Mails analysieren
+            mail = await bot.email_service.get_email(user_key, mail_ref["id"])
+            if not mail:
+                continue
+            actions = await bot.email_service.extract_actions(mail, bot.ai_service)
+            summary = actions.get("summary", "")
+            tasks = actions.get("tasks", [])
+            events = actions.get("events", [])
+            reminders = actions.get("reminders", [])
+
+            block = [f"📧 *{mail_ref['subject'][:50]}*"]
+            if summary:
+                block.append(f"_{summary}_")
+            for t in tasks:
+                block.append(f"📋 {t}")
+            for e in events:
+                block.append(f"📅 {e}")
+            for r in reminders:
+                block.append(f"⏰ {r}")
+            results.append("\n".join(block))
+
+        if results:
+            await update.message.reply_text(
+                "*Erkannte Aktionen aus E-Mails:*\n\n" + "\n\n".join(results),
+                parse_mode="Markdown",
+            )
+        else:
+            await update.message.reply_text("📭 Keine Aktionen in den E-Mails erkannt.")
+    except Exception as e:
+        logger.error(f"Email-Aktionen-Fehler: {e}")
+        await update.message.reply_text("❌ E-Mail-Analyse fehlgeschlagen.")
+
+
+# ── Fahrzeit Command ──────────────────────────────────────────────────────────
+
+async def cmd_fahrzeit(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Berechnet die Fahrzeit zu einem Ort. Verwendung: /fahrzeit <Ziel>"""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "🗺 *Fahrzeit berechnen:*\n\n"
+            "Verwendung: `/fahrzeit Berlin Hbf`\n\n"
+            "Oder schreib: _\"Wann muss ich los für meinen 14 Uhr Termin in München?\"_",
+            parse_mode="Markdown",
+        )
+        return
+
+    try:
+        if not hasattr(bot, "mobility_service") or not bot.mobility_service:
+            await update.message.reply_text("❌ Fahrzeit-Service nicht verfügbar.")
+            return
+
+        if not bot.mobility_service.available:
+            await update.message.reply_text(
+                "❌ Fahrzeit nicht verfügbar.\n"
+                "Bitte `OPENROUTE_API_KEY` in `.env` eintragen.",
+                parse_mode="Markdown",
+            )
+            return
+
+        destination = " ".join(context.args)
+        await update.message.reply_text(f"🗺 Berechne Fahrzeit nach _{destination}_...", parse_mode="Markdown")
+
+        route = await bot.mobility_service.get_travel_time(origin="", destination=destination)
+        if not route:
+            await update.message.reply_text(f"❌ Route nach _{destination}_ konnte nicht berechnet werden.", parse_mode="Markdown")
+            return
+
+        text = bot.mobility_service.format_route(route)
+        await update.message.reply_text(text, parse_mode="Markdown")
+    except Exception as e:
+        logger.error(f"Fahrzeit-Fehler: {e}")
+        await update.message.reply_text("❌ Fahrzeit konnte nicht berechnet werden.")

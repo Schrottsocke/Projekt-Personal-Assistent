@@ -86,6 +86,15 @@ class AssistantScheduler:
             name="Conversation-History-Pruning",
         )
 
+        # E-Mail-Check (konfigurierbares Intervall, Standard 15 Min)
+        self.scheduler.add_job(
+            self._check_new_emails,
+            IntervalTrigger(minutes=settings.EMAIL_CHECK_INTERVAL_MINUTES),
+            id="email_check",
+            replace_existing=True,
+            name="E-Mail-Check",
+        )
+
         self.scheduler.start()
         logger.info(
             f"Scheduler gestartet: Briefing {settings.MORNING_BRIEFING_TIME}, "
@@ -298,6 +307,36 @@ class AssistantScheduler:
             logger.info(f"Conversation-Pruning: {deleted} Einträge gelöscht (> {days} Tage).")
         except Exception as e:
             logger.error(f"Conversation-Pruning-Fehler: {e}")
+
+    async def _check_new_emails(self):
+        """Prüft auf neue ungelesene Mails und benachrichtigt die User."""
+        for user_key, bot in self._bots.items():
+            try:
+                if not hasattr(bot, "email_service") or not bot.email_service:
+                    continue
+                if not bot.email_service.is_connected(user_key):
+                    continue
+                if self._is_quiet_hours(user_key) or self._is_focus_mode(user_key):
+                    continue
+
+                count = await bot.email_service.get_unread_count(user_key)
+                if count <= 0:
+                    continue
+
+                chat_id = await self._get_chat_id(user_key)
+                if not chat_id:
+                    continue
+
+                app = self._applications.get(user_key)
+                if app and count > 0:
+                    await app.bot.send_message(
+                        chat_id=chat_id,
+                        text=f"📬 Du hast *{count}* ungelesene E-Mail{'s' if count != 1 else ''}.\n_/email_ zum Anzeigen.",
+                        parse_mode="Markdown",
+                    )
+                    logger.info(f"E-Mail-Benachrichtigung gesendet an '{user_key}': {count} ungelesen.")
+            except Exception as e:
+                logger.error(f"E-Mail-Check-Fehler für '{user_key}': {e}")
 
     def _is_focus_mode(self, user_key: str) -> bool:
         """Gibt True zurück wenn der User gerade im Fokus-Modus ist."""

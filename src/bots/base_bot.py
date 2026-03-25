@@ -45,6 +45,10 @@ class BaseAssistantBot:
         self.smarthome_service = None
         self.chefkoch_service = None
         self.drive_service = None
+        self.shopping_service = None
+        self.email_service = None
+        self.scanner_service = None
+        self.mobility_service = None
 
     def inject_services(
         self,
@@ -61,6 +65,10 @@ class BaseAssistantBot:
         smarthome_service=None,
         chefkoch_service=None,
         drive_service=None,
+        shopping_service=None,
+        email_service=None,
+        scanner_service=None,
+        mobility_service=None,
     ):
         self.ai_service = ai_service
         self.memory_service = memory_service
@@ -75,6 +83,10 @@ class BaseAssistantBot:
         self.smarthome_service = smarthome_service
         self.chefkoch_service = chefkoch_service
         self.drive_service = drive_service
+        self.shopping_service = shopping_service
+        self.email_service = email_service
+        self.scanner_service = scanner_service
+        self.mobility_service = mobility_service
 
     def _is_authorized(self, user_id: int) -> bool:
         """Nur der Owner darf mit diesem Bot interagieren."""

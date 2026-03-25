@@ -41,3 +41,8 @@ spotipy>=2.24.0
 
 # Logging
 structlog==24.4.0
+
+# Dokumenten-Scanner: PDF-Text-Extraktion (optional – Scanner-Service)
+PyPDF2>=3.0.0
+
+# Mobilität: Fahrzeiten via OpenRouteService (httpx bereits vorhanden)

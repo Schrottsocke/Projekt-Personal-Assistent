@@ -33,7 +33,23 @@ async def generate_briefing(bot) -> str:
     except Exception:
         open_tasks = []
 
-    return await bot.ai_service.generate_morning_briefing(
+    # Neue Kontexte: Einkaufsliste + ungelesene Mails
+    shopping_count = 0
+    try:
+        if hasattr(bot, "shopping_service") and bot.shopping_service:
+            items = await bot.shopping_service.get_items(user_key)
+            shopping_count = len(items)
+    except Exception:
+        pass
+
+    unread_emails = 0
+    try:
+        if hasattr(bot, "email_service") and bot.email_service and bot.email_service.is_connected(user_key):
+            unread_emails = await bot.email_service.get_unread_count(user_key)
+    except Exception:
+        pass
+
+    briefing = await bot.ai_service.generate_morning_briefing(
         user_key=user_key,
         name=bot.name,
         events=events,
@@ -41,3 +57,15 @@ async def generate_briefing(bot) -> str:
         memories=memories,
         open_tasks=open_tasks,
     )
+
+    # Einkaufsliste- und Email-Hinweis anhängen
+    extras = []
+    if shopping_count > 0:
+        extras.append(f"🛒 *Einkaufsliste:* {shopping_count} offene Artikel (_/einkaufsliste_)")
+    if unread_emails > 0:
+        extras.append(f"📬 *E-Mail:* {unread_emails} ungelesene Nachrichten (_/email_)")
+
+    if extras:
+        briefing += "\n\n" + "\n".join(extras)
+
+    return briefing

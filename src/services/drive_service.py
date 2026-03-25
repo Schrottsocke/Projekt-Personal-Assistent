@@ -371,6 +371,119 @@ class DriveService:
     # Formatierung
     # ------------------------------------------------------------------
 
+    async def create_folder(
+        self, user_key: str, name: str, parent_id: Optional[str] = None
+    ) -> Optional[dict]:
+        """
+        Erstellt einen Ordner in Google Drive.
+
+        Returns:
+            Dict mit id und name, oder None bei Fehler.
+        """
+        try:
+            service = self._get_service(user_key)
+            metadata: dict = {
+                "name": name,
+                "mimeType": "application/vnd.google-apps.folder",
+            }
+            if parent_id:
+                metadata["parents"] = [parent_id]
+            folder = service.files().create(
+                body=metadata, fields="id,name,webViewLink"
+            ).execute()
+            logger.info("Drive Ordner '%s' erstellt für '%s': %s", name, user_key, folder.get("id"))
+            return folder
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error("Drive create_folder Fehler für '%s': %s", user_key, e)
+            return None
+
+    async def search_files(
+        self, user_key: str, query: str, mime_type: Optional[str] = None, limit: int = 10
+    ) -> list[dict]:
+        """
+        Sucht Dateien in Google Drive nach Name und/oder MIME-Typ.
+
+        Args:
+            query: Suchbegriff (Dateiname enthält diesen String)
+            mime_type: Optionaler MIME-Type-Filter
+            limit: Maximale Anzahl Ergebnisse
+
+        Returns:
+            Liste von Datei-Dicts.
+        """
+        try:
+            service = self._get_service(user_key)
+            q_parts = [f"name contains '{query}'", "trashed = false"]
+            if mime_type:
+                q_parts.append(f"mimeType = '{mime_type}'")
+            result = service.files().list(
+                q=" and ".join(q_parts),
+                pageSize=limit,
+                fields="files(id,name,mimeType,modifiedTime,size,webViewLink)",
+                orderBy="modifiedTime desc",
+            ).execute()
+            return result.get("files", [])
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error("Drive search_files Fehler für '%s': %s", user_key, e)
+            return []
+
+    async def get_or_create_assistant_folder(self, user_key: str) -> Optional[str]:
+        """
+        Gibt die ID des 'Personal Assistant' Ordners zurück.
+        Erstellt ihn wenn er noch nicht existiert.
+
+        Returns:
+            Ordner-ID oder None bei Fehler.
+        """
+        folder_name = "Personal Assistant"
+        try:
+            service = self._get_service(user_key)
+            result = service.files().list(
+                q=f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+                fields="files(id,name)",
+                pageSize=1,
+            ).execute()
+            folders = result.get("files", [])
+            if folders:
+                return folders[0]["id"]
+            # Ordner erstellen
+            folder = await self.create_folder(user_key, folder_name)
+            return folder["id"] if folder else None
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error("Drive get_or_create_assistant_folder Fehler für '%s': %s", user_key, e)
+            return None
+
+    async def download_file(self, user_key: str, file_id: str) -> Optional[bytes]:
+        """
+        Lädt den Inhalt einer Drive-Datei herunter.
+
+        Returns:
+            Dateiinhalt als bytes, oder None bei Fehler.
+        """
+        try:
+            from googleapiclient.http import MediaIoBaseDownload
+            import io
+
+            service = self._get_service(user_key)
+            request = service.files().get_media(fileId=file_id)
+            buf = io.BytesIO()
+            downloader = MediaIoBaseDownload(buf, request)
+            done = False
+            while not done:
+                _, done = downloader.next_chunk()
+            return buf.getvalue()
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error("Drive download_file Fehler für '%s' (id=%s): %s", user_key, file_id, e)
+            return None
+
     @staticmethod
     def format_file_list(files: list[dict]) -> str:
         """

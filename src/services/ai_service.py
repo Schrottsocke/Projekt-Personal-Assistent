@@ -33,6 +33,12 @@ INTENT_SPOTIFY = "spotify"
 INTENT_SMARTHOME = "smarthome"
 INTENT_RECIPE_SEARCH = "recipe_search"
 INTENT_DRIVE = "drive"
+INTENT_SHOPPING_ADD = "shopping_add"
+INTENT_SHOPPING_VIEW = "shopping_view"
+INTENT_SHOPPING_RECIPE = "shopping_recipe"
+INTENT_EMAIL_READ = "email_read"
+INTENT_EMAIL_COMPOSE = "email_compose"
+INTENT_MOBILITY = "mobility"
 
 
 class AIService:
@@ -216,6 +222,24 @@ class AIService:
         elif intent == INTENT_DRIVE:
             return await self._handle_drive(bot, user_key, message, extracted, chat_id)
 
+        elif intent == INTENT_SHOPPING_ADD:
+            return await self._handle_shopping_add(bot, user_key, extracted)
+
+        elif intent == INTENT_SHOPPING_VIEW:
+            return await self._handle_shopping_view(bot, user_key)
+
+        elif intent == INTENT_SHOPPING_RECIPE:
+            return await self._handle_shopping_recipe(bot, user_key, extracted)
+
+        elif intent == INTENT_EMAIL_READ:
+            return await self._handle_email_read(bot, user_key, extracted)
+
+        elif intent == INTENT_EMAIL_COMPOSE:
+            return await self._handle_email_compose(bot, user_key, message, extracted, chat_id)
+
+        elif intent == INTENT_MOBILITY:
+            return await self._handle_mobility(bot, user_key, extracted)
+
         else:
             # Normaler Chat mit Kontext-Gedächtnis
             return await self._handle_chat(message, user_key, bot)
@@ -248,11 +272,17 @@ Mögliche Intents:
 - smarthome: Smart Home / Haus-Steuerung (z.B. "Licht aus", "Heizung auf 22 Grad", "Rollos schließen", "Steckdose Küche an")
 - recipe_search: Nutzer sucht ein Rezept oder fragt was er kochen kann (z.B. "Rezept für Pasta Carbonara", "Was kann ich mit Brokkoli kochen?", "Zeig mir ein Kuchenrezept", "Wie macht man Schnitzel?")
 - drive: Google Drive Aktionen (z.B. "Zeig meine Drive-Dateien", "Suche Datei X in Drive", "Was liegt in meinem Drive?")
+- shopping_add: Nutzer will Artikel auf die Einkaufsliste (z.B. "Kauf noch Milch", "Auf die Einkaufsliste: Brot und Butter", "Ich brauche noch Tomaten")
+- shopping_view: Nutzer will die Einkaufsliste sehen (z.B. "Was muss ich einkaufen?", "Einkaufsliste zeigen", "Was steht auf der Liste?")
+- shopping_recipe: Nutzer will Rezept-Zutaten auf die Einkaufsliste (z.B. "Zutaten für Carbonara auf die Liste", "Füge Zutaten von Rezept X hinzu")
+- email_read: Nutzer fragt nach E-Mails (z.B. "Zeig meine Mails", "Neue E-Mails?", "Was steht in meinem Posteingang?")
+- email_compose: Nutzer will eine E-Mail schreiben (z.B. "Schreib eine Mail an X", "E-Mail an Chef über Y", "Antworte auf die Mail")
+- mobility: Nutzer fragt nach Fahrzeiten oder Abfahrt (z.B. "Wie lang brauche ich zur Arbeit?", "Wann muss ich losfahren?", "Fahrzeit nach München", "Route zu X berechnen")
 - chat: Alles andere (persönliche Fragen, Konversation, Meinungen, Erinnerungen aus Gesprächen)
 
 Antworte NUR mit diesem JSON-Format:
 {{
-  "intent": "calendar_read|calendar_create|note_create|reminder_create|task_create|task_read|task_complete|timer_create|table_create|presentation_create|web_search|spotify|smarthome|recipe_search|drive|chat",
+  "intent": "calendar_read|calendar_create|note_create|reminder_create|task_create|task_read|task_complete|timer_create|table_create|presentation_create|web_search|spotify|smarthome|recipe_search|drive|shopping_add|shopping_view|shopping_recipe|email_read|email_compose|mobility|chat",
   "confidence": 0.0-1.0,
   "extracted": {{
     "content": "extrahierter Kerninhalt",
@@ -266,7 +296,17 @@ Antworte NUR mit diesem JSON-Format:
     "spotify_query": "Suche-Query für play (Song, Künstler, Playlist), sonst null",
     "volume_level": "Lautstärke 0-100 bei volume-Action, sonst null",
     "smarthome_command": "Rohbefehl für Smart Home (bei smarthome intent)",
-    "smarthome_entity": "Raumname oder Gerätename, falls erkennbar, sonst null"
+    "smarthome_entity": "Raumname oder Gerätename, falls erkennbar, sonst null",
+    "shopping_items": "Komma-getrennte Artikel falls shopping_add (z.B. 'Milch, Brot, 500g Butter'), sonst null",
+    "recipe_query": "Rezeptname falls shopping_recipe, sonst null",
+    "email_action": "inbox|read|unread_count (bei email_read intent), sonst null",
+    "email_id": "Mail-ID falls konkrete Mail gemeint, sonst null",
+    "email_to": "Empfänger-Adresse falls email_compose, sonst null",
+    "email_subject": "Betreff falls email_compose, sonst null",
+    "mobility_origin": "Startort falls angegeben, sonst null (default: Zuhause)",
+    "mobility_destination": "Zielort bei mobility intent, sonst null",
+    "mobility_arrival_time": "Gewünschte Ankunftszeit als ISO-String, sonst null",
+    "mobility_mode": "driving|cycling|walking (Standard: driving), sonst null"
   }}
 }}"""
 
@@ -1274,3 +1314,222 @@ Regeln:
             except Exception as e:
                 logger.error(f"Presentation-Parse-Fehler (Versuch {attempt+1}): {e}")
         return None
+
+    # ── Shopping Handler ─────────────────────────────────────────────────────
+
+    async def _handle_shopping_add(self, bot, user_key: str, extracted: dict) -> str:
+        """Fügt Artikel zur Einkaufsliste hinzu."""
+        try:
+            if not hasattr(bot, "shopping_service") or not bot.shopping_service:
+                return "❌ Einkaufsliste nicht verfügbar."
+
+            raw = extracted.get("shopping_items") or extracted.get("content", "")
+            if not raw:
+                return "❓ Was soll auf die Einkaufsliste? Beispiel: _'Milch, Brot, 500g Butter'_"
+
+            # Komma-getrennte Items parsen
+            items_raw = [i.strip() for i in str(raw).split(",") if i.strip()]
+            if not items_raw:
+                return "❓ Keine Artikel erkannt."
+
+            items = []
+            for item_str in items_raw:
+                # Einfache Mengen-Erkennung: "500g Butter" → qty="500", unit="g", name="Butter"
+                parts = item_str.split(None, 1)
+                quantity = None
+                unit = None
+                name = item_str
+
+                if len(parts) == 2:
+                    qty_part = parts[0]
+                    # Prüfen ob erstes Wort eine Mengenangabe ist (Zahl + optionale Einheit)
+                    import re
+                    match = re.match(r"^(\d+(?:[.,]\d+)?)\s*([a-zA-ZÄÖÜäöü]*)$", qty_part)
+                    if match:
+                        quantity = match.group(1)
+                        unit = match.group(2) or None
+                        name = parts[1]
+
+                items.append({"name": name, "quantity": quantity, "unit": unit})
+
+            count = await bot.shopping_service.add_items_bulk(user_key, items)
+            if count == 1:
+                return f"✅ *{items[0]['name']}* auf die Einkaufsliste."
+            return f"✅ {count} Artikel auf die Einkaufsliste:\n" + "\n".join(f"• {i['name']}" for i in items)
+        except Exception as e:
+            logger.error(f"Shopping-Add-Fehler: {e}")
+            return "❌ Konnte Artikel nicht hinzufügen."
+
+    async def _handle_shopping_view(self, bot, user_key: str) -> str:
+        """Zeigt die aktuelle Einkaufsliste."""
+        try:
+            if not hasattr(bot, "shopping_service") or not bot.shopping_service:
+                return "❌ Einkaufsliste nicht verfügbar."
+            items = await bot.shopping_service.get_items(user_key)
+            return bot.shopping_service.format_list(items)
+        except Exception as e:
+            logger.error(f"Shopping-View-Fehler: {e}")
+            return "❌ Einkaufsliste konnte nicht geladen werden."
+
+    async def _handle_shopping_recipe(self, bot, user_key: str, extracted: dict) -> str:
+        """Sucht ein Rezept und fügt Zutaten zur Einkaufsliste hinzu (via Proposal)."""
+        try:
+            if not hasattr(bot, "shopping_service") or not bot.shopping_service:
+                return "❌ Einkaufsliste nicht verfügbar."
+            if not hasattr(bot, "chefkoch_service") or not bot.chefkoch_service:
+                return "❌ Chefkoch-Service nicht verfügbar."
+
+            query = extracted.get("recipe_query") or extracted.get("content", "")
+            if not query:
+                return "❓ Welches Rezept soll ich auf die Einkaufsliste?"
+
+            # Rezept suchen
+            results = await bot.chefkoch_service.search_recipes(query, limit=1)
+            if not results:
+                return f"❌ Kein Rezept gefunden für: _{query}_"
+
+            recipe_item = results[0].get("item", {})
+            recipe_id = recipe_item.get("id", "")
+            recipe_title = recipe_item.get("title", query)
+
+            # Vollständiges Rezept laden
+            recipe = await bot.chefkoch_service.get_recipe(recipe_id)
+            if not recipe:
+                return "❌ Rezept konnte nicht geladen werden."
+
+            # Zutaten extrahieren und auf Einkaufsliste
+            count = await bot.shopping_service.add_items_from_recipe(user_key, recipe)
+            if count == 0:
+                return f"❓ Keine Zutaten in Rezept _{recipe_title}_ gefunden."
+
+            return (
+                f"🛒 *{count} Zutaten* aus _{recipe_title}_ auf die Einkaufsliste!\n"
+                f"_/einkaufsliste_ zum Anzeigen."
+            )
+        except Exception as e:
+            logger.error(f"Shopping-Recipe-Fehler: {e}")
+            return "❌ Konnte Rezept-Zutaten nicht hinzufügen."
+
+    # ── Email Handler ─────────────────────────────────────────────────────────
+
+    async def _handle_email_read(self, bot, user_key: str, extracted: dict) -> str:
+        """Zeigt die Inbox oder eine einzelne Mail."""
+        try:
+            if not hasattr(bot, "email_service") or not bot.email_service:
+                return "❌ E-Mail-Service nicht verfügbar."
+            if not bot.email_service.is_connected(user_key):
+                return (
+                    "📭 Gmail nicht verbunden.\n"
+                    "Verbinden mit: /email\\_connect"
+                )
+
+            email_id = extracted.get("email_id")
+            if email_id:
+                # Einzelne Mail lesen
+                mail = await bot.email_service.get_email(user_key, email_id)
+                if not mail:
+                    return "❌ E-Mail nicht gefunden."
+                return bot.email_service.format_email(mail)
+            else:
+                # Inbox anzeigen
+                emails = await bot.email_service.get_inbox(user_key, limit=10, unread_only=True)
+                return bot.email_service.format_inbox(emails)
+        except Exception as e:
+            logger.error(f"Email-Read-Fehler: {e}")
+            return "❌ E-Mails konnten nicht geladen werden."
+
+    async def _handle_email_compose(
+        self, bot, user_key: str, message: str, extracted: dict, chat_id: int
+    ) -> str:
+        """Erstellt einen E-Mail-Entwurf via Proposal."""
+        try:
+            if not hasattr(bot, "email_service") or not bot.email_service:
+                return "❌ E-Mail-Service nicht verfügbar."
+            if not bot.email_service.is_connected(user_key):
+                return "📭 Gmail nicht verbunden. Verbinden mit: /email\\_connect"
+
+            to = extracted.get("email_to", "")
+            subject = extracted.get("email_subject", "")
+            body = extracted.get("content", message)
+
+            if not to:
+                return "❓ An wen soll die Mail? Beispiel: _'Mail an max@example.com über Termin morgen'_"
+
+            from src.services.proposal_service import TYPE_TASK_CREATE
+            await bot.proposal_service.create_proposal(
+                user_key=user_key,
+                proposal_type="email_compose",
+                title=f"E-Mail an {to}: {subject or '(kein Betreff)'}",
+                description=f"Inhalt: {body[:100]}",
+                payload={"to": to, "subject": subject, "body": body},
+                created_by="ai",
+                chat_id=str(chat_id),
+                bot=bot,
+            )
+            return ""
+        except Exception as e:
+            logger.error(f"Email-Compose-Fehler: {e}")
+            return "❌ E-Mail konnte nicht erstellt werden."
+
+    # ── Mobility Handler ──────────────────────────────────────────────────────
+
+    async def _handle_mobility(self, bot, user_key: str, extracted: dict) -> str:
+        """Berechnet Fahrzeiten oder Abfahrtsempfehlungen."""
+        try:
+            if not hasattr(bot, "mobility_service") or not bot.mobility_service:
+                return "❌ Mobilitäts-Service nicht verfügbar (OPENROUTE_API_KEY fehlt)."
+            if not bot.mobility_service.available:
+                return "❌ Fahrzeiten nicht verfügbar. Bitte OPENROUTE\\_API\\_KEY in .env eintragen."
+
+            destination = extracted.get("mobility_destination") or extracted.get("content", "")
+            if not destination:
+                return "❓ Wohin soll die Route? Beispiel: _'Wie lang brauche ich zur Arbeit?'_"
+
+            origin = extracted.get("mobility_origin")
+            mode_raw = (extracted.get("mobility_mode") or "driving").lower()
+            mode_map = {
+                "driving": "driving-car",
+                "cycling": "cycling-regular",
+                "walking": "foot-walking",
+                "car": "driving-car",
+                "bike": "cycling-regular",
+                "walk": "foot-walking",
+                "driving-car": "driving-car",
+            }
+            mode = mode_map.get(mode_raw, "driving-car")
+
+            arrival_str = extracted.get("mobility_arrival_time")
+
+            if arrival_str:
+                # Abfahrts-Empfehlung berechnen
+                try:
+                    from datetime import datetime
+                    import pytz
+                    arrival_time = datetime.fromisoformat(arrival_str.replace("Z", "+00:00"))
+                    if arrival_time.tzinfo is None:
+                        arrival_time = self.tz.localize(arrival_time)
+                except Exception:
+                    arrival_time = datetime.now(self.tz) + timedelta(hours=1)
+
+                dep_data = await bot.mobility_service.get_departure_time(
+                    destination=destination,
+                    arrival_time=arrival_time,
+                    mode=mode,
+                    origin=origin,
+                )
+                if not dep_data:
+                    return f"❌ Fahrzeit nach _{destination}_ konnte nicht berechnet werden."
+                return bot.mobility_service.format_departure(dep_data)
+            else:
+                # Einfache Fahrzeit
+                route = await bot.mobility_service.get_travel_time(
+                    origin=origin or "",
+                    destination=destination,
+                    mode=mode,
+                )
+                if not route:
+                    return f"❌ Fahrzeit nach _{destination}_ konnte nicht berechnet werden."
+                return bot.mobility_service.format_route(route)
+        except Exception as e:
+            logger.error(f"Mobility-Handler-Fehler: {e}")
+            return "❌ Fahrzeit konnte nicht berechnet werden."

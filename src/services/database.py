@@ -142,6 +142,21 @@ class ConversationHistory(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ShoppingItem(Base):
+    """Einkaufsliste-Eintrag. Eine Liste pro User (kein separates Listen-Model)."""
+    __tablename__ = "shopping_items"
+
+    id = Column(Integer, primary_key=True)
+    user_key = Column(String(50), nullable=False)
+    name = Column(String(200), nullable=False)
+    quantity = Column(String(50), nullable=True)   # z.B. "500", "2", "1 Bund"
+    unit = Column(String(30), nullable=True)       # z.B. "g", "Stück", "ml"
+    category = Column(String(50), nullable=True)   # z.B. "Gemüse", "Milchprodukte"
+    checked = Column(Boolean, default=False)
+    source = Column(String(100), nullable=True)    # z.B. "chefkoch:12345" oder "manual"
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # Engine & Session Setup
 _engine = None
 _SessionLocal = None
