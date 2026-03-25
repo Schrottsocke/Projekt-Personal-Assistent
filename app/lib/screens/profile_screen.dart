@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
+import '../providers/features_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -36,6 +37,18 @@ class ProfileScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: 32),
+
+          // Feature-Marketplace
+          Row(
+            children: [
+              Text('Features', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(width: 8),
+              const Icon(Icons.storefront, size: 18),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const _FeaturesSection(),
           const SizedBox(height: 32),
 
           // Dienste Status
@@ -102,6 +115,40 @@ class ProfileScreen extends ConsumerWidget {
             style: OutlinedButton.styleFrom(foregroundColor: Colors.red),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _FeaturesSection extends ConsumerWidget {
+  const _FeaturesSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(featuresProvider);
+    return state.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Text('Features nicht abrufbar: $e', style: const TextStyle(color: Colors.grey)),
+      data: (features) => Column(
+        children: features.map((feat) {
+          final available = feat['available'] as bool? ?? false;
+          final enabled = feat['enabled'] as bool? ?? false;
+          return SwitchListTile(
+            dense: true,
+            secondary: Text(feat['emoji'] as String? ?? '•', style: const TextStyle(fontSize: 20)),
+            title: Text(feat['name'] as String? ?? ''),
+            subtitle: Text(
+              available ? (feat['description'] as String? ?? '') : '⚠️ API-Keys fehlen',
+              style: TextStyle(fontSize: 12, color: available ? null : Colors.orange),
+            ),
+            value: enabled,
+            onChanged: available
+                ? (val) async {
+                    await ref.read(featuresProvider.notifier).toggle(feat['id'] as String);
+                  }
+                : null,
+          );
+        }).toList(),
       ),
     );
   }

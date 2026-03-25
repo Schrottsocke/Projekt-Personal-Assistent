@@ -13,6 +13,7 @@ from openai import AsyncOpenAI, RateLimitError, APITimeoutError
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, retry_if_not_exception_type
 
 from config.settings import settings
+from src.features.feature_service import get_enabled_intents, is_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +154,14 @@ class AIService:
                 last_exc = e
         raise last_exc
 
+    def _feature_enabled(self, intent: str, user_key: str) -> bool:
+        """Prüft ob das Feature für diesen Intent aktiv ist."""
+        from src.features.catalog import INTENT_TO_FEATURES
+        feature_ids = INTENT_TO_FEATURES.get(intent, [])
+        if not feature_ids:
+            return True  # Kein Feature-Gate für diesen Intent
+        return any(is_enabled(user_key, fid) for fid in feature_ids)
+
     async def process_message(
         self,
         message: str,
@@ -167,6 +176,11 @@ class AIService:
         intent_data = await self._detect_intent(message, user_key)
         intent = intent_data.get("intent", INTENT_CHAT)
         logger.info(f"Intent erkannt: {intent} für Nachricht: {message[:50]}")
+
+        # Feature-Gate: Deaktivierte Features fallen auf Chat zurück
+        if not self._feature_enabled(intent, user_key):
+            logger.info(f"Feature für Intent '{intent}' deaktiviert für {user_key}, Fallback auf Chat")
+            return await self._handle_chat(message, user_key, bot)
 
         handlers = {
             INTENT_CALENDAR_READ: self._handle_calendar_read,
@@ -191,41 +205,54 @@ class AIService:
             INTENT_EMAIL_READ: self._handle_email_read,
             INTENT_EMAIL_COMPOSE: self._handle_email_compose,
             INTENT_MOBILITY: self._handle_mobility,
-                        INTENT_WEATHER: self._handle_weather,
+            INTENT_WEATHER: self._handle_weather,
         }
 
         handler = handlers.get(intent, self._handle_chat)
         return await handler(message, intent_data, user_key, chat_id, bot)
 
-    async def _detect_intent(self, message: str, user_key: str = None) -> dict:
-        """Erkennt den Intent einer Nutzernachricht."""
-        system_prompt = """Du bist ein Intent-Erkennungs-System. Analysiere die Nutzernachricht und gib einen JSON zurück.
+    async def _detect_intent(self, message: str, user_key: str) -> tuple[str, dict]:
+        """
+        Erkennt den Intent einer Nachricht via KI.
+        Gibt (intent_type, extracted_data) zurück.
+        """
+        active_intents = set(get_enabled_intents(user_key))
+        now = datetime.now(self.tz)
+
+        all_intent_lines = [
+            ('calendar_read', '- calendar_read: Nutzer fragt nach Terminen (z.B. "Was habe ich heute?", "Zeig meine Termine")'),
+            ('calendar_create', '- calendar_create: Nutzer will Termin erstellen (z.B. "Zahnarzt am Montag um 10", "Meeting morgen 14 Uhr")'),
+            ('note_create', '- note_create: Nutzer will eine Notiz speichern (z.B. "Notiz: ...", "Merkzettel für ...")'),
+            ('reminder_create', '- reminder_create: Nutzer will erinnert werden (z.B. "Erinnere mich...", "In 2 Stunden...", "Morgen um 9...")'),
+            ('task_create', '- task_create: Nutzer will eine Aufgabe/Todo erstellen (z.B. "Muss noch Steuer machen", "Aufgabe: Einkaufen", "To-Do: Arzt anrufen", "[Name] soll etwas tun")'),
+            ('task_read', '- task_read: Nutzer fragt nach offenen Aufgaben (z.B. "Was steht noch an?", "Zeig meine Todos", "Was muss ich noch tun?")'),
+            ('task_complete', '- task_complete: Nutzer will eine Aufgabe abhaken (z.B. "Aufgabe 3 erledigt", "Habe eingekauft", "Nummer 2 ist fertig")'),
+            ('timer_create', '- timer_create: Nutzer will einen kurzen Countdown/Timer (z.B. "Timer 25 Minuten", "In 30 Min klingeln", "Pomodoro", "Stoppuhr 45 Min"). NUR bei Zeitangaben < 4 Stunden ohne festen Zeitpunkt.'),
+            ('table_create', '- table_create: Nutzer will eine Tabelle oder Excel-Datei erstellen (z.B. "Erstelle eine Tabelle meiner Aufgaben", "Mach mir eine Excel-Tabelle", "Tabelle mit meinen Terminen", "Zeig meine Tasks als Tabelle")'),
+            ('presentation_create', '- presentation_create: Nutzer will eine Präsentation oder PowerPoint erstellen (z.B. "Erstelle eine Präsentation über X", "PowerPoint zu Thema Y", "Erstell mir Slides für Z")'),
+            ('web_search', '- web_search: BEVORZUGE wenn aktuelle/externe Daten gebraucht werden. PFLICHT bei: Wetter (auch "Wetter heute/morgen/diese Woche" → IMMER web_search!), Nachrichten, Preise, Sportergebnisse, Aktienkurse, Börsenkurse, Öffnungszeiten, Rezepte, Definitionen, aktuelle Ereignisse. REGEL: Wenn die Antwort sich täglich ändern kann oder live-Daten benötigt → web_search. Niemals für zeitkritische Fragen chat wählen!'),
+            ('spotify', '- spotify: Musik-Steuerung (z.B. "Spiel Musik", "Pause", "Nächster Song", "Spiel Jazz", "Lauter", "Was läuft gerade?")'),
+            ('smarthome', '- smarthome: Smart Home / Haus-Steuerung (z.B. "Licht aus", "Heizung auf 22 Grad", "Rollos schließen", "Steckdose Küche an")'),
+            ('recipe_search', '- recipe_search: Nutzer sucht ein Rezept oder fragt was er kochen kann (z.B. "Rezept für Pasta Carbonara", "Was kann ich mit Brokkoli kochen?", "Zeig mir ein Kuchenrezept", "Wie macht man Schnitzel?")'),
+            ('drive', '- drive: Google Drive Aktionen (z.B. "Zeig meine Drive-Dateien", "Suche Datei X in Drive", "Was liegt in meinem Drive?")'),
+            ('shopping_add', '- shopping_add: Nutzer will Artikel auf die Einkaufsliste (z.B. "Kauf noch Milch", "Auf die Einkaufsliste: Brot und Butter", "Ich brauche noch Tomaten")'),
+            ('shopping_view', '- shopping_view: Nutzer will die Einkaufsliste sehen (z.B. "Was muss ich einkaufen?", "Einkaufsliste zeigen", "Was steht auf der Liste?")'),
+            ('shopping_recipe', '- shopping_recipe: Nutzer will Rezept-Zutaten auf die Einkaufsliste (z.B. "Zutaten für Carbonara auf die Liste", "Füge Zutaten von Rezept X hinzu")'),
+            ('email_read', '- email_read: Nutzer fragt nach E-Mails (z.B. "Zeig meine Mails", "Neue E-Mails?", "Was steht in meinem Posteingang?")'),
+            ('email_compose', '- email_compose: Nutzer will eine E-Mail schreiben (z.B. "Schreib eine Mail an X", "E-Mail an Chef über Y", "Antworte auf die Mail")'),
+            ('mobility', '- mobility: Nutzer fragt nach Fahrzeiten oder Abfahrt (z.B. "Wie lang brauche ich zur Arbeit?", "Wann muss ich losfahren?", "Fahrzeit nach München", "Route zu X berechnen")'),
+            ('chat', '- chat: Alles andere (persönliche Fragen, Konversation, Meinungen, Erinnerungen aus Gesprächen)'),
+        ]
+        intent_lines = "\n".join(line for intent_name, line in all_intent_lines if intent_name in active_intents)
+
+        prompt = f"""Du bist ein Intent-Classifier. Analysiere die folgende Nachricht und bestimme den Intent.
+
+Aktuelle Zeit: {now.strftime('%A, %d.%m.%Y %H:%M')} (Zeitzone: {settings.TIMEZONE})
+
+Nachricht: "{message}"
 
 Mögliche Intents:
-- calendar_read: Kalender lesen/abfragen ("Was steht heute an?", "Zeig mir meine Termine")
-- calendar_create: Termin erstellen ("Erstelle Termin", "Buche Meeting")
-- note_create: Notiz erstellen ("Notiere", "Schreib auf", "Merke dir")
-- reminder_create: Erinnerung setzen ("Erinnere mich", "In 2 Stunden")
-- web_search: Web-Suche ("Suche nach", "Was ist", "Wie funktioniert", aktuelle Infos/News)
-- task_create: Aufgabe erstellen ("Aufgabe", "Todo", "Erledige")
-- task_read: Aufgaben anzeigen ("Zeig Aufgaben", "Was muss ich noch tun")
-- task_complete: Aufgabe abschließen ("Erledigt", "Abgehakt", "Fertig mit")
-- timer_create: Timer stellen ("Stell Timer", "In X Minuten", "Wecker")
-- table_create: Tabelle erstellen ("Erstelle Tabelle", "Tabelle mit")
-- presentation_create: Präsentation erstellen ("Erstelle Präsentation", "Mache Slides")
-- briefing: Tagesbriefing ("Briefing", "Was gibt es Neues", "Guten Morgen Zusammenfassung")
-- spotify: Musik steuern ("Spiel Musik", "Pause", "Nächster Song", "Lautstärke")
-- smarthome: Smart Home steuern ("Licht an", "Temperatur", "Heizung", "Lampe")
-- recipe_search: Rezept suchen ("Rezept für", "Was kann ich kochen", "Zutaten für")
-- drive: Google Drive ("Zeig Dateien", "Suche Dokument", "Drive")
-- shopping_add: Einkaufsliste hinzufügen ("Kaufe", "Auf die Einkaufsliste", "Brauch ich noch")
-- shopping_view: Einkaufsliste anzeigen ("Einkaufsliste", "Was muss ich kaufen")
-- shopping_recipe: Rezeptzutaten auf Einkaufsliste ("Zutaten von Rezept auf Liste")
-- email_read: E-Mails lesen ("E-Mails", "Posteingang", "Neue Mails")
-- email_compose: E-Mail schreiben ("Schreibe Mail", "Sende E-Mail an")
-- mobility: Fahrzeit/Route ("Wie lange", "Fahrzeit nach", "Route zu", "Stau")
-- weather: Wetter abfragen ("Wie ist das Wetter", "Wetter in", "Wird es regnen", "Temperatur heute", "Wettervorhersage")
-- chat: Normales Gespräch (alles andere)
+{intent_lines}
 
 Antworte NUR mit JSON:
 {"intent": "...", "details": {...}}

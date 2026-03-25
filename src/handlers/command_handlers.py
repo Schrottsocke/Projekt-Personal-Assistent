@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta
 import pytz
 from telegram import Update
-from telegram.ext import CommandHandler, ContextTypes, Application
+from telegram.ext import CommandHandler, CallbackQueryHandler, ContextTypes, Application
 
 from config.settings import settings
 
@@ -1084,6 +1084,8 @@ def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("fahrzeit", cmd_fahrzeit))
     app.add_handler(CommandHandler("scan", cmd_scan))
     app.add_handler(CommandHandler("dokumente", cmd_dokumente))
+    app.add_handler(CommandHandler("marketplace", cmd_marketplace))
+    app.add_handler(CallbackQueryHandler(callback_marketplace_toggle, pattern=r"^mkt_toggle_"))
 
 
 async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1358,3 +1360,97 @@ async def cmd_fahrzeit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Fahrzeit-Fehler: {e}")
         await update.message.reply_text("❌ Fahrzeit konnte nicht berechnet werden.")
+
+
+# ---------------------------------------------------------------------------
+# /marketplace – Feature-Verwaltung
+# ---------------------------------------------------------------------------
+
+async def cmd_marketplace(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Zeigt alle Features mit Toggle-Buttons."""
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    from src.features.feature_service import get_feature_status_list
+
+    bot = get_bot(context)
+    user_key = bot.get_user_key(update.effective_user.id) if bot else None
+    if not user_key:
+        await update.message.reply_text("❌ Benutzer nicht erkannt.")
+        return
+
+    features = get_feature_status_list(user_key)
+    keyboard = []
+    for feat in features:
+        if not feat["available"]:
+            status = "⚠️ Keys fehlen"
+            btn_text = f"{feat['emoji']} {feat['name']} — {status}"
+            keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"mkt_info_{feat['id']}")])
+        else:
+            status = "✅ aktiv" if feat["enabled"] else "❌ inaktiv"
+            action = "deaktivieren" if feat["enabled"] else "aktivieren"
+            keyboard.append([
+                InlineKeyboardButton(f"{feat['emoji']} {feat['name']} — {status}", callback_data=f"mkt_info_{feat['id']}"),
+                InlineKeyboardButton(action.capitalize(), callback_data=f"mkt_toggle_{feat['id']}"),
+            ])
+
+    text = (
+        "🛍 *Feature-Marketplace*\n\n"
+        "Hier kannst du Features aktivieren oder deaktivieren.\n"
+        "Deaktivierte Features werden auch aus der KI-Erkennung entfernt.\n\n"
+        "⚠️ = API-Keys fehlen in `.env`"
+    )
+    await update.message.reply_text(
+        text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
+
+
+async def callback_marketplace_toggle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Callback: Feature umschalten."""
+    from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+    from src.features.feature_service import get_feature_status_list, toggle_feature
+
+    query = update.callback_query
+    await query.answer()
+
+    bot = get_bot(context)
+    user_key = bot.get_user_key(update.effective_user.id) if bot else None
+    if not user_key:
+        await query.edit_message_text("❌ Benutzer nicht erkannt.")
+        return
+
+    feature_id = query.data.replace("mkt_toggle_", "")
+    try:
+        new_state = toggle_feature(user_key, feature_id)
+        state_text = "aktiviert ✅" if new_state else "deaktiviert ❌"
+        await query.answer(f"Feature {state_text}", show_alert=False)
+    except ValueError as e:
+        await query.answer(str(e), show_alert=True)
+        return
+
+    # Keyboard neu aufbauen
+    features = get_feature_status_list(user_key)
+    keyboard = []
+    for feat in features:
+        if not feat["available"]:
+            btn_text = f"{feat['emoji']} {feat['name']} — ⚠️ Keys fehlen"
+            keyboard.append([InlineKeyboardButton(btn_text, callback_data=f"mkt_info_{feat['id']}")])
+        else:
+            status = "✅ aktiv" if feat["enabled"] else "❌ inaktiv"
+            action = "deaktivieren" if feat["enabled"] else "aktivieren"
+            keyboard.append([
+                InlineKeyboardButton(f"{feat['emoji']} {feat['name']} — {status}", callback_data=f"mkt_info_{feat['id']}"),
+                InlineKeyboardButton(action.capitalize(), callback_data=f"mkt_toggle_{feat['id']}"),
+            ])
+
+    text = (
+        "🛍 *Feature-Marketplace*\n\n"
+        "Hier kannst du Features aktivieren oder deaktivieren.\n"
+        "Deaktivierte Features werden auch aus der KI-Erkennung entfernt.\n\n"
+        "⚠️ = API-Keys fehlen in `.env`"
+    )
+    await query.edit_message_text(
+        text,
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )

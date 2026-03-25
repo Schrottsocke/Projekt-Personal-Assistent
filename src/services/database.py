@@ -51,6 +51,8 @@ class UserProfile(Base):
     tts_enabled = Column(Boolean, default=False)
     # Spotify: OAuth2-Token als JSON
     spotify_token_json = Column(Text, nullable=True)
+    # Feature-Marketplace: aktivierte/deaktivierte Features als JSON {"calendar": true, ...}
+    enabled_features = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -232,6 +234,7 @@ def init_db():
                 "ALTER TABLE user_profiles ADD COLUMN focus_mode_until DATETIME",
                 "ALTER TABLE user_profiles ADD COLUMN tts_enabled BOOLEAN DEFAULT 0",
                 "ALTER TABLE user_profiles ADD COLUMN spotify_token_json TEXT",
+                "ALTER TABLE user_profiles ADD COLUMN enabled_features TEXT",
             ]:
                 try:
                     conn.execute(__import__("sqlalchemy").text(col_sql))
