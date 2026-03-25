@@ -183,8 +183,27 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+# Keywords die den Dokument-Scan-Workflow auslösen (in Caption)
+_SCAN_KEYWORDS = {
+    "scan", "dokument", "brief", "rechnung", "vertrag", "arztbrief",
+    "behörde", "ausweis", "beleg", "kontoauszug", "quittung",
+}
+
+
+def _is_scan_intent(caption: str) -> bool:
+    """True wenn kein Caption (=default scan) oder Caption enthält Scan-Keyword."""
+    if not caption:
+        return True
+    caption_lower = caption.lower()
+    return any(kw in caption_lower for kw in _SCAN_KEYWORDS)
+
+
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Analysiert Fotos und Bilder via Vision-Modell."""
+    """
+    Analysiert Fotos:
+    - Kein Caption / Scan-Keywords → Dokument-Scan-Workflow
+    - Sonst → bestehende Vision-Analyse (unverändert)
+    """
     bot = get_bot(context)
     if not await bot._check_auth(update):
         return
@@ -205,9 +224,19 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         photo_file = await photo.get_file()
         image_bytes = await photo_file.download_as_bytearray()
 
-        # Begleittext als Prompt (falls vorhanden)
         caption = update.message.caption or ""
 
+        # --- Dokument-Scan-Workflow ---
+        if _is_scan_intent(caption):
+            await update.message.reply_text("🔍 Analysiere Dokument...")
+            from src.workflows.document_scan_workflow import run_document_scan
+            result = await run_document_scan(
+                bytes(image_bytes), user_key, chat_id, bot, caption
+            )
+            await update.message.reply_text(result, parse_mode="Markdown")
+            return
+
+        # --- Bestehender Vision-Analyse-Flow ---
         analysis = await bot.ai_service.analyze_image(
             image_bytes=bytes(image_bytes),
             user_prompt=caption,
@@ -241,7 +270,12 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Verarbeitet Dokumente: Bilder als Dateien → Vision, andere → Hinweis."""
+    """
+    Verarbeitet Dokument-Dateien:
+    - Bilder (JPG/PNG/etc.) → Scan-Workflow oder Vision
+    - PDFs → Scan-Workflow (Text-Extraktion via PyPDF2 + Analyse)
+    - Andere → Hinweis
+    """
     bot = get_bot(context)
     if not await bot._check_auth(update):
         return
@@ -252,40 +286,126 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     IMAGE_MIMETYPES = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"}
 
-    if doc.mime_type in IMAGE_MIMETYPES:
-        allowed, _ = rate_limiter.check(user_key)
-        if not allowed:
-            await update.message.reply_text("⏳ Rate-Limit erreicht – bitte kurz warten.")
-            return
+    allowed, _ = rate_limiter.check(user_key)
+    if not allowed:
+        await update.message.reply_text("⏳ Rate-Limit erreicht – bitte kurz warten.")
+        return
 
+    caption = update.message.caption or ""
+
+    if doc.mime_type in IMAGE_MIMETYPES:
         await context.bot.send_chat_action(chat_id=chat_id, action="typing")
         try:
             doc_file = await doc.get_file()
             image_bytes = await doc_file.download_as_bytearray()
-            caption = update.message.caption or ""
 
-            analysis = await bot.ai_service.analyze_image(
-                image_bytes=bytes(image_bytes),
-                user_prompt=caption,
-                user_key=user_key,
-            )
-
-            if analysis:
-                await update.message.reply_text(f"🖼️ {analysis}", parse_mode="Markdown")
+            if _is_scan_intent(caption):
+                await update.message.reply_text("🔍 Analysiere Dokument...")
+                from src.workflows.document_scan_workflow import run_document_scan
+                result = await run_document_scan(
+                    bytes(image_bytes), user_key, chat_id, bot, caption
+                )
+                await update.message.reply_text(result, parse_mode="Markdown")
             else:
-                await update.message.reply_text("❌ Bild konnte nicht analysiert werden.")
+                analysis = await bot.ai_service.analyze_image(
+                    image_bytes=bytes(image_bytes),
+                    user_prompt=caption,
+                    user_key=user_key,
+                )
+                if analysis:
+                    await update.message.reply_text(f"🖼️ {analysis}", parse_mode="Markdown")
+                else:
+                    await update.message.reply_text("❌ Bild konnte nicht analysiert werden.")
         except Exception as e:
             logger.error(f"Dokument-Bild-Fehler für {bot.name}: {e}", exc_info=True)
             await update.message.reply_text("❌ Dokument konnte nicht verarbeitet werden.")
+
+    elif doc.mime_type == "application/pdf":
+        await context.bot.send_chat_action(chat_id=chat_id, action="typing")
+        await update.message.reply_text("🔍 Analysiere PDF-Dokument...")
+        try:
+            doc_file = await doc.get_file()
+            pdf_bytes = await doc_file.download_as_bytearray()
+
+            # PDF-Text via PyPDF2 extrahieren, dann Analyse
+            text = _extract_pdf_text(bytes(pdf_bytes))
+            from src.workflows.document_scan_workflow import _analyze_document, _save_to_db, _format_response
+            analysis = await _analyze_document(text, caption, bot.ai_service)
+
+            doc_type_label = analysis.get("document_type", "Sonstiges")
+            import datetime as dt
+            today = dt.datetime.now().strftime("%Y-%m-%d")
+            filename = f"{today}_{doc_type_label}.pdf"
+
+            _save_to_db(
+                user_key=user_key,
+                doc_type=doc_type_label,
+                filename=filename,
+                drive_link=None,
+                drive_file_id=None,
+                summary=analysis.get("summary"),
+                sender=analysis.get("sender"),
+                amount=analysis.get("amount"),
+            )
+
+            actions = analysis.get("actions", [])
+            for action in actions:
+                try:
+                    await bot.proposal_service.create_proposal(
+                        user_key=user_key,
+                        proposal_type=action["type"],
+                        title=action.get("title", "Aktion"),
+                        description=action.get("context", ""),
+                        payload=action,
+                        created_by="document_scan",
+                        chat_id=str(chat_id),
+                        bot=bot,
+                    )
+                except Exception as pe:
+                    logger.error(f"PDF-Proposal-Fehler: {pe}")
+
+            result = _format_response(
+                doc_type_label=doc_type_label,
+                sender=analysis.get("sender"),
+                summary=analysis.get("summary", "Analyse abgeschlossen."),
+                amount=analysis.get("amount"),
+                filename=filename,
+                drive_link=None,
+                pdf_path=None,
+                proposals_created=len(actions),
+                ocr_method="text",
+                ocr_confidence=100.0,
+                text_length=len(text),
+            )
+            await update.message.reply_text(result, parse_mode="Markdown")
+        except Exception as e:
+            logger.error(f"PDF-Handler-Fehler für {bot.name}: {e}", exc_info=True)
+            await update.message.reply_text("❌ PDF konnte nicht verarbeitet werden.")
     else:
-        # Andere Dateitypen: Hinweis geben
         filename = doc.file_name or "Datei"
         await update.message.reply_text(
             f"📎 *{filename}* erhalten.\n\n"
-            "Ich kann aktuell nur Bilder analysieren (JPG, PNG, WEBP).\n"
-            "PDFs und andere Dokumente folgen in einem späteren Update.",
+            "Ich kann Bilder (JPG, PNG, WEBP) und PDFs analysieren.\n"
+            "Andere Dateitypen werden noch nicht unterstützt.",
             parse_mode="Markdown",
         )
+
+
+def _extract_pdf_text(pdf_bytes: bytes) -> str:
+    """Extrahiert Text aus PDF-Bytes via PyPDF2."""
+    try:
+        import io
+        from PyPDF2 import PdfReader
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        pages = []
+        for page in reader.pages[:10]:  # Max 10 Seiten
+            text = page.extract_text()
+            if text:
+                pages.append(text)
+        return "\n".join(pages)
+    except Exception as e:
+        logger.warning(f"PDF-Text-Extraktion fehlgeschlagen: {e}")
+        return ""
 
 
 def register_message_handlers(app: Application):

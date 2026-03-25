@@ -45,4 +45,11 @@ structlog==24.4.0
 # Dokumenten-Scanner: PDF-Text-Extraktion (optional – Scanner-Service)
 PyPDF2>=3.0.0
 
+# Dokument-Scan-Workflow: OCR + durchsuchbare PDFs
+pytesseract>=0.3.13
+img2pdf>=0.5.1
+pypdf>=4.0.0
+reportlab>=4.0.0
+Pillow>=10.0.0
+
 # Mobilität: Fahrzeiten via OpenRouteService (httpx bereits vorhanden)

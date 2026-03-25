@@ -25,6 +25,7 @@ TYPE_TASK_CREATE = "task_create"
 TYPE_AI_SUGGESTION = "ai_suggestion"
 TYPE_SHARED_ACTION = "shared_action"
 TYPE_DOCUMENT_PREVIEW = "document_preview"
+TYPE_EMAIL_COMPOSE = "email_compose"
 
 # Status
 STATUS_PENDING = "pending"
@@ -40,6 +41,7 @@ TYPE_ICONS = {
     TYPE_AI_SUGGESTION: "🤖",
     TYPE_SHARED_ACTION: "🔗",
     TYPE_DOCUMENT_PREVIEW: "📄",
+    TYPE_EMAIL_COMPOSE: "✉️",
 }
 
 
@@ -229,6 +231,17 @@ class ProposalService:
                 if len(slides) > 6:
                     lines.append(f"\n  _... und {len(slides) - 6} weitere Folien_")
 
+        elif proposal_type == TYPE_EMAIL_COMPOSE:
+            to = payload.get("email_to", "")
+            subject = payload.get("email_subject", "")
+            if to:
+                lines.append(f"\n📬 An: {to}")
+            if subject:
+                lines.append(f"📋 Betreff: _{subject}_")
+            body = payload.get("email_body", "")
+            if body:
+                lines.append(f"\n_{body[:150]}{'…' if len(body) > 150 else ''}_")
+
         lines.append("\n\nSoll ich das ausführen?")
         return "\n".join(lines)
 
@@ -361,6 +374,17 @@ class ProposalService:
                 )
             finally:
                 path.unlink(missing_ok=True)
+
+        elif proposal_type == TYPE_EMAIL_COMPOSE:
+            to = payload.get("email_to", "")
+            subject = payload.get("email_subject", "")
+            body = payload.get("email_body", "")
+            if bot and hasattr(bot, "email_service") and bot.email_service:
+                draft = await bot.email_service.send_draft(user_key, to, subject, body)
+                if not draft:
+                    raise ValueError("E-Mail-Entwurf konnte nicht erstellt werden.")
+            else:
+                raise ValueError("E-Mail-Service nicht verbunden.")
 
         elif proposal_type in (TYPE_AI_SUGGESTION, TYPE_SHARED_ACTION):
             # Freie Vorschläge: Nur bestätigen, keine weitere Aktion nötig

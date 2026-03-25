@@ -484,6 +484,67 @@ class DriveService:
             logger.error("Drive download_file Fehler für '%s' (id=%s): %s", user_key, file_id, e)
             return None
 
+    async def get_or_create_document_folder(
+        self, user_key: str, doc_type: str
+    ) -> Optional[str]:
+        """
+        Gibt die Ordner-ID für /Dokumente/<Typ>/ zurück, erstellt bei Bedarf.
+
+        Hierarchie:
+          DRIVE_DOCUMENTS_FOLDER_ID (oder Personal Assistant) → Typ-Unterordner
+
+        Args:
+            user_key: Schlüssel des Users.
+            doc_type: Dokumenttyp (lowercase, z.B. "rechnung"). Wird via FOLDER_MAP aufgelöst.
+
+        Returns:
+            Ordner-ID oder None bei Fehler.
+        """
+        from src.workflows.document_scan_workflow import FOLDER_MAP
+
+        subfolder_name = FOLDER_MAP.get(doc_type.lower(), "Sonstiges")
+
+        try:
+            service = self._get_service(user_key)
+
+            # Basis-Ordner bestimmen
+            base_folder_id = settings.DRIVE_DOCUMENTS_FOLDER_ID or None
+            if not base_folder_id:
+                base_folder_id = await self.get_or_create_assistant_folder(user_key)
+
+            if not base_folder_id:
+                return None
+
+            # Unterordner suchen
+            q = (
+                f"name = '{subfolder_name}' "
+                f"and mimeType = 'application/vnd.google-apps.folder' "
+                f"and '{base_folder_id}' in parents "
+                f"and trashed = false"
+            )
+            result = service.files().list(
+                q=q, fields="files(id,name)", pageSize=1
+            ).execute()
+            folders = result.get("files", [])
+            if folders:
+                return folders[0]["id"]
+
+            # Unterordner erstellen
+            folder = await self.create_folder(user_key, subfolder_name, parent_id=base_folder_id)
+            if folder:
+                logger.info(
+                    "Drive: Dokumenten-Ordner '%s' erstellt für '%s'.", subfolder_name, user_key
+                )
+                return folder["id"]
+            return None
+        except ValueError:
+            raise
+        except Exception as e:
+            logger.error(
+                "Drive get_or_create_document_folder Fehler für '%s': %s", user_key, e
+            )
+            return None
+
     @staticmethod
     def format_file_list(files: list[dict]) -> str:
         """

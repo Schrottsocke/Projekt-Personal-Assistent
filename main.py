@@ -30,6 +30,8 @@ from src.services.shopping_service import ShoppingService
 from src.services.email_service import EmailService
 from src.services.scanner_service import ScannerService
 from src.services.mobility_service import MobilityService
+from src.services.ocr_service import OcrService
+from src.services.pdf_service import PdfService
 from src.bots.taake_bot import TaakeBot
 from src.bots.nina_bot import NinaBot
 
@@ -109,6 +111,7 @@ async def main():
     # Verzeichnisse anlegen
     Path("data").mkdir(exist_ok=True)
     Path("data/documents").mkdir(exist_ok=True)
+    Path("data/scans").mkdir(exist_ok=True)
     Path("logs").mkdir(exist_ok=True)
     init_db()
 
@@ -131,6 +134,8 @@ async def main():
     email_service = EmailService()
     scanner_service = ScannerService()
     mobility_service = MobilityService()
+    ocr_service = OcrService()
+    pdf_service = PdfService()
 
     await memory_service.initialize()
     await calendar_service.initialize()
@@ -168,6 +173,8 @@ async def main():
             email_service=email_service,
             scanner_service=scanner_service,
             mobility_service=mobility_service,
+            ocr_service=ocr_service,
+            pdf_service=pdf_service,
         )
 
     # Telegram Applications bauen

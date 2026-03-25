@@ -157,6 +157,22 @@ class ShoppingItem(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class ScannedDocument(Base):
+    """Gespeichertes Scan-Ergebnis für die /dokumente-Historie."""
+    __tablename__ = "scanned_documents"
+
+    id = Column(Integer, primary_key=True)
+    user_key = Column(String(50), nullable=False)
+    doc_type = Column(String(100), nullable=False)       # Rechnung, Brief, etc.
+    filename = Column(String(200), nullable=False)       # YYYY-MM-DD_Typ.pdf
+    drive_link = Column(String(500), nullable=True)      # Drive webViewLink
+    drive_file_id = Column(String(100), nullable=True)   # Drive File-ID
+    summary = Column(Text, nullable=True)
+    sender = Column(String(200), nullable=True)
+    amount = Column(String(50), nullable=True)           # Betrag falls Rechnung
+    scanned_at = Column(DateTime, default=datetime.utcnow)
+
+
 # Engine & Session Setup
 _engine = None
 _SessionLocal = None

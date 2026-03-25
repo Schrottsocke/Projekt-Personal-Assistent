@@ -981,6 +981,74 @@ async def cmd_drive(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ Drive-Dateien konnten nicht geladen werden.")
 
 
+async def cmd_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Erklärt dem Nutzer wie er Dokumente scannt."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    await update.message.reply_text(
+        "📷 *Dokument scannen:*\n\n"
+        "Schick mir einfach ein Foto deines Dokuments.\n\n"
+        "Ich erkenne automatisch den Typ und …\n"
+        "• erstelle ein durchsuchbares PDF\n"
+        "• lade es in deinen Drive hoch\n"
+        "• erkenne Fristen, Aufgaben und Antwortbedarf\n\n"
+        "_Kein Caption nötig – einfach Foto schicken!_\n\n"
+        "Mit Caption kannst du den Typ vorgeben:\n"
+        "`rechnung`, `brief`, `vertrag`, `arztbrief` …",
+        parse_mode="Markdown",
+    )
+
+
+async def cmd_dokumente(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Zeigt die letzten 10 gescannten Dokumente."""
+    bot = get_bot(context)
+    if not await bot._check_auth(update):
+        return
+
+    user_key = bot.name.lower()
+
+    try:
+        from src.services.database import ScannedDocument, get_db
+
+        with get_db()() as session:
+            docs = (
+                session.query(ScannedDocument)
+                .filter_by(user_key=user_key)
+                .order_by(ScannedDocument.scanned_at.desc())
+                .limit(10)
+                .all()
+            )
+
+        if not docs:
+            await update.message.reply_text(
+                "📂 Noch keine gescannten Dokumente.\n\n"
+                "Schick mir ein Foto um zu starten, oder /scan für Anleitung."
+            )
+            return
+
+        lines = ["📂 *Letzte gescannte Dokumente:*", ""]
+        for doc in docs:
+            date_str = doc.scanned_at.strftime("%d.%m.%Y") if doc.scanned_at else "?"
+            line = f"• {date_str} | *{doc.doc_type}*"
+            if doc.sender:
+                line += f" – {doc.sender}"
+            if doc.amount:
+                line += f" ({doc.amount})"
+            if doc.drive_link:
+                line += f"\n  🔗 [Drive öffnen]({doc.drive_link})"
+            elif doc.filename:
+                line += f"\n  📁 `{doc.filename}`"
+            lines.append(line)
+
+        await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+    except Exception as e:
+        logger.error(f"Dokumente-Fehler: {e}")
+        await update.message.reply_text("❌ Dokumente konnten nicht geladen werden.")
+
+
 def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("hilfe", cmd_hilfe))
     app.add_handler(CommandHandler("help", cmd_hilfe))
@@ -1014,6 +1082,8 @@ def register_command_handlers(app: Application):
     app.add_handler(CommandHandler("email_connect", cmd_email_connect))
     app.add_handler(CommandHandler("email_aktionen", cmd_email_aktionen))
     app.add_handler(CommandHandler("fahrzeit", cmd_fahrzeit))
+    app.add_handler(CommandHandler("scan", cmd_scan))
+    app.add_handler(CommandHandler("dokumente", cmd_dokumente))
 
 
 async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):

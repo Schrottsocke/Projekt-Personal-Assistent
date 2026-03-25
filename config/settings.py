@@ -85,6 +85,12 @@ class Settings:
     # Conversation History Pruning (Einträge älter als N Tage löschen)
     CONVERSATION_HISTORY_DAYS: int = int(os.getenv("CONVERSATION_HISTORY_DAYS", "30"))
 
+    # Dokument-Scan
+    DRIVE_DOCUMENTS_FOLDER_ID: str = os.getenv("DRIVE_DOCUMENTS_FOLDER_ID", "")
+    OCR_CONFIDENCE_THRESHOLD: int = int(os.getenv("OCR_CONFIDENCE_THRESHOLD", "70"))
+    SCAN_SAVE_LOCAL: bool = os.getenv("SCAN_SAVE_LOCAL", "true").lower() == "true"
+    SCANS_DIR: Path = BASE_DIR / "data" / "scans"
+
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: Path = BASE_DIR / os.getenv("LOG_FILE", "logs/assistant.log")
