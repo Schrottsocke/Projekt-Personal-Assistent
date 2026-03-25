@@ -28,6 +28,11 @@ Zwei persönliche KI-Assistenten via Telegram. Jeder Bot hat eine eigene Persön
 | **Proaktives Briefing** | Täglich um 08:00 Uhr |
 | **Quiet Hours** | Keine Nachrichten in der Ruhezeit |
 | **Wochenrückblick** | Sonntags automatisch |
+| **Einkaufsliste** | Artikel hinzufügen/abhaken, automatische Kategorien, Chefkoch-Rezept → Zutaten |
+| **E-Mail (Gmail)** | Posteingang lesen, KI-Aktionen erkennen, Entwürfe erstellen |
+| **Google Drive** | Dateien hochladen, durchsuchen, als Datei-Eingang nutzen |
+| **Dokument-Scanner** | Foto → OCR → durchsuchbares PDF → Drive-Upload → KI-Aktionen per Proposal |
+| **Mobilität** | Fahrzeit berechnen, Abfahrtszeit rückwärts (OpenRouteService) |
 
 ---
 
@@ -58,6 +63,16 @@ Zwei persönliche KI-Assistenten via Telegram. Jeder Bot hat eine eigene Persön
 | `/vorschlaege` | Offene Vorschläge anzeigen |
 | `/tabelle` | Tabelle als Chat oder Excel-Datei |
 | `/praesentation` | PowerPoint-Präsentation erstellen |
+| `/drive` | Google Drive Dateien anzeigen |
+| `/einkaufsliste` | Einkaufsliste anzeigen |
+| `/einkauf <Artikel>` | Artikel zur Einkaufsliste hinzufügen |
+| `/rezept <Name>` | Rezept suchen + Zutaten zur Einkaufsliste hinzufügen |
+| `/email` | Posteingang lesen (Gmail) |
+| `/email_connect` | Gmail verbinden (OAuth2) |
+| `/email_aktionen` | KI-Aktionen aus E-Mails als Vorschläge |
+| `/fahrzeit <Ziel>` | Fahrzeit und Route berechnen |
+| `/scan` | Anleitung zum Dokument scannen |
+| `/dokumente` | Letzte 10 gescannte Dokumente |
 
 Oder einfach **frei schreiben oder eine Sprachnachricht schicken** – der Bot versteht natürliche Sprache.
 
@@ -90,6 +105,11 @@ Das Skript erledigt automatisch:
 - Virtualenv + alle Dependencies installieren
 - Systemd-Service einrichten (Autostart bei Reboot)
 
+Für den Dokument-Scanner zusätzlich:
+```bash
+apt install -y tesseract-ocr tesseract-ocr-deu
+```
+
 ---
 
 ### Schritt 2 – .env befüllen
@@ -118,11 +138,26 @@ MEMORY_MODE=local
 TIMEZONE=Europe/Berlin
 DATABASE_URL=sqlite:///data/assistant.db
 LOG_LEVEL=INFO
+
+# Mobilität (optional)
+OPENROUTE_API_KEY=        # openrouteservice.org – kostenlos bis 2.000 Req/Tag
+HOME_ADDRESS=             # z.B. "Musterstraße 1, Berlin" für Fahrzeitberechnung
+
+# Dokument-Scanner (optional)
+DRIVE_DOCUMENTS_FOLDER_ID=   # Google Drive Ordner-ID (leer = "Personal Assistant" Ordner)
+OCR_CONFIDENCE_THRESHOLD=70  # Unter diesem Wert → Vision-API Fallback
+SCAN_SAVE_LOCAL=true         # Lokale Kopie in data/scans/ behalten
 ```
 
 ---
 
-### Schritt 3 – Google Calendar OAuth
+### Schritt 3 – Google API verbinden
+
+Die **gleichen** `google_credentials.json` gelten für Calendar, Drive und Gmail. In der Google Cloud Console müssen alle drei APIs aktiviert sein:
+
+- Google Calendar API
+- Google Drive API
+- Gmail API
 
 Google OAuth benötigt einen Browser. **Lokal auf deinem PC** ausführen, Tokens dann hochladen.
 
@@ -140,7 +175,9 @@ scp data/google_token_taake.json    assistant@IP:~/projekt-personal-assistent/da
 scp data/google_token_nina.json     assistant@IP:~/projekt-personal-assistent/data/
 ```
 
-> **Ohne Google Calendar** funktioniert alles außer Kalender-Features. Bot startet trotzdem.
+Drive und Gmail werden beim ersten Benutzen im Chat verbunden (`/email_connect`, `/drive`).
+
+> **Ohne Google** funktioniert alles außer Kalender/Drive/Gmail-Features. Bot startet trotzdem.
 
 ---
 
@@ -200,6 +237,8 @@ systemctl stop personal-assistant
 | Google Token läuft nach 7 Tagen ab | In Google Cloud Console Offline-Zugriff aktivieren |
 | Bot startet nach Reboot nicht | `systemctl enable personal-assistant` ausführen |
 | Port bereits belegt | Kein Port nötig – Bot nutzt Telegram-Polling |
+| Tesseract nicht installiert | `apt install -y tesseract-ocr tesseract-ocr-deu` – OCR fällt automatisch auf Vision-API zurück |
+| Drive/Gmail-Scopes fehlen | In Google Cloud Console alle drei APIs aktivieren, `credentials.json` neu herunterladen |
 
 ---
 
@@ -228,7 +267,7 @@ python main.py
 main.py
 ├── TaakeBot / NinaBot       (Telegram Applications)
 ├── AIService                (OpenRouter + Groq Whisper)
-│   ├── Intent-Erkennung     (calendar, task, timer, table, ...)
+│   ├── Intent-Erkennung     (calendar, task, timer, table, shopping, email, ...)
 │   ├── Web-Suche            (Search-First Pattern)
 │   └── Verification-Loop    (JSON-Validierung + Retry)
 ├── MemoryService            (mem0 + Konfidenz-Tracking)
@@ -237,7 +276,13 @@ main.py
 ├── ReminderService          (SQLite + Startup-Delivery)
 ├── DocumentService          (python-pptx + openpyxl)
 ├── ProposalService          (Human-in-the-Loop + Auto-Approve)
-└── AssistantScheduler       (APScheduler, Briefing, Quiet Hours, Fokus-Modus)
+├── ShoppingService          (SQLite, Kategorien, Chefkoch-API)
+├── EmailService             (Gmail OAuth2, Aktionserkennung)
+├── DriveService             (Google Drive API, Typen-Ordner)
+├── OcrService               (pytesseract + Vision-API Fallback)
+├── PdfService               (img2pdf + reportlab + pypdf, searchable PDF)
+├── MobilityService          (OpenRouteService, Geocoding + Routing)
+└── AssistantScheduler       (APScheduler, Briefing, Quiet Hours, E-Mail-Check)
 ```
 
 ---
@@ -250,7 +295,10 @@ main.py
 | OpenRouter | openrouter.ai/keys | Kostenlos (free Modelle) |
 | Groq (Whisper) | console.groq.com | Kostenlos (7.200 Sek./Tag) |
 | Google Calendar | console.cloud.google.com | Kostenlos |
+| Google Drive | console.cloud.google.com (Drive API aktivieren) | Kostenlos |
+| Google Gmail | console.cloud.google.com (Gmail API aktivieren) | Kostenlos |
 | Tavily (Web-Suche) | tavily.com | Kostenlos (1.000 Suchen/Monat) |
 | OpenRouter Vision | openrouter.ai (Gemini Flash) | Kostenlos |
+| OpenRouteService | openrouteservice.org | Kostenlos (2.000 Req/Tag) |
 | Spotify | developer.spotify.com/dashboard | Kostenlos (Premium für Steuerung) |
 | Home Assistant | homeassistant.local (self-hosted) | Kostenlos |
