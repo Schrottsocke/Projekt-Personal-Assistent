@@ -31,7 +31,7 @@ class Settings:
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
     OPENROUTER_BASE_URL: str = os.getenv("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1")
     AI_MODEL: str = os.getenv("AI_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
-        AI_MODEL_FALLBACK: str = os.getenv("AI_MODEL_FALLBACK", "nvidia_fallback")
+    AI_MODEL_FALLBACK: str = os.getenv("AI_MODEL_FALLBACK", "nvidia_fallback")
     NVIDIA_API_KEY: str = os.getenv("NVIDIA_API_KEY", "")
     NVIDIA_BASE_URL: str = os.getenv("NVIDIA_BASE_URL", "https://integrate.api.nvidia.com/v1")
     NVIDIA_MODEL: str = os.getenv("NVIDIA_MODEL", "moonshotai/kimi-k2.5")
