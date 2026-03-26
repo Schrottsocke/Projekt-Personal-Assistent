@@ -20,6 +20,7 @@ sudo -u assistant bash -c "
 echo ">>> Services neustarten..."
 systemctl restart personal-assistant
 systemctl restart personal-assistant-api
+systemctl restart personal-assistant-webhook
 
 echo ">>> Status:"
 systemctl status personal-assistant --no-pager -l

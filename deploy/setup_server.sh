@@ -87,21 +87,42 @@ cp "$PROJ_DIR/deploy/personal-assistant.service" \
 cp "$PROJ_DIR/deploy/personal-assistant-api.service" \
    /etc/systemd/system/personal-assistant-api.service
 
+cp "$PROJ_DIR/deploy/personal-assistant-webhook.service" \
+   /etc/systemd/system/personal-assistant-webhook.service
+
 systemctl daemon-reload
 systemctl enable personal-assistant
 systemctl enable personal-assistant-api
+systemctl enable personal-assistant-webhook
 echo ">>> Services aktiviert (starten beim Reboot automatisch)."
+
+# --- GitHub PAT für Push-Zugang ---
+echo ""
+echo "======================================================"
+echo "  EMPFOHLEN: GitHub PAT für Push-Zugang einrichten"
+echo "  1. GitHub → Settings → Developer Settings → PAT (classic)"
+echo "  2. Scope: repo"
+echo "  3. Auf dem Server:"
+echo "     sudo -u assistant git remote set-url origin \\"
+echo "       https://<PAT>@github.com/Schrottsocke/Projekt-Personal-Assistent.git"
+echo "======================================================"
 
 echo ""
 echo "======================================================"
 echo "  Setup abgeschlossen!"
 echo ""
 echo "  Nächste Schritte:"
-echo "  1. nano $PROJ_DIR/.env          (Keys eintragen)"
+echo "  1. nano $PROJ_DIR/.env          (Keys eintragen, inkl. WEBHOOK_SECRET)"
 echo "  2. Google OAuth lokal ausführen (deploy/google_auth_local.py)"
 echo "  3. Tokens hochladen (scp)"
 echo "  4. systemctl start personal-assistant"
 echo "  5. systemctl start personal-assistant-api"
-echo "  6. journalctl -u personal-assistant -f  (Bot-Logs)"
-echo "  7. journalctl -u personal-assistant-api -f  (API-Logs)"
+echo "  6. systemctl start personal-assistant-webhook"
+echo "  7. GitHub Webhook einrichten:"
+echo "     URL:    http://DEINE_IP:9000/deploy"
+echo "     Secret: Wert aus .env WEBHOOK_SECRET"
+echo "     Event:  push"
+echo "  8. journalctl -u personal-assistant -f         (Bot-Logs)"
+echo "  9. journalctl -u personal-assistant-api -f     (API-Logs)"
+echo " 10. journalctl -u personal-assistant-webhook -f (Deploy-Logs)"
 echo "======================================================"

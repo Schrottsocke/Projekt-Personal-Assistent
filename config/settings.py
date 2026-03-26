@@ -102,6 +102,11 @@ class Settings:
     API_CORS_ORIGINS: list = os.getenv("API_CORS_ORIGINS", "*").split(",")
     API_TOKEN_EXPIRE_DAYS: int = int(os.getenv("API_TOKEN_EXPIRE_DAYS", "30"))
 
+    # Webhook Deployer
+    WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
+    WEBHOOK_PORT: int = int(os.getenv("WEBHOOK_PORT", "9000"))
+    DEPLOY_BRANCH: str = os.getenv("DEPLOY_BRANCH", "claude/dual-personal-assistants-0Uqna")
+
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: Path = BASE_DIR / os.getenv("LOG_FILE", "logs/assistant.log")

@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from config.settings import settings
 from api import dependencies
-from api.routers import auth, dashboard, chat, tasks, calendar, shopping, recipes, mealplan, drive, features
+from api.routers import auth, dashboard, chat, tasks, calendar, shopping, recipes, mealplan, drive, features, status
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +54,7 @@ app.include_router(recipes.router, prefix="/recipes", tags=["Rezepte"])
 app.include_router(mealplan.router, prefix="/meal-plan", tags=["Wochenplan"])
 app.include_router(drive.router, prefix="/drive", tags=["Drive"])
 app.include_router(features.router)
+app.include_router(status.router)
 
 
 @app.get("/", tags=["Status"])
