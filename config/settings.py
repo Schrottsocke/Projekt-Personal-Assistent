@@ -24,8 +24,8 @@ class Settings:
     # Telegram Bots
     BOT_TOKEN_TAAKE: str = os.getenv("BOT_TOKEN_TAAKE", "")
     BOT_TOKEN_NINA: str = os.getenv("BOT_TOKEN_NINA", "")
-    TELEGRAM_USER_ID_TAAKE: int = int(os.getenv("TELEGRAM_USER_ID_TAAKE", "0"))
-    TELEGRAM_USER_ID_NINA: int = int(os.getenv("TELEGRAM_USER_ID_NINA", "0"))
+    TELEGRAM_USER_ID_TAAKE: int = int(os.getenv("TELEGRAM_USER_ID_TAAKE") or "0")
+    TELEGRAM_USER_ID_NINA: int = int(os.getenv("TELEGRAM_USER_ID_NINA") or "0")
 
     # AI
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
@@ -141,10 +141,10 @@ class Settings:
             errors.append("BOT_TOKEN_TAAKE fehlt in .env")
         if not cls.BOT_TOKEN_NINA:
             errors.append("BOT_TOKEN_NINA fehlt in .env")
-        if not cls.TELEGRAM_USER_ID_TAAKE:
-            errors.append("TELEGRAM_USER_ID_TAAKE fehlt in .env")
-        if not cls.TELEGRAM_USER_ID_NINA:
-            errors.append("TELEGRAM_USER_ID_NINA fehlt in .env")
+        if cls.TELEGRAM_USER_ID_TAAKE <= 0:
+            errors.append("TELEGRAM_USER_ID_TAAKE fehlt oder ungültig in .env (muss > 0 sein)")
+        if cls.TELEGRAM_USER_ID_NINA <= 0:
+            errors.append("TELEGRAM_USER_ID_NINA fehlt oder ungültig in .env (muss > 0 sein)")
         if not cls.OPENROUTER_API_KEY:
             errors.append("OPENROUTER_API_KEY fehlt in .env")
         return errors

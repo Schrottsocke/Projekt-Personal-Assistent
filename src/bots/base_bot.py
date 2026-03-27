@@ -96,6 +96,8 @@ class BaseAssistantBot:
 
     def _is_authorized(self, user_id: int) -> bool:
         """Nur der Owner darf mit diesem Bot interagieren."""
+        if self.owner_id <= 0:
+            return False
         return user_id == self.owner_id
 
     async def _unauthorized(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
