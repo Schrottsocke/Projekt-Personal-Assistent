@@ -24,8 +24,8 @@ class Settings:
     # Telegram Bots
     BOT_TOKEN_TAAKE: str = os.getenv("BOT_TOKEN_TAAKE", "")
     BOT_TOKEN_NINA: str = os.getenv("BOT_TOKEN_NINA", "")
-    TELEGRAM_USER_ID_TAAKE: int = int(os.getenv("TELEGRAM_USER_ID_TAAKE") or "0")
-    TELEGRAM_USER_ID_NINA: int = int(os.getenv("TELEGRAM_USER_ID_NINA") or "0")
+    TELEGRAM_USER_ID_TAAKE: int = int(os.getenv("TELEGRAM_USER_ID_TAAKE") or "-1")
+    TELEGRAM_USER_ID_NINA: int = int(os.getenv("TELEGRAM_USER_ID_NINA") or "-1")
 
     # AI
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
@@ -131,7 +131,7 @@ class Settings:
 
     @classmethod
     def get_allowed_user_ids(cls) -> set[int]:
-        return {cls.TELEGRAM_USER_ID_TAAKE, cls.TELEGRAM_USER_ID_NINA}
+        return {uid for uid in (cls.TELEGRAM_USER_ID_TAAKE, cls.TELEGRAM_USER_ID_NINA) if uid > 0}
 
     @classmethod
     def validate(cls) -> list[str]:
