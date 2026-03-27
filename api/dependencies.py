@@ -8,7 +8,7 @@ dann via FastAPI Depends in die Routen injiziert.
 import logging
 from typing import Annotated
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 
 from api.auth.jwt_handler import verify_token
@@ -78,44 +78,51 @@ async def startup():
 # ------------------------------------------------------------------
 
 
+def _require(name: str):
+    svc = _svc.get(name)
+    if svc is None:
+        raise HTTPException(status_code=503, detail=f"Service '{name}' not available")
+    return svc
+
+
 def get_ai_service():
-    return _svc.get("ai")
+    return _require("ai")
 
 
 def get_memory_service():
-    return _svc.get("memory")
+    return _require("memory")
 
 
 def get_calendar_service():
-    return _svc.get("calendar")
+    return _require("calendar")
 
 
 def get_task_service():
-    return _svc.get("task")
+    return _require("task")
 
 
 def get_reminder_service():
-    return _svc.get("reminder")
+    return _require("reminder")
 
 
 def get_shopping_service():
-    return _svc.get("shopping")
+    return _require("shopping")
 
 
 def get_chefkoch_service():
-    return _svc.get("chefkoch")
+    return _require("chefkoch")
 
 
 def get_email_service():
-    return _svc.get("email")
+    return _require("email")
 
 
 def get_drive_service():
-    return _svc.get("drive")
+    return _require("drive")
 
 
 def get_bot_shim():
-    return _svc.get("bot_shim")
+    return _require("bot_shim")
 
 
 # ------------------------------------------------------------------
