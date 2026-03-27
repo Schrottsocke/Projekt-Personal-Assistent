@@ -99,7 +99,7 @@ class Settings:
     API_PASSWORD_TAAKE: str = os.getenv("API_PASSWORD_TAAKE", "")
     API_PASSWORD_NINA: str = os.getenv("API_PASSWORD_NINA", "")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
-    API_CORS_ORIGINS: list = os.getenv("API_CORS_ORIGINS", "*").split(",")
+    API_CORS_ORIGINS: list = [o.strip() for o in os.getenv("API_CORS_ORIGINS", "").split(",") if o.strip()]
     API_TOKEN_EXPIRE_DAYS: int = int(os.getenv("API_TOKEN_EXPIRE_DAYS", "30"))
 
     # Webhook Deployer
