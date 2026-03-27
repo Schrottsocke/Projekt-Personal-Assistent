@@ -32,7 +32,49 @@ DualMind Personal Assistant – Zwei Telegram-Bots (TaakeBot + NinaBot) mit gete
 2. **Kleine Schritte, keine Endlosschleifen.** Jede Aenderung einzeln durchfuehren und verifizieren.
 3. **Maximal 1 zusammenhaengende Aufgabe pro Durchlauf.** Fokus halten, nicht abschweifen.
 4. **Nach Aenderungen immer kurz pruefen, dann stoppen.** Ergebnis verifizieren, nicht blind weitermachen.
-5. **Keine neuen Features, keine grossen Refactorings ohne expliziten Auftrag.** Nur das tun, was angefragt wurde.
+5. **Keine Arbeit ohne Issue.** Neue Features, Bugs und Refactorings immer zuerst als GitHub Issue anlegen. Priorisierung ueber Labels (P0/P1/P2).
+
+## Arbeitsmodi
+
+### Modus 1: Issue abarbeiten (Standard)
+- Offene Issues nach Prioritaet abarbeiten: P0-critical → P1-high → P2-medium
+- Kein neues Issue erstellen waehrend der Arbeit
+- Neue Probleme notieren, aber NICHT sofort als Issue anlegen
+- Am Ende der Session: gesammelte Probleme dem User melden
+
+### Modus 2: Analyse & Issues erstellen
+- Nur wenn User explizit sagt: "Analysiere...", "Erstelle Issues...", "Finde Probleme..."
+- Keine Code-Aenderungen in diesem Modus
+- Issues erstellen, labeln, fertig
+
+### Modus 3: Freie Arbeit
+- User gibt direkten Auftrag der kein Issue betrifft
+- Normal ausfuehren, kein Issue-Zwang
+
+## Issue-Workflow
+
+**Alle Arbeit wird ueber GitHub Issues gesteuert (Repo: schrottsocke/projekt-personal-assistent).**
+
+### Bei Sessionstart
+1. Offene Issues laden (State: OPEN)
+2. Nach Prioritaet sortieren: P0-critical → P1-high → P2-medium
+3. Naechstes Issue mit hoechster Prioritaet waehlen
+4. User informieren welches Issue bearbeitet wird
+
+### Waehrend der Arbeit
+1. Issue-Nummer in allen Commits referenzieren: `fix(scope): Beschreibung (#Issue)`
+2. Pro Issue ein Branch: `fix/#<nummer>-kurzbeschreibung`
+3. Nur Dateien aendern die im Issue gelistet sind (oder begruendet ergaenzen)
+4. Definition of Done aus dem Issue als Checkliste abarbeiten
+
+### Nach Abschluss
+1. Alle DoD-Checkboxen im Issue abhaken (Issue updaten)
+2. Issue schliessen mit state: closed, state_reason: completed
+3. Naechstes Issue vorschlagen
+
+### Neue Probleme entdeckt
+- Nicht sofort fixen, sondern am Ende der Session dem User melden
+- User entscheidet ob neues Issue erstellt wird (→ Modus 2)
 
 ## Tech-Stack
 
