@@ -136,6 +136,46 @@ Ein Issue ist erst fertig, wenn:
 - der PR gemergt wurde oder klar zur User-Freigabe bereit ist
 - das Issue geschlossen wurde oder nachweislich automatisch geschlossen wird
 
+## Entscheidung nach jedem abgeschlossenen Issue
+
+Nach jedem abgeschlossenen Issue triff aktiv genau eine Entscheidung:
+
+### Option A: In derselben Session weitermachen
+Nur erlaubt, wenn alle folgenden Punkte erfüllt sind:
+- das aktuelle Issue ist vollständig abgeschlossen
+- das nächste Issue betrifft denselben Bereich oder eng verwandte Dateien
+- kein Kontextdrift erkennbar ist
+- keine neue breite Analyse nötig ist
+- das nächste Issue ist klein genug für einen weiteren klaren Durchlauf
+
+### Option B: Session beenden und neues Issue in neuer Session
+Bevorzugt, wenn einer der folgenden Punkte zutrifft:
+- das aktuelle Issue war größer oder über mehrere Dateien/Module verteilt
+- das nächste Issue betrifft einen anderen Bereich des Projekts
+- der Kontext ist bereits lang oder unübersichtlich geworden
+- in der Session gab es Plan-Loops, Drift oder Wiederholungen
+- für das nächste Issue wäre eine frische Analyse sinnvoller
+
+## Entscheidungsregel
+
+Nach Abschluss eines Issues tue genau eines von zwei Dingen:
+1. genau ein weiteres kleines, verwandtes Issue in derselben Session beginnen
+2. die Session sauber abschließen und ein nächstes Issue für eine neue Session empfehlen
+
+Nicht ohne Entscheidung einfach mit dem nächsten Issue anfangen.
+
+Im Zweifel immer **neue Session bevorzugen**.
+
+## Handoff bei Sessionende
+
+Wenn du empfiehlst, die Session zu beenden:
+- fasse den Abschluss des aktuellen Issues kurz zusammen
+- nenne das empfohlene nächste Issue
+- nenne die ersten Dateien oder Bereiche für die nächste Session
+- stoppe danach
+
+Nicht in derselben Antwort schon mit dem nächsten Issue beginnen.
+
 ## Ende
 
 Kurz melden:
@@ -143,4 +183,7 @@ Kurz melden:
 - **Ergebnis**
 - **Prüfung**
 - **GitHub:** Branch, Push, PR, Merge, Issue-Status
+- **Nächstes Issue**
+- **Empfehlung:** gleiche Session / neue Session
+- **Grund**
 - **Offen**
