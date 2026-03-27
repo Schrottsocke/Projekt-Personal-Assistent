@@ -55,6 +55,10 @@ class ProposalService:
         # user_key → telegram Application (für Bot-übergreifende Proposals)
         self._apps: dict = {}
 
+    def _ensure_initialized(self):
+        if self._db is None:
+            raise RuntimeError("ProposalService not initialized – call initialize() first")
+
     async def initialize(self):
         from src.services.database import get_db, init_db
 
@@ -71,6 +75,7 @@ class ProposalService:
         try:
             from src.services.database import UserProfile
 
+            self._ensure_initialized()
             with self._db() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 if profile and profile.auto_approve_types:
@@ -120,6 +125,7 @@ class ProposalService:
         payload_json = json.dumps(payload, default=str, ensure_ascii=False)
         icon = TYPE_ICONS.get(proposal_type, "📋")
 
+        self._ensure_initialized()
         with self._db() as session:
             proposal = Proposal(
                 proposal_type=proposal_type,
@@ -156,6 +162,7 @@ class ProposalService:
                     parse_mode="Markdown",
                 )
                 # message_id für späteres Editieren speichern
+                self._ensure_initialized()
                 with self._db() as session:
                     p = session.query(Proposal).filter_by(id=proposal_id).first()
                     if p:
@@ -257,6 +264,7 @@ class ProposalService:
         """Genehmigt einen Vorschlag und führt die Aktion aus."""
         from src.services.database import Proposal
 
+        self._ensure_initialized()
         with self._db() as session:
             proposal = session.query(Proposal).filter_by(id=proposal_id, status=STATUS_PENDING).first()
             if not proposal:
@@ -277,6 +285,7 @@ class ProposalService:
         except Exception as e:
             logger.error(f"Proposal #{proposal_id} Ausführungsfehler: {e}")
             # Status zurücksetzen auf pending bei Fehler
+            self._ensure_initialized()
             with self._db() as session:
                 p = session.query(Proposal).filter_by(id=proposal_id).first()
                 if p:
@@ -288,6 +297,7 @@ class ProposalService:
         """Lehnt einen Vorschlag ab."""
         from src.services.database import Proposal
 
+        self._ensure_initialized()
         with self._db() as session:
             proposal = session.query(Proposal).filter_by(id=proposal_id, status=STATUS_PENDING).first()
             if not proposal:
@@ -302,6 +312,7 @@ class ProposalService:
         """Gibt alle offenen Vorschläge für einen User zurück."""
         from src.services.database import Proposal
 
+        self._ensure_initialized()
         with self._db() as session:
             proposals = (
                 session.query(Proposal)

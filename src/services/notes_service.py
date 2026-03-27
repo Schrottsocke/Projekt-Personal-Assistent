@@ -11,6 +11,10 @@ class NotesService:
     def __init__(self):
         self._db = None
 
+    def _ensure_initialized(self):
+        if self._db is None:
+            raise RuntimeError("NotesService not initialized – call initialize() first")
+
     async def initialize(self):
         from src.services.database import get_db, init_db
 
@@ -21,6 +25,7 @@ class NotesService:
     async def create_note(self, user_key: str, content: str, is_shared: bool = False) -> dict:
         from src.services.database import Note
 
+        self._ensure_initialized()
         with self._db() as session:
             note = Note(
                 user_key=user_key,
@@ -36,6 +41,7 @@ class NotesService:
     async def get_notes(self, user_key: str, include_shared: bool = True) -> list[dict]:
         from src.services.database import Note
 
+        self._ensure_initialized()
         with self._db() as session:
             query = session.query(Note)
             if include_shared:
@@ -58,6 +64,7 @@ class NotesService:
     async def delete_note(self, note_id: int, user_key: str) -> bool:
         from src.services.database import Note
 
+        self._ensure_initialized()
         with self._db() as session:
             note = session.query(Note).filter_by(id=note_id, user_key=user_key).first()
             if note:
