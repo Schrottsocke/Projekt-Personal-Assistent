@@ -5,6 +5,7 @@ Speichert nutzerspezifische Infos (privat + geteilt).
 
 import logging
 from typing import Optional
+from sqlalchemy.exc import SQLAlchemyError
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -83,7 +84,7 @@ class MemoryService:
                 user_id=user_key,
             )
             logger.debug(f"Memory hinzugefügt für {user_key}: {content[:50]}...")
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as e:
             logger.error(f"Memory-Add-Fehler: {e}")
 
     async def search_memories(self, user_key: str, query: str, limit: int = 5) -> list[dict]:
@@ -96,7 +97,7 @@ class MemoryService:
             if isinstance(results, list):
                 return results
             return []
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as e:
             logger.error(f"Memory-Search-Fehler: {e}")
             return []
 
@@ -109,7 +110,7 @@ class MemoryService:
             if isinstance(results, list):
                 return results
             return []
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as e:
             logger.error(f"Memory-GetAll-Fehler: {e}")
             return []
 
@@ -123,7 +124,7 @@ class MemoryService:
                 {"role": "assistant", "content": assistant_response},
             ]
             self._memory.add(messages=messages, user_id=user_key)
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as e:
             logger.error(f"Conversation-Memory-Fehler: {e}")
 
     async def upsert_fact(self, user_key: str, content: str):
@@ -143,7 +144,7 @@ class MemoryService:
                     existing.last_used = datetime.utcnow()
                 else:
                     session.add(MemoryFact(user_key=user_key, content=content))
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Upsert-Fact-Fehler: {e}")
 
     async def get_top_facts(self, user_key: str, limit: int = 10) -> list[dict]:
@@ -166,7 +167,7 @@ class MemoryService:
                     }
                     for f in facts
                 ]
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Get-Top-Facts-Fehler: {e}")
             return []
 
@@ -181,7 +182,7 @@ class MemoryService:
                     session.add(profile)
                 profile.is_onboarded = True
                 session.commit()
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Mark-Onboarded-Fehler: {e}")
 
     async def is_onboarded(self, user_key: str) -> bool:
@@ -191,7 +192,7 @@ class MemoryService:
             with self._db() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 return bool(profile and profile.is_onboarded)
-        except Exception as e:
+        except SQLAlchemyError as e:
             logger.error(f"Is-Onboarded-Fehler: {e}")
             return False
 

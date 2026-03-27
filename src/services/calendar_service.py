@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 import pytz
+from google.auth.exceptions import RefreshError, TransportError
 
 from config.settings import settings
 
@@ -61,7 +62,7 @@ class CalendarService:
                         del self._credentials[user_key]
                     else:
                         logger.info(f"Google Calendar Token für '{user_key}' geladen.")
-                except Exception as e:
+                except (json.JSONDecodeError, ValueError, RefreshError, OSError) as e:
                     logger.warning(f"Token für '{user_key}' konnte nicht geladen werden: {e}")
 
         if not self._credentials_available:
@@ -163,7 +164,7 @@ class CalendarService:
             logger.info(f"Google Calendar für '{user_key}' erfolgreich verbunden.")
             return True
 
-        except Exception as e:
+        except (ValueError, RefreshError, TransportError, OSError) as e:
             logger.error(f"Token-Exchange-Fehler für '{user_key}': {e}")
             return False
 
@@ -204,7 +205,7 @@ class CalendarService:
 
         except ValueError:
             raise  # Nicht-verbunden Fehler weiterwerfen
-        except Exception as e:
+        except (RefreshError, TransportError, OSError) as e:
             logger.error(f"Calendar-GetEvents-Fehler: {e}")
             raise
 
@@ -237,7 +238,7 @@ class CalendarService:
             result = events_result.get("items", [])
             self._set_cached(cache_key, result)
             return result
-        except Exception as e:
+        except (ValueError, RefreshError, TransportError, OSError) as e:
             logger.error(f"Calendar-GetToday-Fehler: {e}")
             return []
 
@@ -279,7 +280,7 @@ class CalendarService:
             logger.info(f"Event erstellt für '{user_key}': {summary}")
             return created
 
-        except Exception as e:
+        except (ValueError, RefreshError, TransportError, OSError) as e:
             logger.error(f"Calendar-CreateEvent-Fehler: {e}")
             raise
 
@@ -290,6 +291,6 @@ class CalendarService:
             service.events().delete(calendarId="primary", eventId=event_id).execute()
             self._invalidate_cache(user_key)
             return True
-        except Exception as e:
+        except (ValueError, RefreshError, TransportError, OSError) as e:
             logger.error(f"Calendar-DeleteEvent-Fehler: {e}")
             return False

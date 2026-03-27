@@ -3,6 +3,7 @@ Morgen-Briefing Generator.
 """
 
 import logging
+from asyncio import TimeoutError as AsyncTimeoutError
 
 logger = logging.getLogger(__name__)
 
@@ -13,24 +14,28 @@ async def generate_briefing(bot) -> str:
 
     try:
         events = await bot.calendar_service.get_todays_events(user_key=user_key)
-    except Exception:
+    except (OSError, AsyncTimeoutError, ValueError) as e:
+        logger.warning(f"Briefing: Kalender-Fehler fuer {user_key}: {e}")
         events = []
 
     try:
         reminders = await bot.reminder_service.get_todays_reminders(user_key=user_key)
-    except Exception:
+    except (OSError, AsyncTimeoutError, KeyError) as e:
+        logger.warning(f"Briefing: Reminder-Fehler fuer {user_key}: {e}")
         reminders = []
 
     try:
         memories = await bot.memory_service.search_memories(
             user_key=user_key, query="Interessen Aufgaben Gewohnheiten", limit=3
         )
-    except Exception:
+    except (OSError, AsyncTimeoutError, ValueError) as e:
+        logger.warning(f"Briefing: Memory-Fehler fuer {user_key}: {e}")
         memories = []
 
     try:
         open_tasks = await bot.task_service.get_open_tasks(user_key=user_key)
-    except Exception:
+    except (OSError, AsyncTimeoutError, KeyError) as e:
+        logger.warning(f"Briefing: Task-Fehler fuer {user_key}: {e}")
         open_tasks = []
 
     # Neue Kontexte: Einkaufsliste + ungelesene Mails
@@ -39,15 +44,15 @@ async def generate_briefing(bot) -> str:
         if hasattr(bot, "shopping_service") and bot.shopping_service:
             items = await bot.shopping_service.get_items(user_key)
             shopping_count = len(items)
-    except Exception:
-        pass
+    except (OSError, AsyncTimeoutError, ValueError) as e:
+        logger.warning(f"Briefing: Shopping-Fehler fuer {user_key}: {e}")
 
     unread_emails = 0
     try:
         if hasattr(bot, "email_service") and bot.email_service and bot.email_service.is_connected(user_key):
             unread_emails = await bot.email_service.get_unread_count(user_key)
-    except Exception:
-        pass
+    except (OSError, AsyncTimeoutError, ValueError) as e:
+        logger.warning(f"Briefing: Email-Fehler fuer {user_key}: {e}")
 
     briefing = await bot.ai_service.generate_morning_briefing(
         user_key=user_key,
