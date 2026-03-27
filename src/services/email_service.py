@@ -9,7 +9,15 @@ import logging
 from pathlib import Path
 from typing import Optional
 import base64
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
+from google.auth.exceptions import TransportError
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -136,6 +144,12 @@ class EmailService:
     # Inbox & Nachrichten
     # ------------------------------------------------------------------
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def get_inbox(self, user_key: str, limit: int = 10, unread_only: bool = True) -> list[dict]:
         """
         Gibt die letzten E-Mails aus dem Posteingang zurück.
@@ -186,6 +200,12 @@ class EmailService:
             logger.error(f"Gmail get_inbox Fehler für {user_key}: {e}")
             return []
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def get_email(self, user_key: str, email_id: str) -> Optional[dict]:
         """
         Ruft eine einzelne E-Mail vollständig ab (inkl. Body).
@@ -238,6 +258,12 @@ class EmailService:
 
         return ""
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def get_unread_count(self, user_key: str) -> int:
         """Gibt die Anzahl ungelesener Mails im Posteingang zurück."""
         if not self.is_connected(user_key):
@@ -250,6 +276,12 @@ class EmailService:
             logger.error(f"Gmail unread_count Fehler für {user_key}: {e}")
             return 0
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def mark_read(self, user_key: str, email_id: str) -> bool:
         """Markiert eine E-Mail als gelesen."""
         try:
@@ -264,6 +296,12 @@ class EmailService:
             logger.error(f"Gmail mark_read Fehler: {e}")
             return False
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def send_draft(self, user_key: str, to: str, subject: str, body: str) -> Optional[dict]:
         """
         Erstellt einen E-Mail-Entwurf (kein direktes Senden — bleibt in Drafts).

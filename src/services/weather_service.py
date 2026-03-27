@@ -1,6 +1,13 @@
 import logging
 import httpx
 from typing import Optional
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +31,12 @@ class WeatherService:
         """WeatherService ist immer verfuegbar (kein API-Key noetig)."""
         return True
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectError, OSError, ConnectionError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def get_weather(self, location: str, lang: str = "de") -> Optional[str]:
         """
         Ruft das aktuelle Wetter fuer einen Ort ab.
@@ -86,6 +99,12 @@ class WeatherService:
             logger.error(f"WeatherService Fehler: {e}")
             return None
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((httpx.TimeoutException, httpx.ConnectError, OSError, ConnectionError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def get_weather_simple(self, location: str) -> Optional[str]:
         """
         Ruft einfaches Wetter-Format ab (Fallback falls JSON-API Probleme hat).

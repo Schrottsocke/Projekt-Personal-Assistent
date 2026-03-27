@@ -9,6 +9,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import pytz
 from google.auth.exceptions import RefreshError, TransportError
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 from config.settings import settings
 
@@ -172,6 +179,12 @@ class CalendarService:
         """Prüft ob Google Calendar verbunden ist."""
         return user_key in self._credentials and self._credentials[user_key] is not None
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def get_upcoming_events(self, user_key: str, days: int = 7, max_results: int = 15) -> list[dict]:
         """Gibt kommende Termine zurück (mit TTL-Cache)."""
         cache_key = f"upcoming_{user_key}_{days}_{max_results}"
@@ -207,6 +220,12 @@ class CalendarService:
             logger.error(f"Calendar-GetEvents-Fehler: {e}")
             raise
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def get_todays_events(self, user_key: str) -> list[dict]:
         """Gibt nur heutige Termine zurück (mit TTL-Cache)."""
         cache_key = f"today_{user_key}"
@@ -240,6 +259,12 @@ class CalendarService:
             logger.error(f"Calendar-GetToday-Fehler: {e}")
             return []
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def create_event(
         self,
         user_key: str,
@@ -282,6 +307,12 @@ class CalendarService:
             logger.error(f"Calendar-CreateEvent-Fehler: {e}")
             raise
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def delete_event(self, user_key: str, event_id: str) -> bool:
         """Löscht einen Kalendereintrag."""
         try:

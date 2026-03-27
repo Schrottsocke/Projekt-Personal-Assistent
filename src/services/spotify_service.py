@@ -15,6 +15,13 @@ import json
 import logging
 from typing import Optional
 from urllib.parse import urlparse, parse_qs
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 from config.settings import settings
 
@@ -138,6 +145,12 @@ class SpotifyService:
     # Wiedergabe-Steuerung
     # =========================================================================
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def play(self, user_key: str, query: str = "") -> Optional[str]:
         """
         Startet/setzt Wiedergabe fort. Wenn query angegeben, wird danach gesucht.
@@ -167,6 +180,12 @@ class SpotifyService:
             logger.error(f"Spotify-Play-Fehler: {e}")
             return f"❌ Spotify-Fehler: {e}"
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def pause(self, user_key: str) -> Optional[str]:
         sp = self._get_client(user_key)
         if not sp:
@@ -177,6 +196,12 @@ class SpotifyService:
         except Exception as e:
             return f"❌ Fehler: {e}"
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def skip(self, user_key: str) -> Optional[str]:
         sp = self._get_client(user_key)
         if not sp:
@@ -187,6 +212,12 @@ class SpotifyService:
         except Exception as e:
             return f"❌ Fehler: {e}"
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def current(self, user_key: str) -> Optional[str]:
         sp = self._get_client(user_key)
         if not sp:
@@ -211,6 +242,12 @@ class SpotifyService:
         except Exception as e:
             return f"❌ Fehler: {e}"
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((ConnectionError, TimeoutError, OSError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def volume(self, user_key: str, level: int) -> Optional[str]:
         sp = self._get_client(user_key)
         if not sp:
