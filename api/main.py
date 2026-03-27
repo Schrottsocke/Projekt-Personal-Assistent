@@ -3,15 +3,17 @@ DualMind REST API – FastAPI App.
 Läuft auf Port 8000, getrennt vom Telegram-Bot.
 """
 
-import logging
+import uuid
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import structlog
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from config.settings import settings
 from api import dependencies
@@ -29,7 +31,35 @@ from api.routers import (
     status,
 )
 
-logger = logging.getLogger(__name__)
+logger = structlog.get_logger(__name__)
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Erzeugt eine Request-ID pro Anfrage und bindet sie an structlog contextvars."""
+
+    async def dispatch(self, request: Request, call_next):
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        structlog.contextvars.clear_contextvars()
+        structlog.contextvars.bind_contextvars(request_id=request_id)
+
+        logger.info(
+            "request_started",
+            method=request.method,
+            path=request.url.path,
+        )
+
+        response: Response = await call_next(request)
+        response.headers["X-Request-ID"] = request_id
+
+        logger.info(
+            "request_finished",
+            method=request.method,
+            path=request.url.path,
+            status_code=response.status_code,
+        )
+
+        structlog.contextvars.clear_contextvars()
+        return response
 
 
 @asynccontextmanager
@@ -78,6 +108,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Request-ID-Tracking
+app.add_middleware(RequestIDMiddleware)
 
 # Router einbinden
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
