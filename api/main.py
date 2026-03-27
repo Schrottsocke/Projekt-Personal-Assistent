@@ -20,6 +20,15 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Services beim Start initialisieren, beim Stop aufräumen."""
     logger.info("DualMind API startet…")
+
+    # JWT-Secret und andere kritische Settings validieren
+    config_errors = settings.validate()
+    jwt_errors = [e for e in config_errors if "API_SECRET_KEY" in e]
+    if jwt_errors:
+        for err in jwt_errors:
+            logger.critical(err)
+        raise SystemExit("API-Start abgebrochen: unsicheres API_SECRET_KEY. Siehe Logs.")
+
     await dependencies.startup()
     logger.info("DualMind API bereit auf Port %s.", settings.API_PORT)
     yield

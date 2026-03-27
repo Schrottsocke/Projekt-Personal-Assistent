@@ -95,7 +95,7 @@ class Settings:
     SCANS_DIR: Path = BASE_DIR / "data" / "scans"
 
     # REST API (FastAPI)
-    API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "change-me-in-production-please")
+    API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "")
     API_PASSWORD_TAAKE: str = os.getenv("API_PASSWORD_TAAKE", "")
     API_PASSWORD_NINA: str = os.getenv("API_PASSWORD_NINA", "")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
@@ -147,6 +147,24 @@ class Settings:
             errors.append("TELEGRAM_USER_ID_NINA fehlt oder ungültig in .env (muss > 0 sein)")
         if not cls.OPENROUTER_API_KEY:
             errors.append("OPENROUTER_API_KEY fehlt in .env")
+
+        # JWT-Secret: darf nicht leer, nicht der alte Default und mindestens 32 Zeichen
+        _insecure_defaults = {
+            "",
+            "change-me-in-production-please",
+            "change-me-generate-with-secrets-token-hex",
+            "CHANGE_ME_USE_python_c_import_secrets_print_secrets_token_hex_32",
+        }
+        if cls.API_SECRET_KEY in _insecure_defaults:
+            errors.append(
+                "API_SECRET_KEY ist nicht gesetzt oder unsicher. "
+                "Generiere ein Secret: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        elif len(cls.API_SECRET_KEY) < 32:
+            errors.append(
+                "API_SECRET_KEY muss mindestens 32 Zeichen lang sein (aktuell: %d)" % len(cls.API_SECRET_KEY)
+            )
+
         return errors
 
 
