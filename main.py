@@ -117,35 +117,62 @@ async def main():
 
     # Services initialisieren (geteilt zwischen beiden Bots)
     logger.info("Initialisiere Services...")
-    ai_service = AIService()
-    memory_service = MemoryService()
-    calendar_service = CalendarService()
-    notes_service = NotesService()
-    reminder_service = ReminderService()
-    proposal_service = ProposalService()
-    task_service = TaskService()
-    document_service = DocumentService()
-    tts_service = TTSService()
-    spotify_service = SpotifyService()
-    smarthome_service = SmartHomeService()
-    chefkoch_service = ChefkochService()
-    drive_service = DriveService()
-    shopping_service = ShoppingService()
-    email_service = EmailService()
-    scanner_service = ScannerService()
-    mobility_service = MobilityService()
-    ocr_service = OcrService()
-    pdf_service = PdfService()
 
-    await memory_service.initialize()
-    await calendar_service.initialize()
-    await notes_service.initialize()
-    await reminder_service.initialize()
-    await proposal_service.initialize()
-    await task_service.initialize()
-    await document_service.initialize()
-    await drive_service.initialize()
-    await email_service.initialize()
+    CORE_SERVICES = {"ai_service", "memory_service"}
+
+    SERVICE_DEFINITIONS = [
+        ("ai_service",        AIService,        False),
+        ("memory_service",    MemoryService,    True),
+        ("calendar_service",  CalendarService,  True),
+        ("notes_service",     NotesService,     True),
+        ("reminder_service",  ReminderService,  True),
+        ("proposal_service",  ProposalService,  True),
+        ("task_service",      TaskService,      True),
+        ("document_service",  DocumentService,  True),
+        ("tts_service",       TTSService,       False),
+        ("spotify_service",   SpotifyService,   False),
+        ("smarthome_service", SmartHomeService, False),
+        ("chefkoch_service",  ChefkochService,  False),
+        ("drive_service",     DriveService,     True),
+        ("shopping_service",  ShoppingService,  False),
+        ("email_service",     EmailService,     True),
+        ("scanner_service",   ScannerService,   False),
+        ("mobility_service",  MobilityService,  False),
+        ("ocr_service",       OcrService,       False),
+        ("pdf_service",       PdfService,       False),
+    ]
+
+    services = {}
+    status_table = []
+
+    for name, cls, needs_init in SERVICE_DEFINITIONS:
+        try:
+            svc = cls()
+            if needs_init:
+                await svc.initialize()
+            services[name] = svc
+            status_table.append((name, "OK"))
+        except FileNotFoundError:
+            services[name] = None
+            status_table.append((name, "NICHT KONFIGURIERT"))
+            logger.warning(f"Service '{name}' nicht konfiguriert – übersprungen.")
+        except Exception as e:
+            services[name] = None
+            status_table.append((name, f"FEHLER: {e}"))
+            logger.error(f"Service '{name}' fehlgeschlagen: {e}")
+
+    # Startup-Tabelle loggen
+    logger.info("Service-Status:")
+    logger.info("-" * 50)
+    for name, status in status_table:
+        logger.info(f"  {name:<25s} {status}")
+    logger.info("-" * 50)
+
+    # Core-Services prüfen
+    for core in CORE_SERVICES:
+        if services.get(core) is None:
+            logger.critical(f"Core-Service '{core}' nicht verfügbar – Abbruch!")
+            sys.exit(1)
 
     logger.info("Services bereit.")
 
@@ -155,35 +182,16 @@ async def main():
 
     # Services in Bots injizieren
     for bot in [taake_bot, nina_bot]:
-        bot.inject_services(
-            ai_service=ai_service,
-            memory_service=memory_service,
-            calendar_service=calendar_service,
-            notes_service=notes_service,
-            reminder_service=reminder_service,
-            proposal_service=proposal_service,
-            task_service=task_service,
-            document_service=document_service,
-            tts_service=tts_service,
-            spotify_service=spotify_service,
-            smarthome_service=smarthome_service,
-            chefkoch_service=chefkoch_service,
-            drive_service=drive_service,
-            shopping_service=shopping_service,
-            email_service=email_service,
-            scanner_service=scanner_service,
-            mobility_service=mobility_service,
-            ocr_service=ocr_service,
-            pdf_service=pdf_service,
-        )
+        bot.inject_services(**services)
 
     # Telegram Applications bauen
     taake_app = taake_bot.build_application()
     nina_app = nina_bot.build_application()
 
     # ProposalService braucht die Apps für Bot-übergreifende Proposals
-    proposal_service.register_app("taake", taake_app)
-    proposal_service.register_app("nina", nina_app)
+    if services["proposal_service"] is not None:
+        services["proposal_service"].register_app("taake", taake_app)
+        services["proposal_service"].register_app("nina", nina_app)
 
     # Scheduler einrichten
     scheduler = AssistantScheduler()
@@ -210,7 +218,8 @@ async def main():
         scheduler.start()
 
         # Adoption B: Memory-Persistence – verpasste Erinnerungen sofort zustellen
-        await _deliver_missed_reminders(reminder_service, taake_app, nina_app)
+        if services["reminder_service"] is not None:
+            await _deliver_missed_reminders(services["reminder_service"], taake_app, nina_app)
 
         logger.info("=" * 60)
         logger.info("Beide Bots laufen! Drücke Ctrl+C zum Beenden.")
