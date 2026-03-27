@@ -100,6 +100,11 @@ class Settings:
     API_PASSWORD_NINA: str = os.getenv("API_PASSWORD_NINA", "")
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
     API_CORS_ORIGINS: list = [o.strip() for o in os.getenv("API_CORS_ORIGINS", "").split(",") if o.strip()]
+
+    # Rate Limits (Requests pro Minute)
+    RATE_LIMIT_LOGIN: str = os.getenv("RATE_LIMIT_LOGIN", "5/minute")
+    RATE_LIMIT_CHAT: str = os.getenv("RATE_LIMIT_CHAT", "30/minute")
+    RATE_LIMIT_DEFAULT: str = os.getenv("RATE_LIMIT_DEFAULT", "60/minute")
     API_TOKEN_EXPIRE_DAYS: int = int(os.getenv("API_TOKEN_EXPIRE_DAYS", "30"))
 
     # Webhook Deployer

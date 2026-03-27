@@ -1,12 +1,15 @@
 """POST /auth/login, POST /auth/refresh"""
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.auth.jwt_handler import create_access_token, create_refresh_token, verify_token
 from api.auth.models import LoginRequest, TokenResponse, RefreshRequest
 from config.settings import settings
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 _PASSWORDS = {
     "taake": lambda: settings.API_PASSWORD_TAAKE,
@@ -15,7 +18,8 @@ _PASSWORDS = {
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(body: LoginRequest):
+@limiter.limit(settings.RATE_LIMIT_LOGIN)
+async def login(request: Request, body: LoginRequest):
     user_key = body.username.lower()
     get_pw = _PASSWORDS.get(user_key)
     if not get_pw:
