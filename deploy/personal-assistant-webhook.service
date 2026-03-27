@@ -1,0 +1,22 @@
+[Unit]
+Description=Personal Assistant Webhook Deployer
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/assistant/projekt-personal-assistent
+Environment=PATH=/home/assistant/projekt-personal-assistent/venv/bin:/usr/bin:/bin
+EnvironmentFile=/home/assistant/projekt-personal-assistent/.env
+ExecStart=/home/assistant/projekt-personal-assistent/venv/bin/python \
+    /home/assistant/projekt-personal-assistent/deploy/webhook_deployer.py
+Restart=always
+RestartSec=10
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=personal-assistant-webhook
+
+[Install]
+WantedBy=multi-user.target

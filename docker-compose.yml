@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  assistant:
+    build: .
+    container_name: personal-assistant
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # Persistente Daten (DB, Tokens, Memory)
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # Google Credentials (read-only)
+      - ./config/google_credentials.json:/app/config/google_credentials.json:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    # Healthcheck
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
