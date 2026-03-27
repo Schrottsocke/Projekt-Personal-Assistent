@@ -10,6 +10,8 @@ logs/
 *.sqlite
 
 # Python
+.coverage
+htmlcov/
 __pycache__/
 *.py[cod]
 *.pyo
