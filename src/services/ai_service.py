@@ -10,7 +10,7 @@ from typing import Optional
 import pytz
 import httpx
 from openai import AsyncOpenAI, RateLimitError, APITimeoutError
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, retry_if_not_exception_type
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, retry_if_not_exception_type, before_sleep_log
 
 from config.settings import settings
 from src.features.feature_service import get_enabled_intents, is_enabled
@@ -124,9 +124,10 @@ class AIService:
         return self._web_search
 
     @retry(
-        stop=stop_after_attempt(1),
+        stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=3),
         retry=retry_if_not_exception_type((RateLimitError, APITimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _complete(self, messages: list[dict], model: str = None, json_mode: bool = False, _start: int = 0) -> str:
         """Führt einen API-Call durch mit linearem Fallback (kein rekursiver Aufruf)."""
@@ -139,7 +140,7 @@ class AIService:
         if json_mode:
             kwargs_base["response_format"] = {"type": "json_object"}
 
-        last_exc: Exception | None = None
+        last_exc: Exception = RuntimeError("Alle AI-Modelle fehlgeschlagen")
         for m in models[_start:]:
             try:
                 if m == "nvidia_fallback" and self._nvidia_client:
