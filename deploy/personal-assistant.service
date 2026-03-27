@@ -9,10 +9,24 @@ User=assistant
 WorkingDirectory=/home/assistant/projekt-personal-assistent
 Environment=PATH=/home/assistant/projekt-personal-assistent/venv/bin
 ExecStart=/home/assistant/projekt-personal-assistent/venv/bin/python main.py
-Restart=always
+
+# Restart with backoff
+Restart=on-failure
 RestartSec=10
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+# Watchdog: systemd prüft ob der Prozess noch reagiert
+WatchdogSec=60
+
 # Wartezeit beim Stopp (sauberes Herunterfahren)
 TimeoutStopSec=30
+
+# Ressourcen-Limits
+MemoryMax=1G
+MemoryHigh=768M
+CPUQuota=80%
+
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=personal-assistant
