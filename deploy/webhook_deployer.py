@@ -146,14 +146,20 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
         body = self.rfile.read(length)
 
         secret = _load_secret()
-        if secret:
-            sig = self.headers.get("X-Hub-Signature-256", "")
-            if not _verify_signature(body, sig, secret):
-                logger.warning("Webhook: ungültige Signatur – abgelehnt.")
-                self.send_response(403)
-                self.end_headers()
-                self.wfile.write(b"Invalid signature")
-                return
+        if not secret:
+            logger.error("Webhook: WEBHOOK_SECRET nicht verfügbar – Request abgelehnt.")
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(b"Server misconfigured")
+            return
+
+        sig = self.headers.get("X-Hub-Signature-256", "")
+        if not _verify_signature(body, sig, secret):
+            logger.warning("Webhook: ungültige Signatur – abgelehnt.")
+            self.send_response(403)
+            self.end_headers()
+            self.wfile.write(b"Invalid signature")
+            return
 
         try:
             payload = json.loads(body)
@@ -193,8 +199,10 @@ if __name__ == "__main__":
     logger.info(f"Projekt: {PROJ_DIR}")
     secret = _load_secret()
     if not secret:
-        logger.warning("WEBHOOK_SECRET nicht gesetzt – Signaturprüfung deaktiviert!")
+        logger.error("WEBHOOK_SECRET nicht gesetzt – Start verweigert!")
+        sys.exit(1)
 
+    logger.info("WEBHOOK_SECRET geladen – Signaturprüfung aktiv.")
     server = http.server.HTTPServer(("0.0.0.0", PORT), WebhookHandler)
     try:
         server.serve_forever()
