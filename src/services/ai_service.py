@@ -125,8 +125,8 @@ class AIService:
 
     @retry(
         stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=1, max=3),
-        retry=retry_if_not_exception_type((RateLimitError, APITimeoutError)),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((RateLimitError, APITimeoutError)),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
     async def _complete(self, messages: list[dict], model: str = None, json_mode: bool = False, _start: int = 0) -> str:
