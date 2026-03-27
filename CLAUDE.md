@@ -73,7 +73,10 @@ Wenn kein Issue-Zugriff möglich ist, bleibt **Issue abarbeiten** zwar der bevor
 | `config/settings.py` | zentrale Konfiguration |
 | `README.md` | Projektübersicht |
 
-## Bekannte Hinweise
+Regeln:
+- keine Code-Aenderungen
+- nur Analyse, Problemfindung, Strukturierung und Issue-Vorschlaege
+- wenn GitHub-Issues erstellt werden sollen: pro Thema klarer Titel, Beschreibung, Prioritaet, DoD
 
 - **Zwei memory_service.py:** `src/memory/memory_service.py` (Telegram Bot) und `src/services/memory_service.py` (API) sind unterschiedliche Implementierungen mit verschiedenen Schnittstellen. Beide werden aktiv genutzt.
 - **Secrets:** `.env` enthält alle API-Keys und Tokens. Niemals committen. `.env.example` ist die Vorlage.
@@ -83,3 +86,24 @@ Wenn kein Issue-Zugriff möglich ist, bleibt **Issue abarbeiten** zwar der bevor
 - Python 3.11, python-telegram-bot, OpenAI SDK (OpenRouter), FastAPI, SQLAlchemy, mem0ai
 - Flutter/Dart, Riverpod
 - Docker, Systemd (Hostinger VPS)
+
+## Praktische Prioritaeten fuer dieses Repo
+
+Wenn unklar ist, womit begonnen werden soll, bevorzuge:
+
+1. reproduzierbare Fehler
+2. Startprobleme
+3. Auth- und Konfigurationsfehler
+4. klare Runtime-Exceptions
+5. Integration zwischen API und App
+6. Deployment-/Betriebsprobleme
+7. erst danach Refactorings oder Komfortverbesserungen
+
+## Erwartetes Verhalten am Ende eines Durchlaufs
+
+Am Ende jeder Aufgabe kurz antworten mit:
+
+- **Geaendert:** welche Datei(en)
+- **Ergebnis:** was behoben / angepasst wurde
+- **Verifikation:** was geprueft wurde
+- **Offen:** was noch nicht geklaert ist
