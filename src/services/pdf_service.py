@@ -175,8 +175,8 @@ class PdfService:
             try:
                 c.setFont("Helvetica", font_size)
                 c.drawString(x, y, word)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Fehler beim Zeichnen von OCR-Wort %r: %s", word, e)
 
     def _add_plain_text(self, c, text: str, page_width: float, page_height: float):
         """Fügt Volltext als unsichtbaren Block oben-links ein."""
@@ -188,8 +188,8 @@ class PdfService:
                 break
             try:
                 c.drawString(10, y, line[:200])  # Zeilenlänge begrenzen
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("Fehler beim Zeichnen von Textzeile: %s", e)
             y -= 9
 
     def _build_pillow_pdf(self, image_bytes: bytes) -> bytes:
