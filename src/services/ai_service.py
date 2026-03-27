@@ -245,7 +245,7 @@ class AIService:
         ]
         intent_lines = "\n".join(line for intent_name, line in all_intent_lines if intent_name in active_intents)
 
-        prompt = f"""Du bist ein Intent-Classifier. Analysiere die folgende Nachricht und bestimme den Intent.
+        system_prompt = f"""Du bist ein Intent-Classifier. Analysiere die folgende Nachricht und bestimme den Intent.
 
 Aktuelle Zeit: {now.strftime('%A, %d.%m.%Y %H:%M')} (Zeitzone: {settings.TIMEZONE})
 

@@ -150,4 +150,16 @@ class Settings:
         return errors
 
 
+
+    def get_system_prompt(self, user_key: str = None) -> str:
+        """Gibt den personalisierten System-Prompt fuer einen User zurueck."""
+        prompts = {
+            'taake': 'Du bist ein persoenlicher KI-Assistent fuer Taake. Du bist hilfsbereit, praezise und effizient. Antworte auf Deutsch.',
+            'nina': 'Du bist ein persoenlicher KI-Assistent fuer Nina. Du bist einfuehlsam, organisiert und unterstuetzend. Antworte auf Deutsch.',
+        }
+        default = 'Du bist ein hilfreicher persoenlicher KI-Assistent. Antworte auf Deutsch.'
+        if not user_key:
+            return default
+        return prompts.get(user_key.lower(), default)
+
 settings = Settings()

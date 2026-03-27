@@ -1,5 +1,27 @@
 # Changelog
 
+## [Unreleased] - Session 3 Bugfix (2026-03-27)
+
+### Bug Fixes
+
+- **fix(ai_service): NameError in _detect_intent behoben (L248)**
+  Die Variable fuer den Intent-Classifier-Prompt hiess `prompt`, wurde aber als `system_prompt` in der OpenAI-Message referenziert (L285). Das fuehrte zu einem `NameError` bei JEDER eingehenden Nachricht. Fix: Variable von `prompt` auf `system_prompt` umbenannt.
+
+- **fix(settings): get_system_prompt() Methode ergaenzt**
+  `ai_service.py` rief `settings.get_system_prompt(user_key)` auf, aber die Methode existierte nicht in der `Settings`-Klasse. Das fuehrte zu einem `AttributeError` bei jeder Chat-Antwort. Fix: Neue Instanzmethode `get_system_prompt(user_key)` in `config/settings.py` ergaenzt, die personalisierte System-Prompts pro User (taake/nina) zurueckgibt.
+
+### Betroffene Dateien
+
+- `src/services/ai_service.py` (Zeile 248: prompt -> system_prompt)
+- `config/settings.py` (Neue Methode: get_system_prompt)
+
+### Verifizierung
+
+- Syntax-Check: beide Dateien OK (ast.parse)
+- Funktionstest: settings.get_system_prompt() gibt korrekte Prompts fuer taake, nina, None und unbekannte Keys zurueck
+
+
+
 ## [Unreleased] - Session 2 (2026-03-26)
 
 ### Neue Features
