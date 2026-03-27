@@ -17,6 +17,10 @@ class ReminderService:
         self._db = None
         self.tz = pytz.timezone(settings.TIMEZONE)
 
+    def _ensure_initialized(self):
+        if self._db is None:
+            raise RuntimeError("ReminderService not initialized – call initialize() first")
+
     async def initialize(self):
         from src.services.database import get_db, init_db
 
@@ -34,6 +38,7 @@ class ReminderService:
     ) -> dict:
         from src.services.database import Reminder
 
+        self._ensure_initialized()
         with self._db() as session:
             reminder = Reminder(
                 user_key=user_key,
@@ -58,6 +63,7 @@ class ReminderService:
         from src.services.database import Reminder
 
         now = datetime.utcnow()
+        self._ensure_initialized()
         with self._db() as session:
             reminders = (
                 session.query(Reminder)
@@ -84,6 +90,7 @@ class ReminderService:
         from src.services.database import Reminder
 
         now = datetime.utcnow()
+        self._ensure_initialized()
         with self._db() as session:
             reminders = (
                 session.query(Reminder)
@@ -115,6 +122,7 @@ class ReminderService:
         start_utc = start.astimezone(pytz.utc).replace(tzinfo=None)
         end_utc = end.astimezone(pytz.utc).replace(tzinfo=None)
 
+        self._ensure_initialized()
         with self._db() as session:
             reminders = (
                 session.query(Reminder)
@@ -133,6 +141,7 @@ class ReminderService:
         """Markiert eine Erinnerung als zugestellt."""
         from src.services.database import Reminder
 
+        self._ensure_initialized()
         with self._db() as session:
             reminder = session.query(Reminder).filter_by(id=reminder_id).first()
             if reminder:
@@ -141,6 +150,7 @@ class ReminderService:
     async def delete_reminder(self, reminder_id: int, user_key: str) -> bool:
         from src.services.database import Reminder
 
+        self._ensure_initialized()
         with self._db() as session:
             reminder = session.query(Reminder).filter_by(id=reminder_id, user_key=user_key).first()
             if reminder:
