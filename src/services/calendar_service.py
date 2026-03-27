@@ -43,16 +43,51 @@ class CalendarService:
         self._cache = {k: v for k, v in self._cache.items() if user_key not in k}
 
     async def initialize(self):
-        """Lädt bestehende Tokens beim Start."""
+        """Lädt bestehende Tokens beim Start und validiert Google Credentials."""
+        self._credentials_available = self._validate_google_credentials()
+
         bot_configs = settings.get_bot_configs()
         for user_key, config in bot_configs.items():
             token_path = config.google_token_path
             if token_path.exists():
                 try:
                     self._load_credentials(user_key, token_path)
-                    logger.info(f"Google Calendar Token für '{user_key}' geladen.")
+                    creds = self._credentials.get(user_key)
+                    if creds and creds.expired and not creds.refresh_token:
+                        logger.warning(
+                            f"Google Token für '{user_key}' ist abgelaufen und kann nicht erneuert werden. "
+                            "Bitte Google Calendar neu verbinden."
+                        )
+                        del self._credentials[user_key]
+                    else:
+                        logger.info(f"Google Calendar Token für '{user_key}' geladen.")
                 except Exception as e:
                     logger.warning(f"Token für '{user_key}' konnte nicht geladen werden: {e}")
+
+        if not self._credentials_available:
+            logger.warning(
+                "Google Calendar Service eingeschränkt: google_credentials.json fehlt oder ist ungültig. "
+                "Neue OAuth-Verbindungen sind nicht möglich."
+            )
+
+    def _validate_google_credentials(self) -> bool:
+        """Prüft ob google_credentials.json existiert und gültiges JSON enthält."""
+        creds_path = settings.GOOGLE_CREDENTIALS_PATH
+        if not creds_path.exists():
+            logger.warning(f"Google Credentials nicht gefunden: {creds_path}")
+            return False
+        try:
+            with open(creds_path) as f:
+                data = json.load(f)
+            # Minimale Validierung: muss client_id enthalten (installed oder web)
+            client_config = data.get("installed") or data.get("web")
+            if not client_config or "client_id" not in client_config:
+                logger.warning(f"Google Credentials ungültig: 'client_id' fehlt in {creds_path}")
+                return False
+            return True
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(f"Google Credentials nicht lesbar: {e}")
+            return False
 
     def _load_credentials(self, user_key: str, token_path: Path):
         from google.oauth2.credentials import Credentials
@@ -87,10 +122,10 @@ class CalendarService:
         """Generiert OAuth2 Authentifizierungs-URL."""
         from google_auth_oauthlib.flow import Flow
 
-        if not settings.GOOGLE_CREDENTIALS_PATH.exists():
+        if not getattr(self, "_credentials_available", False):
             raise FileNotFoundError(
-                f"Google Credentials nicht gefunden: {settings.GOOGLE_CREDENTIALS_PATH}\n"
-                "Bitte credentials.json von Google Cloud Console in config/ ablegen."
+                f"Google Credentials fehlen oder sind ungültig: {settings.GOOGLE_CREDENTIALS_PATH}\n"
+                "Bitte gültige google_credentials.json von Google Cloud Console in config/ ablegen."
             )
 
         flow = Flow.from_client_secrets_file(
