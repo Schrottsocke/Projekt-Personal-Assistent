@@ -44,9 +44,17 @@ app = FastAPI(
 
 # CORS – Flutter App darf zugreifen
 origins = settings.API_CORS_ORIGINS
+if not origins:
+    logger.warning("API_CORS_ORIGINS ist nicht gesetzt – CORS blockiert alle Origins.")
+    origins = []
+elif "*" in origins:
+    logger.warning(
+        "API_CORS_ORIGINS enthält Wildcard '*' – alle Origins erlaubt. "
+        "In Produktion explizite Origins setzen!"
+    )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins if origins != ["*"] else ["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
