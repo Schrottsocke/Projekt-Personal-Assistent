@@ -1,109 +1,93 @@
-# CLAUDE.md – Arbeitskontext für Claude Code
+# CLAUDE.md
 
-## Projekt
-
-DualMind Personal Assistant – zwei Telegram-Bots (TaakeBot + NinaBot) mit geteiltem Gedächtnis, REST API und Flutter App.
-
-## Ziel dieses Dokuments
-
-Dieses Dokument definiert, wie in diesem Repository gearbeitet wird.
-
-Ziel ist:
-- kleine, sichere, nachvollziehbare Schritte statt großer unkontrollierter Änderungen
-- klare Priorisierung über GitHub Issues
-- erst Stabilität und Debugging, dann Ausbau
-- keine stillen Seiteneffekte über Bot, API, App und Deployment hinweg
-
-Claude soll:
-- erst verstehen, dann ändern,
-- pro Durchlauf nur eine klar abgegrenzte Aufgabe bearbeiten,
-- nach jeder Änderung kurz verifizieren,
-- bei Risiko oder Unklarheit stoppen und den User fragen.
-
-## Sessionstart
-
-Wenn eine neue Session beginnt und der User keinen anderen klaren Auftrag gibt, starte automatisch im Modus **Issue abarbeiten**.
-
-Pflichtablauf bei Sessionstart:
-1. Prüfe die offenen GitHub Issues im Repository `Schrottsocke/Projekt-Personal-Assistent`.
-2. Sortiere sie nach Priorität: `P0-critical` → `P1-high` → `P2-medium`.
-3. Wähle genau **ein** nächstes sinnvolles Issue.
-4. Antworte dem User sofort mit:
-   - der gewählten Issue-Nummer und dem Titel,
-   - dem Grund für die Auswahl,
-   - den Dateien oder Bereichen, die du zuerst prüfen willst.
-5. Beginne erst danach mit der Analyse.
+DualMind Personal Assistant:
+- Bots: `main.py`
+- Backend: `src/`
+- API: `api/`
+- App: `app/`
+- Config: `config/settings.py`
+- Deploy: `deploy/`
 
 Wichtig:
-- Nicht mit freier Analyse starten, solange ein sinnvolles offenes Issue verfügbar ist.
-- Nicht mehrere Issues gleichzeitig auswählen.
-- Nicht ohne Begründung vom priorisierten nächsten Issue abweichen.
+- Zwei verschiedene `memory_service.py` existieren und bleiben getrennt:
+  - `src/memory/memory_service.py`
+  - `src/services/memory_service.py`
+- `.env` enthält Secrets. Niemals committen oder ungefragt ändern.
 
-## Fallback bei fehlendem Issue-Zugriff
+## Default
 
-Wenn GitHub Issues nicht geladen werden können oder kein Tool-Zugriff darauf besteht:
-- nicht raten,
-- nicht eigenständig irgendein Feature auswählen,
-- den User klar darauf hinweisen, dass der Issue-Zugriff fehlt.
+Wenn die Session startet und kein klarer User-Auftrag vorliegt:
+1. offene GitHub Issues prüfen
+2. nach `P0-critical` → `P1-high` → `P2-medium` sortieren
+3. genau ein Issue auswählen
+4. kurz sagen, welches Issue bearbeitet wird
+5. direkt den ersten Schritt ausführen
 
-Bitte den User dann um genau eine der folgenden Angaben:
-1. die Issue-Nummer,
-2. den kopierten Inhalt eines Issues,
-3. einen direkten Arbeitsauftrag,
-4. die ausdrückliche Freigabe für Modus „Analyse & Issues erstellen".
+Wenn offene Issues existieren, keine freie Analyse starten.
 
-Wenn kein Issue-Zugriff möglich ist, bleibt **Issue abarbeiten** zwar der bevorzugte Modus, kann aber ohne User-Hilfe nicht automatisch gestartet werden.
+## Kein Issue-Zugriff
 
-## Architektur
+Wenn Issues nicht geladen werden können:
+- nicht raten
+- nicht frei losarbeiten
+- den User um genau eines bitten:
+  - Issue-Nummer
+  - kopierten Issue-Text
+  - direkten Arbeitsauftrag
 
-- **Backend (Python):** `src/` – Services, Handler, Scheduler, Memory, Bots
-- **REST API:** `api/` – FastAPI mit JWT-Auth
-- **Mobile App:** `app/` – Flutter (Dart), Riverpod State-Management
-- **Config:** `config/settings.py` – zentralisierte Settings aus `.env`
-- **Deploy:** `deploy/` – Systemd-Services, Bootstrap, Webhook-Deployer
+## Vor dem ersten Schritt
 
-## Einstiegspunkte
+Genau einmal kurz antworten mit:
+- **Aufgabe**
+- **Dateien**
+- **Erster Schritt**
+- **Prüfung**
 
-| Datei | Zweck |
-|---|---|
-| `main.py` | Telegram-Bots (TaakeBot + NinaBot) |
-| `api/main.py` | FastAPI App-Definition |
-| `api/api_main.py` | Standalone-Startskript für die API |
-| `app/lib/main.dart` | Flutter App Entry |
-| `config/settings.py` | zentrale Konfiguration |
-| `README.md` | Projektübersicht |
+Danach direkt ausführen.
 
-Regeln:
-- keine Code-Aenderungen
-- nur Analyse, Problemfindung, Strukturierung und Issue-Vorschlaege
-- wenn GitHub-Issues erstellt werden sollen: pro Thema klarer Titel, Beschreibung, Prioritaet, DoD
+## Anti-Loop
 
-- **Zwei memory_service.py:** `src/memory/memory_service.py` (Telegram Bot) und `src/services/memory_service.py` (API) sind unterschiedliche Implementierungen mit verschiedenen Schnittstellen. Beide werden aktiv genutzt.
-- **Secrets:** `.env` enthält alle API-Keys und Tokens. Niemals committen. `.env.example` ist die Vorlage.
+Ein Plan darf nur einmal erscheinen.
 
-## Tech-Stack
+Wenn der Plan schon da ist, tue genau eines:
+1. ausführen
+2. konkrete Blockade nennen
+3. eine gezielte Rückfrage stellen
 
-- Python 3.11, python-telegram-bot, OpenAI SDK (OpenRouter), FastAPI, SQLAlchemy, mem0ai
-- Flutter/Dart, Riverpod
-- Docker, Systemd (Hostinger VPS)
+Nie denselben Plan erneut formulieren.
 
-## Praktische Prioritaeten fuer dieses Repo
+## Regeln
 
-Wenn unklar ist, womit begonnen werden soll, bevorzuge:
+- Erst verstehen, dann minimal ändern.
+- Nur eine Aufgabe pro Durchlauf.
+- Kleine Änderungen bevorzugen.
+- Keine stillen Refactorings.
+- Nach der Änderung kurz prüfen und stoppen.
+- Nicht automatisch das nächste Problem anfangen.
 
-1. reproduzierbare Fehler
-2. Startprobleme
-3. Auth- und Konfigurationsfehler
-4. klare Runtime-Exceptions
-5. Integration zwischen API und App
-6. Deployment-/Betriebsprobleme
-7. erst danach Refactorings oder Komfortverbesserungen
+## Debug-Reihenfolge
 
-## Erwartetes Verhalten am Ende eines Durchlaufs
+1. Start-/Importfehler
+2. Konfiguration
+3. Backend-Runtime
+4. API/Auth
+5. App/API-Integration
+6. Deployment
 
-Am Ende jeder Aufgabe kurz antworten mit:
+## Stop
 
-- **Geaendert:** welche Datei(en)
-- **Ergebnis:** was behoben / angepasst wurde
-- **Verifikation:** was geprueft wurde
-- **Offen:** was noch nicht geklaert ist
+Sofort stoppen und Rückfrage stellen bei:
+- `.env`, Secrets, Tokens
+- Migrationen oder Datenbankschema
+- Auth/Security
+- produktionsrelevanten Deploy-Änderungen
+- größeren Refactorings
+- unklarer Zuständigkeit zwischen Bot, API und App
+
+## Ende
+
+Kurz melden:
+- **Geändert**
+- **Ergebnis**
+- **Prüfung**
+- **Offen**
