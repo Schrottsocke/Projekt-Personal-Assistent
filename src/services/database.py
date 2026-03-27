@@ -4,10 +4,12 @@ Speichert: Notizen, Erinnerungen, User-Profile, Konversations-History, Proposals
 """
 
 import logging
+import threading
 from contextlib import contextmanager
 from datetime import datetime
 from sqlalchemy import (
     create_engine,
+    event,
     Column,
     String,
     Integer,
@@ -213,36 +215,69 @@ class MealPlanEntry(Base):
 # Engine & Session Setup
 _engine = None
 _SessionLocal = None
+_init_lock = threading.Lock()
+
+
+def _set_sqlite_pragmas(dbapi_conn, connection_record):
+    """SQLite-Pragmas bei jeder neuen Connection setzen."""
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL")
+    cursor.execute("PRAGMA busy_timeout=5000")
+    cursor.close()
 
 
 def init_db():
     global _engine, _SessionLocal
 
-    _engine = create_engine(
-        settings.DATABASE_URL,
-        connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {},
-    )
-    _SessionLocal = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
+    # Guard: idempotent – bei bereits initialisierter DB nichts tun
+    if _engine is not None:
+        return
 
-    # Tabellen erstellen
-    Base.metadata.create_all(bind=_engine)
+    with _init_lock:
+        # Double-check nach Lock-Erwerb
+        if _engine is not None:
+            return
 
-    # Migrations: neue Spalten zu bestehenden Tabellen hinzufügen (SQLite)
-    if "sqlite" in settings.DATABASE_URL:
-        with _engine.connect() as conn:
-            for col_sql in [
-                "ALTER TABLE user_profiles ADD COLUMN focus_mode_until DATETIME",
-                "ALTER TABLE user_profiles ADD COLUMN tts_enabled BOOLEAN DEFAULT 0",
-                "ALTER TABLE user_profiles ADD COLUMN spotify_token_json TEXT",
-                "ALTER TABLE user_profiles ADD COLUMN enabled_features TEXT",
-            ]:
-                try:
-                    conn.execute(__import__("sqlalchemy").text(col_sql))
-                    conn.commit()
-                except Exception:
-                    pass  # Spalte existiert bereits
+        is_sqlite = "sqlite" in settings.DATABASE_URL
 
-    logger.info(f"Datenbank initialisiert: {settings.DATABASE_URL}")
+        connect_args = {"check_same_thread": False} if is_sqlite else {}
+        pool_kwargs = {}
+        if is_sqlite:
+            # StaticPool ist für SQLite-Threads nicht geeignet;
+            # stattdessen QueuePool mit sinnvollen Limits
+            pool_kwargs = {"pool_size": 5, "max_overflow": 10, "pool_pre_ping": True}
+
+        _engine = create_engine(
+            settings.DATABASE_URL,
+            connect_args=connect_args,
+            **pool_kwargs,
+        )
+
+        # WAL-Modus und busy_timeout für jede SQLite-Connection
+        if is_sqlite:
+            event.listen(_engine, "connect", _set_sqlite_pragmas)
+
+        _SessionLocal = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
+
+        # Tabellen erstellen
+        Base.metadata.create_all(bind=_engine)
+
+        # Migrations: neue Spalten zu bestehenden Tabellen hinzufügen (SQLite)
+        if is_sqlite:
+            with _engine.connect() as conn:
+                for col_sql in [
+                    "ALTER TABLE user_profiles ADD COLUMN focus_mode_until DATETIME",
+                    "ALTER TABLE user_profiles ADD COLUMN tts_enabled BOOLEAN DEFAULT 0",
+                    "ALTER TABLE user_profiles ADD COLUMN spotify_token_json TEXT",
+                    "ALTER TABLE user_profiles ADD COLUMN enabled_features TEXT",
+                ]:
+                    try:
+                        conn.execute(__import__("sqlalchemy").text(col_sql))
+                        conn.commit()
+                    except Exception:
+                        pass  # Spalte existiert bereits
+
+        logger.info(f"Datenbank initialisiert: {settings.DATABASE_URL}")
 
 
 def prune_conversation_history(days: int = 30) -> int:
