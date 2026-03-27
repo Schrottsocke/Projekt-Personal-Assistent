@@ -1,15 +1,18 @@
 """
-Status-Endpunkt – öffentlich, kein Auth nötig.
-Gibt Git-Stand, Service-Status und Uptime zurück.
-Ermöglicht Claude Code, den Server-Zustand remote zu prüfen.
+Status-Endpunkt – zweistufig:
+- /status (public): Nur allgemeiner Health-Check (api ok, uptime, timestamp)
+- /status/detail (auth): Git-Details, Service-Status und Logs
 """
 
 import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+
+from api.dependencies import get_current_user
 
 router = APIRouter(tags=["Status"])
 
@@ -57,16 +60,34 @@ def _last_log_lines(service: str, n: int = 5) -> list[str]:
         return []
 
 
-@router.get("/status")
-async def status():
-    """
-    Server-Status: Git-Commit, Branch, Services, Uptime, letzte Logs.
-    Kein Auth erforderlich – für Monitoring und Claude Code Debugging.
-    """
+def _uptime_str() -> str:
     uptime_seconds = int(time.time() - _start_time)
     h, rem = divmod(uptime_seconds, 3600)
     m, s = divmod(rem, 60)
+    return f"{h}h {m}m {s}s"
 
+
+@router.get("/status")
+async def status():
+    """
+    Oeffentlicher Health-Check: API-Status, Uptime, Timestamp.
+    Keine sensiblen Daten – sicher ohne Auth.
+    """
+    return {
+        "api": "ok",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "uptime": _uptime_str(),
+    }
+
+
+@router.get("/status/detail")
+async def status_detail(
+    _user: Annotated[str, Depends(get_current_user)],
+):
+    """
+    Detaillierter Status: Git-Commit, Branch, Services, Logs.
+    Erfordert Auth – nur fuer authentifizierte Nutzer und Monitoring.
+    """
     bot_active = _service_active("personal-assistant")
     api_active = _service_active("personal-assistant-api")
     webhook_active = _service_active("personal-assistant-webhook")
@@ -74,7 +95,7 @@ async def status():
     return {
         "api": "ok",
         "timestamp": datetime.now(timezone.utc).isoformat(),
-        "uptime": f"{h}h {m}m {s}s",
+        "uptime": _uptime_str(),
         "git": {
             "commit": _git(["rev-parse", "--short", "HEAD"]),
             "commit_full": _git(["rev-parse", "HEAD"]),
