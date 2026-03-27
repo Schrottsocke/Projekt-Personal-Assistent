@@ -281,8 +281,8 @@ def init_db():
                     try:
                         conn.execute(__import__("sqlalchemy").text(col_sql))
                         conn.commit()
-                    except OperationalError:
-                        pass  # Spalte existiert bereits
+                    except OperationalError as e:
+                        logger.debug("Migration übersprungen (Spalte existiert bereits): %s", e)
 
         logger.info(f"Datenbank initialisiert: {settings.DATABASE_URL}")
 
