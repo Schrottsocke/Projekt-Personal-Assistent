@@ -72,6 +72,14 @@ DualMind Personal Assistant – Zwei Telegram-Bots (TaakeBot + NinaBot) mit gete
 2. Issue schliessen mit state: closed, state_reason: completed
 3. Naechstes Issue vorschlagen
 
+### Parallelisierung
+- Issues die **verschiedene Dateien** betreffen: parallel via Subagents abarbeiten
+- Issues die **gleiche Dateien** betreffen: sequentiell in einer Gruppe
+- Maximal 3 parallele Subagents (Kontextlimit)
+- Jeder Subagent arbeitet auf eigenem Branch: `fix/#<nummer>-kurzbeschreibung`
+- Nach Abschluss aller parallelen Issues: User informieren, Ergebnisse zusammenfassen
+- Bei Merge-Konflikten: stoppen und User fragen
+
 ### Neue Probleme entdeckt
 - Nicht sofort fixen, sondern am Ende der Session dem User melden
 - User entscheidet ob neues Issue erstellt wird (→ Modus 2)
