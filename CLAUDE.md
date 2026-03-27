@@ -18,9 +18,11 @@ Wichtige Dateien:
 - `.env.example`
 
 Wichtig:
-- Zwei verschiedene `memory_service.py` existieren und bleiben getrennt:
-  - `src/memory/memory_service.py`
-  - `src/services/memory_service.py`
+- Memory-Architektur: BaseMemoryService + zwei Spezialisierungen:
+  - `src/memory/base_memory_service.py` – gemeinsame mem0-Logik (Basis)
+  - `src/memory/memory_service.py` – BotMemoryService (+ SQLite Facts, Onboarding)
+  - `src/services/memory_service.py` – ApiMemoryService (+ add_fact)
+  - Beide exportieren `MemoryService` als Alias fuer Rueckwaertskompatibilitaet
 - `.env` enthält Secrets. Niemals committen oder ungefragt ändern.
 
 ## Default
