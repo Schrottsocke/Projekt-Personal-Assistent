@@ -365,13 +365,14 @@ class ProposalService:
             target_chat_id = payload.get("chat_id", chat_id)
             path = bot.document_service.create_presentation(title=title, slides=slides)
             try:
-                await bot.app.bot.send_document(
-                    chat_id=target_chat_id,
-                    document=open(path, "rb"),
-                    filename=f"{title}.pptx",
-                    caption=f"📊 *{title}* – {len(slides)} Folien",
-                    parse_mode="Markdown",
-                )
+                with open(path, "rb") as f:
+                    await bot.app.bot.send_document(
+                        chat_id=target_chat_id,
+                        document=f,
+                        filename=f"{title}.pptx",
+                        caption=f"📊 *{title}* – {len(slides)} Folien",
+                        parse_mode="Markdown",
+                    )
             finally:
                 path.unlink(missing_ok=True)
 
