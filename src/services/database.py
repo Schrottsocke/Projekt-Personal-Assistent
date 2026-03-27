@@ -265,6 +265,7 @@ def init_db():
         # Migrations: neue Spalten zu bestehenden Tabellen hinzufügen (SQLite)
         if is_sqlite:
             with _engine.connect() as conn:
+                from sqlalchemy.exc import OperationalError
                 for col_sql in [
                     "ALTER TABLE user_profiles ADD COLUMN focus_mode_until DATETIME",
                     "ALTER TABLE user_profiles ADD COLUMN tts_enabled BOOLEAN DEFAULT 0",
@@ -274,7 +275,7 @@ def init_db():
                     try:
                         conn.execute(__import__("sqlalchemy").text(col_sql))
                         conn.commit()
-                    except Exception:
+                    except OperationalError:
                         pass  # Spalte existiert bereits
 
         logger.info(f"Datenbank initialisiert: {settings.DATABASE_URL}")

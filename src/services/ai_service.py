@@ -97,7 +97,7 @@ class AIService:
                 language="de",
             )
             return response.text.strip() or None
-        except Exception as e:
+        except (httpx.HTTPError, OSError, ValueError) as e:
             logger.error(f"Whisper-Transkriptions-Fehler: {e}")
             return None
 
@@ -150,7 +150,7 @@ class AIService:
                 else:
                     response = await self._client.chat.completions.create(model=m, **kwargs_base)
                 return response.choices[0].message.content
-            except Exception as e:
+            except (RateLimitError, APITimeoutError, httpx.HTTPError, OSError, ValueError) as e:
                 logger.warning(f"Modell {m} fehlgeschlagen: {e}")
                 last_exc = e
         raise last_exc
