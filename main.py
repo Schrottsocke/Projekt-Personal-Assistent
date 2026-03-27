@@ -4,6 +4,7 @@ Main Entry Point: Startet beide Bots parallel.
 
 import asyncio
 import logging
+import signal
 import sys
 from pathlib import Path
 
@@ -226,18 +227,26 @@ async def main():
         logger.info("Beide Bots laufen! Drücke Ctrl+C zum Beenden.")
         logger.info("=" * 60)
 
-        # Warten bis Ctrl+C
-        try:
-            await asyncio.Event().wait()
-        except (KeyboardInterrupt, SystemExit):
-            logger.info("Shutdown eingeleitet...")
-        finally:
-            scheduler.stop()
-            await taake_app.updater.stop()
-            await nina_app.updater.stop()
-            await taake_app.stop()
-            await nina_app.stop()
-            logger.info("Sauber beendet.")
+        # Graceful Shutdown via Signal-Handler
+        shutdown_event = asyncio.Event()
+
+        def _signal_handler(sig, _frame):
+            sig_name = signal.Signals(sig).name
+            logger.info(f"Signal {sig_name} empfangen – Shutdown eingeleitet...")
+            shutdown_event.set()
+
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            signal.signal(sig, _signal_handler)
+
+        await shutdown_event.wait()
+
+        logger.info("Fahre Services herunter...")
+        scheduler.stop()
+        await taake_app.updater.stop()
+        await nina_app.updater.stop()
+        await taake_app.stop()
+        await nina_app.stop()
+        logger.info("Sauber beendet.")
 
 
 if __name__ == "__main__":

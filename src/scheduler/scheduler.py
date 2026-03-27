@@ -100,7 +100,8 @@ class AssistantScheduler:
 
     def stop(self):
         if self.scheduler.running:
-            self.scheduler.shutdown(wait=False)
+            logger.info("Scheduler wird heruntergefahren (warte auf laufende Jobs, max 10s)...")
+            self.scheduler.shutdown(wait=True)
             logger.info("Scheduler gestoppt.")
 
     async def _send_morning_briefings(self):
