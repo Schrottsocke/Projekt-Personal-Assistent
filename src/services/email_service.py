@@ -5,7 +5,6 @@ Scopes: gmail.readonly + gmail.compose (kein Vollzugriff).
 Token-Dateien: data/gmail_token_{user_key}.json
 """
 
-import json
 import logging
 from pathlib import Path
 from typing import Optional
@@ -39,7 +38,7 @@ class EmailService:
     """
 
     def __init__(self):
-        self._credentials: dict = {}    # user_key → google.oauth2.credentials.Credentials
+        self._credentials: dict = {}  # user_key → google.oauth2.credentials.Credentials
         self._pending_flows: dict = {}  # user_key → Flow
 
     # ------------------------------------------------------------------
@@ -62,6 +61,7 @@ class EmailService:
 
     def _load_credentials(self, user_key: str, token_path: Path):
         from google.oauth2.credentials import Credentials
+
         creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
         self._credentials[user_key] = creds
 
@@ -98,9 +98,7 @@ class EmailService:
         from google_auth_oauthlib.flow import Flow
 
         if not settings.GOOGLE_CREDENTIALS_PATH.exists():
-            raise FileNotFoundError(
-                f"Google Credentials nicht gefunden: {settings.GOOGLE_CREDENTIALS_PATH}"
-            )
+            raise FileNotFoundError(f"Google Credentials nicht gefunden: {settings.GOOGLE_CREDENTIALS_PATH}")
 
         flow = Flow.from_client_secrets_file(
             str(settings.GOOGLE_CREDENTIALS_PATH),
@@ -138,9 +136,7 @@ class EmailService:
     # Inbox & Nachrichten
     # ------------------------------------------------------------------
 
-    async def get_inbox(
-        self, user_key: str, limit: int = 10, unread_only: bool = True
-    ) -> list[dict]:
+    async def get_inbox(self, user_key: str, limit: int = 10, unread_only: bool = True) -> list[dict]:
         """
         Gibt die letzten E-Mails aus dem Posteingang zurück.
 
@@ -153,32 +149,34 @@ class EmailService:
             if unread_only:
                 query += " is:unread"
 
-            result = service.users().messages().list(
-                userId="me", q=query, maxResults=limit
-            ).execute()
+            result = service.users().messages().list(userId="me", q=query, maxResults=limit).execute()
 
             messages = result.get("messages", [])
             emails = []
             for msg_ref in messages:
                 try:
-                    msg = service.users().messages().get(
-                        userId="me",
-                        id=msg_ref["id"],
-                        format="metadata",
-                        metadataHeaders=["Subject", "From", "Date"],
-                    ).execute()
-                    headers = {
-                        h["name"]: h["value"]
-                        for h in msg.get("payload", {}).get("headers", [])
-                    }
-                    emails.append({
-                        "id": msg["id"],
-                        "subject": headers.get("Subject", "(Kein Betreff)"),
-                        "from": headers.get("From", "Unbekannt"),
-                        "date": headers.get("Date", ""),
-                        "snippet": msg.get("snippet", ""),
-                        "is_unread": "UNREAD" in msg.get("labelIds", []),
-                    })
+                    msg = (
+                        service.users()
+                        .messages()
+                        .get(
+                            userId="me",
+                            id=msg_ref["id"],
+                            format="metadata",
+                            metadataHeaders=["Subject", "From", "Date"],
+                        )
+                        .execute()
+                    )
+                    headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
+                    emails.append(
+                        {
+                            "id": msg["id"],
+                            "subject": headers.get("Subject", "(Kein Betreff)"),
+                            "from": headers.get("From", "Unbekannt"),
+                            "date": headers.get("Date", ""),
+                            "snippet": msg.get("snippet", ""),
+                            "is_unread": "UNREAD" in msg.get("labelIds", []),
+                        }
+                    )
                 except Exception as e:
                     logger.warning(f"Mail-Details konnten nicht geladen werden: {e}")
             return emails
@@ -197,14 +195,9 @@ class EmailService:
         """
         try:
             service = self._get_service(user_key)
-            msg = service.users().messages().get(
-                userId="me", id=email_id, format="full"
-            ).execute()
+            msg = service.users().messages().get(userId="me", id=email_id, format="full").execute()
 
-            headers = {
-                h["name"]: h["value"]
-                for h in msg.get("payload", {}).get("headers", [])
-            }
+            headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
 
             body = self._extract_body(msg.get("payload", {}))
 
@@ -251,9 +244,7 @@ class EmailService:
             return 0
         try:
             service = self._get_service(user_key)
-            result = service.users().messages().list(
-                userId="me", q="in:inbox is:unread", maxResults=1
-            ).execute()
+            result = service.users().messages().list(userId="me", q="in:inbox is:unread", maxResults=1).execute()
             return result.get("resultSizeEstimate", 0)
         except Exception as e:
             logger.error(f"Gmail unread_count Fehler für {user_key}: {e}")
@@ -273,9 +264,7 @@ class EmailService:
             logger.error(f"Gmail mark_read Fehler: {e}")
             return False
 
-    async def send_draft(
-        self, user_key: str, to: str, subject: str, body: str
-    ) -> Optional[dict]:
+    async def send_draft(self, user_key: str, to: str, subject: str, body: str) -> Optional[dict]:
         """
         Erstellt einen E-Mail-Entwurf (kein direktes Senden — bleibt in Drafts).
 
@@ -285,17 +274,21 @@ class EmailService:
         try:
             service = self._get_service(user_key)
             from email.mime.text import MIMEText
-            import email.utils
 
             message = MIMEText(body, "plain", "utf-8")
             message["to"] = to
             message["subject"] = subject
 
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
-            draft = service.users().drafts().create(
-                userId="me",
-                body={"message": {"raw": raw}},
-            ).execute()
+            draft = (
+                service.users()
+                .drafts()
+                .create(
+                    userId="me",
+                    body={"message": {"raw": raw}},
+                )
+                .execute()
+            )
 
             draft_id = draft.get("id", "")
             logger.info(f"Gmail-Entwurf erstellt für {user_key}: {draft_id}")
@@ -349,6 +342,7 @@ Wenn keine Aufgaben/Termine/Fristen gefunden, leere Listen verwenden."""
 
         try:
             import json
+
             response = await ai_service._complete(
                 messages=[{"role": "user", "content": prompt}],
                 json_mode=True,
@@ -374,11 +368,7 @@ Wenn keine Aufgaben/Termine/Fristen gefunden, leere Listen verwenden."""
             subject = mail.get("subject", "(kein Betreff)")[:60]
             sender = mail.get("from", "").split("<")[0].strip()[:30]
             snippet = mail.get("snippet", "")[:80]
-            lines.append(
-                f"{icon} *{i}. {subject}*\n"
-                f"   Von: {sender}\n"
-                f"   _{snippet}_\n"
-            )
+            lines.append(f"{icon} *{i}. {subject}*\n   Von: {sender}\n   _{snippet}_\n")
 
         return "\n".join(lines)
 
@@ -390,9 +380,4 @@ Wenn keine Aufgaben/Termine/Fristen gefunden, leere Listen verwenden."""
         date = email_data.get("date", "")
         body = email_data.get("body", email_data.get("snippet", ""))[:1500]
 
-        return (
-            f"📧 *{subject}*\n"
-            f"Von: {sender}\n"
-            f"Datum: {date}\n\n"
-            f"{body}"
-        )
+        return f"📧 *{subject}*\nVon: {sender}\nDatum: {date}\n\n{body}"

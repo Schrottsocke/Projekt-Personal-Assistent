@@ -7,8 +7,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from api.dependencies import (
-    get_current_user, get_calendar_service, get_task_service,
-    get_shopping_service, get_reminder_service, get_email_service,
+    get_current_user,
+    get_calendar_service,
+    get_task_service,
+    get_shopping_service,
+    get_reminder_service,
+    get_email_service,
 )
 
 router = APIRouter()
@@ -35,11 +39,15 @@ async def dashboard_today(
 
     # Alle Quellen parallel abrufen
     events, tasks, shopping_items, reminders, unread_count = await asyncio.gather(
-        safe(calendar_svc.get_todays_events(user_key), []) if calendar_svc.is_connected(user_key) else asyncio.coroutine(lambda: [])(),
+        safe(calendar_svc.get_todays_events(user_key), [])
+        if calendar_svc.is_connected(user_key)
+        else asyncio.coroutine(lambda: [])(),
         safe(task_svc.get_open_tasks(user_key), []),
         safe(shopping_svc.get_items(user_key, include_checked=False), []),
         safe(reminder_svc.get_todays_reminders(user_key), []),
-        safe(email_svc.get_unread_count(user_key), 0) if email_svc.is_connected(user_key) else asyncio.coroutine(lambda: 0)(),
+        safe(email_svc.get_unread_count(user_key), 0)
+        if email_svc.is_connected(user_key)
+        else asyncio.coroutine(lambda: 0)(),
     )
 
     # Shopping-Kurzinfo

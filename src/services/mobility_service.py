@@ -20,7 +20,6 @@ ORS_BASE_URL = "https://api.openrouteservice.org/v2"
 _PROFILE_MAP: dict[str, str] = {
     "auto": "driving-car",
     "pkw": "driving-car",
-    "auto": "driving-car",
     "fahren": "driving-car",
     "fahrrad": "cycling-regular",
     "rad": "cycling-regular",
@@ -229,11 +228,7 @@ class MobilityService:
         mins = duration % 60
         time_str = f"{hours}h {mins}min" if hours > 0 else f"{mins} Minuten"
 
-        return (
-            f"{icon} *Route: {origin} → {destination}*\n"
-            f"Fahrzeit: {time_str}\n"
-            f"Distanz: {distance} km"
-        )
+        return f"{icon} *Route: {origin} → {destination}*\nFahrzeit: {time_str}\nDistanz: {distance} km"
 
     @staticmethod
     def format_departure(dep_data: dict) -> str:

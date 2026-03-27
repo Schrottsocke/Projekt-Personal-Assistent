@@ -40,7 +40,7 @@ class WeatherService:
                 url = f"{self.BASE_URL}/{location}"
                 params = {
                     "format": "j1",  # JSON Format
-                    "lang": lang
+                    "lang": lang,
                 }
                 response = await client.get(url, params=params)
                 if response.status_code != 200:
@@ -76,7 +76,9 @@ class WeatherService:
                         w = data["weather"][i]
                         hourly = w.get("hourly", [])
                         desc_day = hourly[4]["lang_de"][0]["value"] if hourly and "lang_de" in hourly[4] else ""
-                        result += f"\n\U0001f4c5 {label}: {w['mintempC']}\u00b0C \u2013 {w['maxtempC']}\u00b0C {desc_day}"
+                        result += (
+                            f"\n\U0001f4c5 {label}: {w['mintempC']}\u00b0C \u2013 {w['maxtempC']}\u00b0C {desc_day}"
+                        )
 
                 return result
 

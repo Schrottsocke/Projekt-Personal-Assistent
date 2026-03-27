@@ -2,7 +2,6 @@
 
 import pytest
 from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
 
 from jose import jwt
 from fastapi import HTTPException
@@ -25,11 +24,13 @@ def _patch_settings(monkeypatch):
 class TestCreateAccessToken:
     def test_returns_string(self):
         from api.auth.jwt_handler import create_access_token
+
         token = create_access_token("taake")
         assert isinstance(token, str)
 
     def test_token_contains_correct_claims(self):
         from api.auth.jwt_handler import create_access_token
+
         token = create_access_token("taake")
         payload = jwt.decode(token, SECRET, algorithms=[ALGORITHM])
         assert payload["sub"] == "taake"
@@ -38,6 +39,7 @@ class TestCreateAccessToken:
 
     def test_token_expiry_is_future(self):
         from api.auth.jwt_handler import create_access_token
+
         token = create_access_token("nina")
         payload = jwt.decode(token, SECRET, algorithms=[ALGORITHM])
         exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
@@ -47,17 +49,20 @@ class TestCreateAccessToken:
 class TestCreateRefreshToken:
     def test_returns_string(self):
         from api.auth.jwt_handler import create_refresh_token
+
         token = create_refresh_token("taake")
         assert isinstance(token, str)
 
     def test_refresh_token_type(self):
         from api.auth.jwt_handler import create_refresh_token
+
         token = create_refresh_token("taake")
         payload = jwt.decode(token, SECRET, algorithms=[ALGORITHM])
         assert payload["type"] == "refresh"
 
     def test_refresh_expiry_longer_than_access(self):
         from api.auth.jwt_handler import create_access_token, create_refresh_token
+
         access = create_access_token("taake")
         refresh = create_refresh_token("taake")
         a_exp = jwt.decode(access, SECRET, algorithms=[ALGORITHM])["exp"]
@@ -68,18 +73,21 @@ class TestCreateRefreshToken:
 class TestVerifyToken:
     def test_valid_access_token(self):
         from api.auth.jwt_handler import create_access_token, verify_token
+
         token = create_access_token("taake")
         user_key = verify_token(token, token_type="access")
         assert user_key == "taake"
 
     def test_valid_refresh_token(self):
         from api.auth.jwt_handler import create_refresh_token, verify_token
+
         token = create_refresh_token("nina")
         user_key = verify_token(token, token_type="refresh")
         assert user_key == "nina"
 
     def test_wrong_token_type_raises(self):
         from api.auth.jwt_handler import create_access_token, verify_token
+
         token = create_access_token("taake")
         with pytest.raises(HTTPException) as exc_info:
             verify_token(token, token_type="refresh")
@@ -87,12 +95,14 @@ class TestVerifyToken:
 
     def test_invalid_token_raises(self):
         from api.auth.jwt_handler import verify_token
+
         with pytest.raises(HTTPException) as exc_info:
             verify_token("invalid-garbage-token")
         assert exc_info.value.status_code == 401
 
     def test_expired_token_raises(self):
         from api.auth.jwt_handler import verify_token
+
         payload = {
             "sub": "taake",
             "type": "access",
@@ -105,6 +115,7 @@ class TestVerifyToken:
 
     def test_missing_sub_raises(self):
         from api.auth.jwt_handler import verify_token
+
         payload = {
             "type": "access",
             "exp": datetime.now(timezone.utc) + timedelta(hours=1),
@@ -116,6 +127,7 @@ class TestVerifyToken:
 
     def test_wrong_secret_raises(self):
         from api.auth.jwt_handler import verify_token
+
         payload = {
             "sub": "taake",
             "type": "access",

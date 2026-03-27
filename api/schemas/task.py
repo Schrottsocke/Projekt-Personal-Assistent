@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class TaskCreate(BaseModel):
     title: str
     description: str = ""
-    priority: str = "medium"   # high|medium|low
+    priority: str = "medium"  # high|medium|low
     due_date: Optional[datetime] = None
 
 
@@ -26,4 +26,4 @@ class TaskOut(BaseModel):
 
 
 class TaskStatusUpdate(BaseModel):
-    status: str   # done|open|in_progress
+    status: str  # done|open|in_progress

@@ -62,7 +62,7 @@ async def run_document_scan(
     sender = analysis.get("sender")
     summary = analysis.get("summary", "Kein Inhalt erkennbar.")
     amount = analysis.get("amount")
-    doc_date = analysis.get("document_date")
+    _doc_date = analysis.get("document_date")
     actions = analysis.get("actions", [])
 
     # Schritt 3: PDF erstellen + Drive-Upload
@@ -76,8 +76,13 @@ async def run_document_scan(
     try:
         if hasattr(bot, "pdf_service") and bot.pdf_service:
             from config.settings import settings
+
             pdf_path = bot.pdf_service.create_searchable_pdf(
-                image_bytes, text, words_data, filename, save_local=settings.SCAN_SAVE_LOCAL
+                image_bytes,
+                text,
+                words_data,
+                filename,
+                save_local=settings.SCAN_SAVE_LOCAL,
             )
     except Exception as e:
         logger.error(f"PDF-Erstellung fehlgeschlagen: {e}")
@@ -85,12 +90,8 @@ async def run_document_scan(
     if pdf_path and hasattr(bot, "drive_service") and bot.drive_service:
         try:
             if bot.drive_service.is_connected(user_key):
-                folder_id = await bot.drive_service.get_or_create_document_folder(
-                    user_key, doc_type_label.lower()
-                )
-                uploaded = await bot.drive_service.upload_file(
-                    user_key, pdf_path, folder_id
-                )
+                folder_id = await bot.drive_service.get_or_create_document_folder(user_key, doc_type_label.lower())
+                uploaded = await bot.drive_service.upload_file(user_key, pdf_path, folder_id)
                 if uploaded:
                     drive_link = uploaded.get("webViewLink")
                     drive_file_id = uploaded.get("id")
@@ -98,6 +99,7 @@ async def run_document_scan(
 
                 # Lokal löschen wenn nicht gewünscht
                 from config.settings import settings
+
                 if not settings.SCAN_SAVE_LOCAL and pdf_path and pdf_path.exists():
                     pdf_path.unlink(missing_ok=True)
                     pdf_path = None
@@ -161,11 +163,15 @@ async def _run_ocr(image_bytes: bytes, bot) -> dict:
     if hasattr(bot, "ai_service") and bot.ai_service:
         try:
             prompt = (
-                "Extrahiere den vollständigen Text aus diesem Dokument-Bild zeichengenau. "
-                "Antworte NUR mit dem Text."
+                "Extrahiere den vollständigen Text aus diesem Dokument-Bild zeichengenau. Antworte NUR mit dem Text."
             )
             text = await bot.ai_service.analyze_image(image_bytes, prompt)
-            return {"text": text, "confidence": 90.0, "method": "vision", "words_data": None}
+            return {
+                "text": text,
+                "confidence": 90.0,
+                "method": "vision",
+                "words_data": None,
+            }
         except Exception as e:
             logger.error(f"Vision-OCR-Fallback fehlgeschlagen: {e}")
     return {"text": "", "confidence": 0.0, "method": "none", "words_data": None}
@@ -214,10 +220,18 @@ Antworte NUR mit validem JSON (kein Markdown, keine Erklärungen):
         return json.loads(raw)
     except json.JSONDecodeError as e:
         logger.error(f"Dokumentanalyse JSON-Parse-Fehler: {e}")
-        return {"document_type": "Sonstiges", "summary": "Analyse fehlgeschlagen.", "actions": []}
+        return {
+            "document_type": "Sonstiges",
+            "summary": "Analyse fehlgeschlagen.",
+            "actions": [],
+        }
     except Exception as e:
         logger.error(f"Dokumentanalyse fehlgeschlagen: {e}")
-        return {"document_type": "Sonstiges", "summary": "Analyse fehlgeschlagen.", "actions": []}
+        return {
+            "document_type": "Sonstiges",
+            "summary": "Analyse fehlgeschlagen.",
+            "actions": [],
+        }
 
 
 def _save_to_db(
@@ -281,9 +295,9 @@ def _format_response(
     if drive_link:
         lines.append(f"🔗 [Drive öffnen]({drive_link})")
     elif pdf_path:
-        lines.append(f"💾 Lokal gespeichert (Drive nicht verbunden)")
+        lines.append("💾 Lokal gespeichert (Drive nicht verbunden)")
     else:
-        lines.append(f"⚠️ PDF konnte nicht erstellt werden")
+        lines.append("⚠️ PDF konnte nicht erstellt werden")
 
     # OCR-Info (nur wenn interessant)
     if ocr_method == "none" or text_length < 10:

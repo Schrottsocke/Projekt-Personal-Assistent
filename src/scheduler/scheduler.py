@@ -3,7 +3,6 @@ APScheduler: Proaktive Nachrichten - Morgen-Briefing, Erinnerungen,
 Mustererkennung (alle 2 Tage), Wochenrückblick (Sonntags).
 """
 
-import asyncio
 import logging
 from datetime import datetime
 import pytz
@@ -26,9 +25,7 @@ class AssistantScheduler:
     """
 
     def __init__(self):
-        self.scheduler = AsyncIOScheduler(
-            timezone=settings.TIMEZONE
-        )
+        self.scheduler = AsyncIOScheduler(timezone=settings.TIMEZONE)
         self._bots: dict = {}  # user_key -> bot instance
         self._applications: dict = {}  # user_key -> telegram Application
 
@@ -127,15 +124,12 @@ class AssistantScheduler:
             return
 
         from src.scheduler.briefing import generate_briefing
+
         text = await generate_briefing(bot)
 
         app = self._applications.get(user_key)
         if app:
-            await app.bot.send_message(
-                chat_id=chat_id,
-                text=text,
-                parse_mode="Markdown"
-            )
+            await app.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
             logger.info(f"Morgen-Briefing gesendet an '{user_key}'.")
 
     async def _check_reminders(self):
@@ -172,7 +166,7 @@ class AssistantScheduler:
                     await app.bot.send_message(
                         chat_id=chat_id,
                         text=f"⏰ *Erinnerung!*\n\n{content}",
-                        parse_mode="Markdown"
+                        parse_mode="Markdown",
                     )
                     await first_bot.reminder_service.mark_sent(reminder_id)
                     logger.info(f"Erinnerung #{reminder_id} gesendet an '{user_key}'.")
@@ -194,9 +188,7 @@ class AssistantScheduler:
                     continue
 
                 intelligence = bot.ai_service.intelligence
-                suggestions = await intelligence.analyze_patterns(
-                    user_key=user_key, bot=bot
-                )
+                suggestions = await intelligence.analyze_patterns(user_key=user_key, bot=bot)
 
                 for suggestion in suggestions:
                     s_type = suggestion.get("type", "ai_suggestion")
@@ -215,10 +207,7 @@ class AssistantScheduler:
                     )
 
                 if suggestions:
-                    logger.info(
-                        f"Mustererkennung für '{user_key}': "
-                        f"{len(suggestions)} Vorschläge erstellt."
-                    )
+                    logger.info(f"Mustererkennung für '{user_key}': {len(suggestions)} Vorschläge erstellt.")
             except Exception as e:
                 logger.error(f"Mustererkennung-Fehler für '{user_key}': {e}")
 
@@ -258,6 +247,7 @@ class AssistantScheduler:
         """Holt Chat-ID aus DB."""
         try:
             from src.services.database import UserProfile, get_db
+
             with get_db()() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 return profile.chat_id if profile else None
@@ -273,6 +263,7 @@ class AssistantScheduler:
         """
         try:
             from src.services.database import UserProfile, get_db
+
             with get_db()() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 if not profile or not profile.quiet_start:
@@ -302,6 +293,7 @@ class AssistantScheduler:
         """Löscht Conversation-History-Einträge die älter als CONVERSATION_HISTORY_DAYS sind."""
         try:
             from src.services.database import prune_conversation_history
+
             days = settings.CONVERSATION_HISTORY_DAYS
             deleted = prune_conversation_history(days=days)
             logger.info(f"Conversation-Pruning: {deleted} Einträge gelöscht (> {days} Tage).")
@@ -342,11 +334,11 @@ class AssistantScheduler:
         """Gibt True zurück wenn der User gerade im Fokus-Modus ist."""
         try:
             from src.services.database import UserProfile, get_db
+
             with get_db()() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 if not profile or not profile.focus_mode_until:
                     return False
-                tz = pytz.timezone(settings.TIMEZONE)
                 now_utc = datetime.utcnow()
                 return now_utc < profile.focus_mode_until
         except Exception as e:

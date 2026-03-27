@@ -16,11 +16,25 @@ class ApiBotShim:
             setattr(self, key, svc)
         # Fehlende Attribute als None defaults
         _optional = [
-            "ai_service", "memory_service", "calendar_service", "notes_service",
-            "reminder_service", "proposal_service", "task_service", "document_service",
-            "tts_service", "spotify_service", "smarthome_service", "chefkoch_service",
-            "drive_service", "shopping_service", "email_service", "scanner_service",
-            "mobility_service", "ocr_service", "pdf_service",
+            "ai_service",
+            "memory_service",
+            "calendar_service",
+            "notes_service",
+            "reminder_service",
+            "proposal_service",
+            "task_service",
+            "document_service",
+            "tts_service",
+            "spotify_service",
+            "smarthome_service",
+            "chefkoch_service",
+            "drive_service",
+            "shopping_service",
+            "email_service",
+            "scanner_service",
+            "mobility_service",
+            "ocr_service",
+            "pdf_service",
         ]
         for attr in _optional:
             if not hasattr(self, attr):

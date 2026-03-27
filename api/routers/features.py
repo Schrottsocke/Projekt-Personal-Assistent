@@ -22,4 +22,5 @@ async def toggle(feature_id: str, user_key: str = Depends(get_current_user)):
         return {"feature_id": feature_id, "enabled": new_state}
     except ValueError as e:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=400, detail=str(e))

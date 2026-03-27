@@ -1,0 +1,14 @@
+target-version = "py311"
+line-length = 120
+
+[lint]
+select = ["E", "F", "W"]
+ignore = [
+    "E501",  # Zeilenlaenge wird durch ruff format kontrolliert; lange Strings bleiben erlaubt
+    "E712",  # SQLAlchemy erfordert == True/False fuer Column-Vergleiche
+]
+
+[lint.per-file-ignores]
+# Conditional imports fuer optionale Dependencies
+"src/services/ocr_service.py" = ["F401"]
+"src/services/web_search.py" = ["F401"]

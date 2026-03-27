@@ -16,7 +16,6 @@ Dann die generierten Token-Dateien hochladen:
   scp config/google_credentials.json assistant@DEINE_IP:~/projekt-personal-assistent/config/
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -84,6 +83,7 @@ def main():
     use_same = input("Denselben Google-Account für Nina verwenden? (j/n): ")
     if use_same.lower() == "j":
         import shutil
+
         src = DATA_DIR / "google_token_taake.json"
         dst = DATA_DIR / "google_token_nina.json"
         shutil.copy(src, dst)

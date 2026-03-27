@@ -70,8 +70,8 @@ class DriveService:
     """
 
     def __init__(self):
-        self._credentials: dict = {}       # user_key → google.oauth2.credentials.Credentials
-        self._pending_flows: dict = {}     # user_key → google_auth_oauthlib.flow.Flow
+        self._credentials: dict = {}  # user_key → google.oauth2.credentials.Credentials
+        self._pending_flows: dict = {}  # user_key → google_auth_oauthlib.flow.Flow
 
     # ------------------------------------------------------------------
     # Initialisierung
@@ -94,7 +94,8 @@ class DriveService:
                 except Exception as e:
                     logger.warning(
                         "Drive-Token für '%s' konnte nicht geladen werden: %s",
-                        user_key, e,
+                        user_key,
+                        e,
                     )
 
     # ------------------------------------------------------------------
@@ -134,10 +135,7 @@ class DriveService:
 
         creds = self._credentials.get(user_key)
         if not creds:
-            raise ValueError(
-                f"Keine Drive-Credentials für '{user_key}'. "
-                "Bitte Google Drive verbinden."
-            )
+            raise ValueError(f"Keine Drive-Credentials für '{user_key}'. Bitte Google Drive verbinden.")
 
         # Access-Token erneuern falls abgelaufen
         if creds.expired and creds.refresh_token:
@@ -203,10 +201,7 @@ class DriveService:
         """
         try:
             if user_key not in self._pending_flows:
-                raise ValueError(
-                    "Kein ausstehender Drive-Auth-Flow. "
-                    "Bitte erneut /drive_connect ausführen."
-                )
+                raise ValueError("Kein ausstehender Drive-Auth-Flow. Bitte erneut /drive_connect ausführen.")
 
             flow = self._pending_flows[user_key]
             flow.fetch_token(code=code)
@@ -266,9 +261,7 @@ class DriveService:
 
             result = service.files().list(**list_kwargs).execute()
             files = result.get("files", [])
-            logger.debug(
-                "Drive list_files für '%s': %d Dateien gefunden.", user_key, len(files)
-            )
+            logger.debug("Drive list_files für '%s': %d Dateien gefunden.", user_key, len(files))
             return files
 
         except ValueError:
@@ -329,7 +322,9 @@ class DriveService:
 
             logger.info(
                 "Drive upload für '%s': '%s' hochgeladen (id=%s).",
-                user_key, file_path.name, created.get("id"),
+                user_key,
+                file_path.name,
+                created.get("id"),
             )
             return created
 
@@ -338,7 +333,9 @@ class DriveService:
         except Exception as e:
             logger.error(
                 "Drive upload_file Fehler für '%s' (%s): %s",
-                user_key, file_path.name, e,
+                user_key,
+                file_path.name,
+                e,
             )
             return None
 
@@ -363,7 +360,9 @@ class DriveService:
         except Exception as e:
             logger.error(
                 "Drive delete_file Fehler für '%s' (id=%s): %s",
-                user_key, file_id, e,
+                user_key,
+                file_id,
+                e,
             )
             return False
 
@@ -371,9 +370,7 @@ class DriveService:
     # Formatierung
     # ------------------------------------------------------------------
 
-    async def create_folder(
-        self, user_key: str, name: str, parent_id: Optional[str] = None
-    ) -> Optional[dict]:
+    async def create_folder(self, user_key: str, name: str, parent_id: Optional[str] = None) -> Optional[dict]:
         """
         Erstellt einen Ordner in Google Drive.
 
@@ -388,10 +385,13 @@ class DriveService:
             }
             if parent_id:
                 metadata["parents"] = [parent_id]
-            folder = service.files().create(
-                body=metadata, fields="id,name,webViewLink"
-            ).execute()
-            logger.info("Drive Ordner '%s' erstellt für '%s': %s", name, user_key, folder.get("id"))
+            folder = service.files().create(body=metadata, fields="id,name,webViewLink").execute()
+            logger.info(
+                "Drive Ordner '%s' erstellt für '%s': %s",
+                name,
+                user_key,
+                folder.get("id"),
+            )
             return folder
         except ValueError:
             raise
@@ -400,7 +400,11 @@ class DriveService:
             return None
 
     async def search_files(
-        self, user_key: str, query: str, mime_type: Optional[str] = None, limit: int = 10
+        self,
+        user_key: str,
+        query: str,
+        mime_type: Optional[str] = None,
+        limit: int = 10,
     ) -> list[dict]:
         """
         Sucht Dateien in Google Drive nach Name und/oder MIME-Typ.
@@ -418,12 +422,16 @@ class DriveService:
             q_parts = [f"name contains '{query}'", "trashed = false"]
             if mime_type:
                 q_parts.append(f"mimeType = '{mime_type}'")
-            result = service.files().list(
-                q=" and ".join(q_parts),
-                pageSize=limit,
-                fields="files(id,name,mimeType,modifiedTime,size,webViewLink)",
-                orderBy="modifiedTime desc",
-            ).execute()
+            result = (
+                service.files()
+                .list(
+                    q=" and ".join(q_parts),
+                    pageSize=limit,
+                    fields="files(id,name,mimeType,modifiedTime,size,webViewLink)",
+                    orderBy="modifiedTime desc",
+                )
+                .execute()
+            )
             return result.get("files", [])
         except ValueError:
             raise
@@ -442,11 +450,15 @@ class DriveService:
         folder_name = "Personal Assistant"
         try:
             service = self._get_service(user_key)
-            result = service.files().list(
-                q=f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
-                fields="files(id,name)",
-                pageSize=1,
-            ).execute()
+            result = (
+                service.files()
+                .list(
+                    q=f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+                    fields="files(id,name)",
+                    pageSize=1,
+                )
+                .execute()
+            )
             folders = result.get("files", [])
             if folders:
                 return folders[0]["id"]
@@ -484,9 +496,7 @@ class DriveService:
             logger.error("Drive download_file Fehler für '%s' (id=%s): %s", user_key, file_id, e)
             return None
 
-    async def get_or_create_document_folder(
-        self, user_key: str, doc_type: str
-    ) -> Optional[str]:
+    async def get_or_create_document_folder(self, user_key: str, doc_type: str) -> Optional[str]:
         """
         Gibt die Ordner-ID für /Dokumente/<Typ>/ zurück, erstellt bei Bedarf.
 
@@ -522,9 +532,7 @@ class DriveService:
                 f"and '{base_folder_id}' in parents "
                 f"and trashed = false"
             )
-            result = service.files().list(
-                q=q, fields="files(id,name)", pageSize=1
-            ).execute()
+            result = service.files().list(q=q, fields="files(id,name)", pageSize=1).execute()
             folders = result.get("files", [])
             if folders:
                 return folders[0]["id"]
@@ -533,16 +541,16 @@ class DriveService:
             folder = await self.create_folder(user_key, subfolder_name, parent_id=base_folder_id)
             if folder:
                 logger.info(
-                    "Drive: Dokumenten-Ordner '%s' erstellt für '%s'.", subfolder_name, user_key
+                    "Drive: Dokumenten-Ordner '%s' erstellt für '%s'.",
+                    subfolder_name,
+                    user_key,
                 )
                 return folder["id"]
             return None
         except ValueError:
             raise
         except Exception as e:
-            logger.error(
-                "Drive get_or_create_document_folder Fehler für '%s': %s", user_key, e
-            )
+            logger.error("Drive get_or_create_document_folder Fehler für '%s': %s", user_key, e)
             return None
 
     @staticmethod

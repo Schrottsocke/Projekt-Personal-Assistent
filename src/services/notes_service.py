@@ -3,7 +3,6 @@ Notizen-Service: CRUD für private und geteilte Notizen.
 """
 
 import logging
-from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -14,14 +13,14 @@ class NotesService:
 
     async def initialize(self):
         from src.services.database import get_db, init_db
+
         init_db()
         self._db = get_db()
         logger.info("Notes Service initialisiert.")
 
-    async def create_note(
-        self, user_key: str, content: str, is_shared: bool = False
-    ) -> dict:
+    async def create_note(self, user_key: str, content: str, is_shared: bool = False) -> dict:
         from src.services.database import Note
+
         with self._db() as session:
             note = Note(
                 user_key=user_key,
@@ -34,16 +33,13 @@ class NotesService:
         logger.info(f"Notiz erstellt für '{user_key}': {content[:50]}...")
         return result
 
-    async def get_notes(
-        self, user_key: str, include_shared: bool = True
-    ) -> list[dict]:
+    async def get_notes(self, user_key: str, include_shared: bool = True) -> list[dict]:
         from src.services.database import Note
+
         with self._db() as session:
             query = session.query(Note)
             if include_shared:
-                query = query.filter(
-                    (Note.user_key == user_key) | (Note.is_shared == True)
-                )
+                query = query.filter((Note.user_key == user_key) | (Note.is_shared == True))
             else:
                 query = query.filter(Note.user_key == user_key)
 
@@ -61,12 +57,9 @@ class NotesService:
 
     async def delete_note(self, note_id: int, user_key: str) -> bool:
         from src.services.database import Note
+
         with self._db() as session:
-            note = (
-                session.query(Note)
-                .filter_by(id=note_id, user_key=user_key)
-                .first()
-            )
+            note = session.query(Note).filter_by(id=note_id, user_key=user_key).first()
             if note:
                 session.delete(note)
                 return True

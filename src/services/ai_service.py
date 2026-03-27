@@ -10,7 +10,13 @@ from typing import Optional
 import pytz
 import httpx
 from openai import AsyncOpenAI, RateLimitError, APITimeoutError
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, retry_if_not_exception_type, before_sleep_log
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 from config.settings import settings
 from src.features.feature_service import get_enabled_intents, is_enabled
@@ -59,7 +65,7 @@ class AIService:
         self._fallback_model = settings.AI_MODEL_FALLBACK
         self.tz = pytz.timezone(settings.TIMEZONE)
         self._intelligence = None  # Lazy init
-        self._web_search = None   # Lazy init
+        self._web_search = None  # Lazy init
         # Groq Client für Whisper (nur wenn API Key vorhanden)
         self._groq_client = (
             AsyncOpenAI(api_key=settings.GROQ_API_KEY, base_url=settings.GROQ_BASE_URL)
@@ -89,6 +95,7 @@ class AIService:
             return None
         try:
             import io
+
             audio_file = io.BytesIO(audio_bytes)
             audio_file.name = filename
             response = await self._groq_client.audio.transcriptions.create(
@@ -104,15 +111,19 @@ class AIService:
     def _get_system_prompt(self, user_key: str = None) -> str:
         """Gibt den System-Prompt zurück (personalisiert wenn user_key gesetzt)."""
         from config.settings import settings
+
         base_prompt = settings.get_system_prompt(user_key)
         now = datetime.now(self.tz)
-        time_context = f"\n\nAktuelles Datum und Uhrzeit: {now.strftime('%A, %d. %B %Y, %H:%M Uhr')} ({settings.TIMEZONE})"
+        time_context = (
+            f"\n\nAktuelles Datum und Uhrzeit: {now.strftime('%A, %d. %B %Y, %H:%M Uhr')} ({settings.TIMEZONE})"
+        )
         return base_prompt + time_context
 
     def _get_intelligence_service(self):
         """Lazy-init des Intelligence Service."""
         if self._intelligence is None:
             from services.intelligence_service import IntelligenceService
+
             self._intelligence = IntelligenceService(self)
         return self._intelligence
 
@@ -120,6 +131,7 @@ class AIService:
         """Lazy-init des Web Search Service."""
         if self._web_search is None:
             from services.web_search_service import WebSearchService
+
             self._web_search = WebSearchService(self)
         return self._web_search
 
@@ -129,7 +141,13 @@ class AIService:
         retry=retry_if_exception_type((RateLimitError, APITimeoutError)),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
-    async def _complete(self, messages: list[dict], model: str = None, json_mode: bool = False, _start: int = 0) -> str:
+    async def _complete(
+        self,
+        messages: list[dict],
+        model: str = None,
+        json_mode: bool = False,
+        _start: int = 0,
+    ) -> str:
         """Führt einen API-Call durch mit linearem Fallback (kein rekursiver Aufruf)."""
         models = [self._model, self._fallback_model]
         kwargs_base = {
@@ -150,7 +168,13 @@ class AIService:
                 else:
                     response = await self._client.chat.completions.create(model=m, **kwargs_base)
                 return response.choices[0].message.content
-            except (RateLimitError, APITimeoutError, httpx.HTTPError, OSError, ValueError) as e:
+            except (
+                RateLimitError,
+                APITimeoutError,
+                httpx.HTTPError,
+                OSError,
+                ValueError,
+            ) as e:
                 logger.warning(f"Modell {m} fehlgeschlagen: {e}")
                 last_exc = e
         raise last_exc
@@ -158,6 +182,7 @@ class AIService:
     def _feature_enabled(self, intent: str, user_key: str) -> bool:
         """Prüft ob das Feature für diesen Intent aktiv ist."""
         from src.features.catalog import INTENT_TO_FEATURES
+
         feature_ids = INTENT_TO_FEATURES.get(intent, [])
         if not feature_ids:
             return True  # Kein Feature-Gate für diesen Intent
@@ -221,34 +246,100 @@ class AIService:
         now = datetime.now(self.tz)
 
         all_intent_lines = [
-            ('calendar_read', '- calendar_read: Nutzer fragt nach Terminen (z.B. "Was habe ich heute?", "Zeig meine Termine")'),
-            ('calendar_create', '- calendar_create: Nutzer will Termin erstellen (z.B. "Zahnarzt am Montag um 10", "Meeting morgen 14 Uhr")'),
-            ('note_create', '- note_create: Nutzer will eine Notiz speichern (z.B. "Notiz: ...", "Merkzettel für ...")'),
-            ('reminder_create', '- reminder_create: Nutzer will erinnert werden (z.B. "Erinnere mich...", "In 2 Stunden...", "Morgen um 9...")'),
-            ('task_create', '- task_create: Nutzer will eine Aufgabe/Todo erstellen (z.B. "Muss noch Steuer machen", "Aufgabe: Einkaufen", "To-Do: Arzt anrufen", "[Name] soll etwas tun")'),
-            ('task_read', '- task_read: Nutzer fragt nach offenen Aufgaben (z.B. "Was steht noch an?", "Zeig meine Todos", "Was muss ich noch tun?")'),
-            ('task_complete', '- task_complete: Nutzer will eine Aufgabe abhaken (z.B. "Aufgabe 3 erledigt", "Habe eingekauft", "Nummer 2 ist fertig")'),
-            ('timer_create', '- timer_create: Nutzer will einen kurzen Countdown/Timer (z.B. "Timer 25 Minuten", "In 30 Min klingeln", "Pomodoro", "Stoppuhr 45 Min"). NUR bei Zeitangaben < 4 Stunden ohne festen Zeitpunkt.'),
-            ('table_create', '- table_create: Nutzer will eine Tabelle oder Excel-Datei erstellen (z.B. "Erstelle eine Tabelle meiner Aufgaben", "Mach mir eine Excel-Tabelle", "Tabelle mit meinen Terminen", "Zeig meine Tasks als Tabelle")'),
-            ('presentation_create', '- presentation_create: Nutzer will eine Präsentation oder PowerPoint erstellen (z.B. "Erstelle eine Präsentation über X", "PowerPoint zu Thema Y", "Erstell mir Slides für Z")'),
-            ('web_search', '- web_search: BEVORZUGE wenn aktuelle/externe Daten gebraucht werden. PFLICHT bei: Wetter (auch "Wetter heute/morgen/diese Woche" → IMMER web_search!), Nachrichten, Preise, Sportergebnisse, Aktienkurse, Börsenkurse, Öffnungszeiten, Rezepte, Definitionen, aktuelle Ereignisse. REGEL: Wenn die Antwort sich täglich ändern kann oder live-Daten benötigt → web_search. Niemals für zeitkritische Fragen chat wählen!'),
-            ('spotify', '- spotify: Musik-Steuerung (z.B. "Spiel Musik", "Pause", "Nächster Song", "Spiel Jazz", "Lauter", "Was läuft gerade?")'),
-            ('smarthome', '- smarthome: Smart Home / Haus-Steuerung (z.B. "Licht aus", "Heizung auf 22 Grad", "Rollos schließen", "Steckdose Küche an")'),
-            ('recipe_search', '- recipe_search: Nutzer sucht ein Rezept oder fragt was er kochen kann (z.B. "Rezept für Pasta Carbonara", "Was kann ich mit Brokkoli kochen?", "Zeig mir ein Kuchenrezept", "Wie macht man Schnitzel?")'),
-            ('drive', '- drive: Google Drive Aktionen (z.B. "Zeig meine Drive-Dateien", "Suche Datei X in Drive", "Was liegt in meinem Drive?")'),
-            ('shopping_add', '- shopping_add: Nutzer will Artikel auf die Einkaufsliste (z.B. "Kauf noch Milch", "Auf die Einkaufsliste: Brot und Butter", "Ich brauche noch Tomaten")'),
-            ('shopping_view', '- shopping_view: Nutzer will die Einkaufsliste sehen (z.B. "Was muss ich einkaufen?", "Einkaufsliste zeigen", "Was steht auf der Liste?")'),
-            ('shopping_recipe', '- shopping_recipe: Nutzer will Rezept-Zutaten auf die Einkaufsliste (z.B. "Zutaten für Carbonara auf die Liste", "Füge Zutaten von Rezept X hinzu")'),
-            ('email_read', '- email_read: Nutzer fragt nach E-Mails (z.B. "Zeig meine Mails", "Neue E-Mails?", "Was steht in meinem Posteingang?")'),
-            ('email_compose', '- email_compose: Nutzer will eine E-Mail schreiben (z.B. "Schreib eine Mail an X", "E-Mail an Chef über Y", "Antworte auf die Mail")'),
-            ('mobility', '- mobility: Nutzer fragt nach Fahrzeiten oder Abfahrt (z.B. "Wie lang brauche ich zur Arbeit?", "Wann muss ich losfahren?", "Fahrzeit nach München", "Route zu X berechnen")'),
-            ('chat', '- chat: Alles andere (persönliche Fragen, Konversation, Meinungen, Erinnerungen aus Gesprächen)'),
+            (
+                "calendar_read",
+                '- calendar_read: Nutzer fragt nach Terminen (z.B. "Was habe ich heute?", "Zeig meine Termine")',
+            ),
+            (
+                "calendar_create",
+                '- calendar_create: Nutzer will Termin erstellen (z.B. "Zahnarzt am Montag um 10", "Meeting morgen 14 Uhr")',
+            ),
+            (
+                "note_create",
+                '- note_create: Nutzer will eine Notiz speichern (z.B. "Notiz: ...", "Merkzettel für ...")',
+            ),
+            (
+                "reminder_create",
+                '- reminder_create: Nutzer will erinnert werden (z.B. "Erinnere mich...", "In 2 Stunden...", "Morgen um 9...")',
+            ),
+            (
+                "task_create",
+                '- task_create: Nutzer will eine Aufgabe/Todo erstellen (z.B. "Muss noch Steuer machen", "Aufgabe: Einkaufen", "To-Do: Arzt anrufen", "[Name] soll etwas tun")',
+            ),
+            (
+                "task_read",
+                '- task_read: Nutzer fragt nach offenen Aufgaben (z.B. "Was steht noch an?", "Zeig meine Todos", "Was muss ich noch tun?")',
+            ),
+            (
+                "task_complete",
+                '- task_complete: Nutzer will eine Aufgabe abhaken (z.B. "Aufgabe 3 erledigt", "Habe eingekauft", "Nummer 2 ist fertig")',
+            ),
+            (
+                "timer_create",
+                '- timer_create: Nutzer will einen kurzen Countdown/Timer (z.B. "Timer 25 Minuten", "In 30 Min klingeln", "Pomodoro", "Stoppuhr 45 Min"). NUR bei Zeitangaben < 4 Stunden ohne festen Zeitpunkt.',
+            ),
+            (
+                "table_create",
+                '- table_create: Nutzer will eine Tabelle oder Excel-Datei erstellen (z.B. "Erstelle eine Tabelle meiner Aufgaben", "Mach mir eine Excel-Tabelle", "Tabelle mit meinen Terminen", "Zeig meine Tasks als Tabelle")',
+            ),
+            (
+                "presentation_create",
+                '- presentation_create: Nutzer will eine Präsentation oder PowerPoint erstellen (z.B. "Erstelle eine Präsentation über X", "PowerPoint zu Thema Y", "Erstell mir Slides für Z")',
+            ),
+            (
+                "web_search",
+                '- web_search: BEVORZUGE wenn aktuelle/externe Daten gebraucht werden. PFLICHT bei: Wetter (auch "Wetter heute/morgen/diese Woche" → IMMER web_search!), Nachrichten, Preise, Sportergebnisse, Aktienkurse, Börsenkurse, Öffnungszeiten, Rezepte, Definitionen, aktuelle Ereignisse. REGEL: Wenn die Antwort sich täglich ändern kann oder live-Daten benötigt → web_search. Niemals für zeitkritische Fragen chat wählen!',
+            ),
+            (
+                "spotify",
+                '- spotify: Musik-Steuerung (z.B. "Spiel Musik", "Pause", "Nächster Song", "Spiel Jazz", "Lauter", "Was läuft gerade?")',
+            ),
+            (
+                "smarthome",
+                '- smarthome: Smart Home / Haus-Steuerung (z.B. "Licht aus", "Heizung auf 22 Grad", "Rollos schließen", "Steckdose Küche an")',
+            ),
+            (
+                "recipe_search",
+                '- recipe_search: Nutzer sucht ein Rezept oder fragt was er kochen kann (z.B. "Rezept für Pasta Carbonara", "Was kann ich mit Brokkoli kochen?", "Zeig mir ein Kuchenrezept", "Wie macht man Schnitzel?")',
+            ),
+            (
+                "drive",
+                '- drive: Google Drive Aktionen (z.B. "Zeig meine Drive-Dateien", "Suche Datei X in Drive", "Was liegt in meinem Drive?")',
+            ),
+            (
+                "shopping_add",
+                '- shopping_add: Nutzer will Artikel auf die Einkaufsliste (z.B. "Kauf noch Milch", "Auf die Einkaufsliste: Brot und Butter", "Ich brauche noch Tomaten")',
+            ),
+            (
+                "shopping_view",
+                '- shopping_view: Nutzer will die Einkaufsliste sehen (z.B. "Was muss ich einkaufen?", "Einkaufsliste zeigen", "Was steht auf der Liste?")',
+            ),
+            (
+                "shopping_recipe",
+                '- shopping_recipe: Nutzer will Rezept-Zutaten auf die Einkaufsliste (z.B. "Zutaten für Carbonara auf die Liste", "Füge Zutaten von Rezept X hinzu")',
+            ),
+            (
+                "email_read",
+                '- email_read: Nutzer fragt nach E-Mails (z.B. "Zeig meine Mails", "Neue E-Mails?", "Was steht in meinem Posteingang?")',
+            ),
+            (
+                "email_compose",
+                '- email_compose: Nutzer will eine E-Mail schreiben (z.B. "Schreib eine Mail an X", "E-Mail an Chef über Y", "Antworte auf die Mail")',
+            ),
+            (
+                "mobility",
+                '- mobility: Nutzer fragt nach Fahrzeiten oder Abfahrt (z.B. "Wie lang brauche ich zur Arbeit?", "Wann muss ich losfahren?", "Fahrzeit nach München", "Route zu X berechnen")',
+            ),
+            (
+                "chat",
+                "- chat: Alles andere (persönliche Fragen, Konversation, Meinungen, Erinnerungen aus Gesprächen)",
+            ),
         ]
         intent_lines = "\n".join(line for intent_name, line in all_intent_lines if intent_name in active_intents)
 
         system_prompt = f"""Du bist ein Intent-Classifier. Analysiere die folgende Nachricht und bestimme den Intent.
 
-Aktuelle Zeit: {now.strftime('%A, %d.%m.%Y %H:%M')} (Zeitzone: {settings.TIMEZONE})
+Aktuelle Zeit: {now.strftime("%A, %d.%m.%Y %H:%M")} (Zeitzone: {settings.TIMEZONE})
 
 Nachricht: "{message}"
 
@@ -306,10 +397,7 @@ Details je nach Intent:
 
         try:
             now = datetime.now(self.tz)
-            events = await bot.calendar_service.get_events(
-                start=now,
-                end=now + timedelta(days=7)
-            )
+            events = await bot.calendar_service.get_events(start=now, end=now + timedelta(days=7))
 
             if not events:
                 return "📅 Keine Termine in den nächsten 7 Tagen."
@@ -496,7 +584,7 @@ Details je nach Intent:
         try:
             success = await bot.tasks_service.complete_task(task_id)
             if success:
-                return f"✅ Aufgabe als erledigt markiert!"
+                return "✅ Aufgabe als erledigt markiert!"
             return "❌ Aufgabe konnte nicht abgeschlossen werden."
         except Exception as e:
             logger.error(f"Aufgaben-Complete-Fehler: {e}")
@@ -538,12 +626,12 @@ Beschreibung: {description}
 Erstelle eine sinnvolle, gut strukturierte Tabelle mit relevanten Spalten und Beispieldaten.
 Formatiere die Ausgabe als Markdown-Tabelle."""
 
-        response = await self._complete(
-            messages=[{"role": "user", "content": prompt}]
-        )
+        response = await self._complete(messages=[{"role": "user", "content": prompt}])
         return response
 
-    async def _handle_presentation_create(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
+    async def _handle_presentation_create(
+        self, message: str, intent_data: dict, user_key: str, chat_id: int, bot
+    ) -> str:
         """Erstellt eine Präsentationsstruktur."""
         details = intent_data.get("details", {})
         title = details.get("title", "Präsentation")
@@ -562,9 +650,7 @@ Erstelle für jede Folie:
 
 Formatiere strukturiert und übersichtlich."""
 
-        response = await self._complete(
-            messages=[{"role": "user", "content": prompt}]
-        )
+        response = await self._complete(messages=[{"role": "user", "content": prompt}])
         return response
 
     async def _handle_briefing(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
@@ -848,10 +934,10 @@ Formatiere strukturiert und übersichtlich."""
             logger.error(f"Mobility-Handler-Fehler: {e}")
             return "❌ Fahrzeit konnte nicht berechnet werden."
 
-
     async def _handle_weather(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
         """Ruft Echtzeit-Wetterdaten via WeatherService ab (Open-Meteo, kein API-Key noetig)."""
         from src.services.weather_service import WeatherService
+
         details = intent_data.get("details", {})
         location = details.get("location", "")
         weather_type = details.get("type", "current")

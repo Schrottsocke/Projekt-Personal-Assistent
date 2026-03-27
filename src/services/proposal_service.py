@@ -13,7 +13,6 @@ from typing import Optional
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +57,7 @@ class ProposalService:
 
     async def initialize(self):
         from src.services.database import get_db, init_db
+
         init_db()
         self._db = get_db()
         logger.info("Proposal Service initialisiert.")
@@ -70,6 +70,7 @@ class ProposalService:
         """Liest die auto_approve_types eines Users aus der DB."""
         try:
             from src.services.database import UserProfile
+
             with self._db() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 if profile and profile.auto_approve_types:
@@ -106,7 +107,12 @@ class ProposalService:
                 if app:
                     await app.bot.send_message(chat_id=chat_id, text=confirm, parse_mode="Markdown")
                 logger.info(f"Auto-approved '{proposal_type}' für '{user_key}': {title}")
-                return {"id": None, "title": title, "type": proposal_type, "auto_approved": True}
+                return {
+                    "id": None,
+                    "title": title,
+                    "type": proposal_type,
+                    "auto_approved": True,
+                }
             except Exception as e:
                 logger.error(f"Auto-Approve Ausführungsfehler: {e}")
                 # Fallback: normaler Proposal-Flow
@@ -130,15 +136,15 @@ class ProposalService:
             proposal_id = proposal.id
 
         # Telegram-Nachricht senden
-        msg_text = self._format_proposal_message(
-            icon, title, description, proposal_type, payload
-        )
-        keyboard = InlineKeyboardMarkup([
+        msg_text = self._format_proposal_message(icon, title, description, proposal_type, payload)
+        keyboard = InlineKeyboardMarkup(
             [
-                InlineKeyboardButton("✅ Ausführen", callback_data=f"proposal_approve_{proposal_id}"),
-                InlineKeyboardButton("❌ Ablehnen", callback_data=f"proposal_reject_{proposal_id}"),
+                [
+                    InlineKeyboardButton("✅ Ausführen", callback_data=f"proposal_approve_{proposal_id}"),
+                    InlineKeyboardButton("❌ Ablehnen", callback_data=f"proposal_reject_{proposal_id}"),
+                ]
             ]
-        ])
+        )
 
         app = self._apps.get(user_key)
         if app:
@@ -174,6 +180,7 @@ class ProposalService:
                     pass
         elif proposal_type == TYPE_TASK_CREATE:
             from src.services.task_service import PRIORITY_ICONS
+
             priority = payload.get("priority", "medium")
             lines.append(f"{PRIORITY_ICONS.get(priority, '')} Priorität: {priority}")
         return "\n".join(lines)
@@ -214,6 +221,7 @@ class ProposalService:
         elif proposal_type == TYPE_TASK_CREATE:
             priority = payload.get("priority", "medium")
             from src.services.task_service import PRIORITY_ICONS
+
             p_icon = PRIORITY_ICONS.get(priority, "")
             lines.append(f"\n{p_icon} Priorität: {priority}")
             assigned_by = payload.get("assigned_by")
@@ -250,9 +258,7 @@ class ProposalService:
         from src.services.database import Proposal
 
         with self._db() as session:
-            proposal = session.query(Proposal).filter_by(
-                id=proposal_id, status=STATUS_PENDING
-            ).first()
+            proposal = session.query(Proposal).filter_by(id=proposal_id, status=STATUS_PENDING).first()
             if not proposal:
                 return False
 
@@ -283,9 +289,7 @@ class ProposalService:
         from src.services.database import Proposal
 
         with self._db() as session:
-            proposal = session.query(Proposal).filter_by(
-                id=proposal_id, status=STATUS_PENDING
-            ).first()
+            proposal = session.query(Proposal).filter_by(id=proposal_id, status=STATUS_PENDING).first()
             if not proposal:
                 return False
             proposal.status = STATUS_REJECTED
@@ -317,9 +321,7 @@ class ProposalService:
                 for p in proposals
             ]
 
-    async def _execute(
-        self, proposal_type: str, payload: dict, user_key: str, chat_id: str, bot
-    ):
+    async def _execute(self, proposal_type: str, payload: dict, user_key: str, chat_id: str, bot):
         """Führt die eigentliche Aktion basierend auf dem Proposal-Typ aus."""
 
         if proposal_type == TYPE_CALENDAR_CREATE:

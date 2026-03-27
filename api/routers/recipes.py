@@ -1,12 +1,15 @@
 """Rezepte: Chefkoch-Suche + gespeicherte Rezepte."""
 
-import json
 import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from api.dependencies import get_current_user, get_chefkoch_service, get_shopping_service
+from api.dependencies import (
+    get_current_user,
+    get_chefkoch_service,
+    get_shopping_service,
+)
 from api.schemas.recipe import SavedRecipeCreate, SavedRecipeOut, ToShoppingRequest
 
 router = APIRouter()
@@ -25,9 +28,7 @@ def _parse_recipe(raw: dict) -> dict:
         "image_url": (item.get("previewImageUrlTemplate") or "").replace("<format>", "400x300"),
         "prep_time": item.get("preparationTime") or 0,
         "cook_time": item.get("cookingTime") or 0,
-        "difficulty": {1: "Einfach", 2: "Normal", 3: "Anspruchsvoll", 4: "Profi"}.get(
-            item.get("difficulty", 0), ""
-        ),
+        "difficulty": {1: "Einfach", 2: "Normal", 3: "Anspruchsvoll", 4: "Profi"}.get(item.get("difficulty", 0), ""),
         "rating": round(item.get("rating", {}).get("rating", 0.0), 1),
         "url": f"{CHEFKOCH_BASE}/{rid}/",
         "servings": item.get("servings") or 4,
@@ -39,11 +40,13 @@ def _extract_ingredients(recipe: dict) -> list[dict]:
     result = []
     for group in recipe.get("ingredientGroups", []):
         for ing in group.get("ingredients", []):
-            result.append({
-                "name": ing.get("name", ""),
-                "amount": ing.get("amount") or "",
-                "unit": ing.get("unit") or "",
-            })
+            result.append(
+                {
+                    "name": ing.get("name", ""),
+                    "amount": ing.get("amount") or "",
+                    "unit": ing.get("unit") or "",
+                }
+            )
     return result
 
 
@@ -77,6 +80,7 @@ async def list_saved(
     user_key: Annotated[str, Depends(get_current_user)],
 ):
     from src.services.database import SavedRecipe, get_db
+
     with get_db()() as session:
         rows = session.query(SavedRecipe).filter_by(user_key=user_key).all()
     return rows
@@ -88,6 +92,7 @@ async def save_recipe(
     user_key: Annotated[str, Depends(get_current_user)],
 ):
     from src.services.database import SavedRecipe, get_db
+
     with get_db()() as session:
         rec = SavedRecipe(user_key=user_key, **body.model_dump())
         session.add(rec)
@@ -102,6 +107,7 @@ async def toggle_favorite(
     user_key: Annotated[str, Depends(get_current_user)],
 ):
     from src.services.database import SavedRecipe, get_db
+
     with get_db()() as session:
         rec = session.query(SavedRecipe).filter_by(id=recipe_id, user_key=user_key).first()
         if not rec:
@@ -116,6 +122,7 @@ async def delete_saved(
     user_key: Annotated[str, Depends(get_current_user)],
 ):
     from src.services.database import SavedRecipe, get_db
+
     with get_db()() as session:
         rec = session.query(SavedRecipe).filter_by(id=recipe_id, user_key=user_key).first()
         if not rec:

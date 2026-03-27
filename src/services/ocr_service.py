@@ -25,15 +25,14 @@ class OcrService:
     def _check_tesseract(self) -> bool:
         try:
             import pytesseract
+
             pytesseract.get_tesseract_version()
             return True
         except Exception:
             logger.info("pytesseract/Tesseract nicht verfügbar – Vision-API als Fallback.")
             return False
 
-    async def extract_text(
-        self, image_bytes: bytes, ai_service=None
-    ) -> dict:
+    async def extract_text(self, image_bytes: bytes, ai_service=None) -> dict:
         """
         Extrahiert Text aus image_bytes.
 
@@ -77,9 +76,7 @@ class OcrService:
                 image = image.convert("RGB")
 
             # Volltext
-            text = pytesseract.image_to_string(
-                image, lang="deu+eng", config="--oem 3 --psm 3"
-            )
+            text = pytesseract.image_to_string(image, lang="deu+eng", config="--oem 3 --psm 3")
 
             # Wortdaten für PDF-Text-Layer
             words_data = pytesseract.image_to_data(
@@ -93,10 +90,7 @@ class OcrService:
             confs = [c for c in words_data["conf"] if isinstance(c, (int, float)) and c > 0]
             confidence = sum(confs) / len(confs) if confs else 0.0
 
-            logger.info(
-                f"Tesseract OCR: {len(text.split())} Wörter, "
-                f"Konfidenz {confidence:.0f}%"
-            )
+            logger.info(f"Tesseract OCR: {len(text.split())} Wörter, Konfidenz {confidence:.0f}%")
             return {
                 "text": text,
                 "confidence": confidence,

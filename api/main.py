@@ -6,7 +6,7 @@ Läuft auf Port 8000, getrennt vom Telegram-Bot.
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -15,7 +15,19 @@ from slowapi.util import get_remote_address
 
 from config.settings import settings
 from api import dependencies
-from api.routers import auth, dashboard, chat, tasks, calendar, shopping, recipes, mealplan, drive, features, status
+from api.routers import (
+    auth,
+    dashboard,
+    chat,
+    tasks,
+    calendar,
+    shopping,
+    recipes,
+    mealplan,
+    drive,
+    features,
+    status,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -57,8 +69,7 @@ if not origins:
     origins = []
 elif "*" in origins:
     logger.warning(
-        "API_CORS_ORIGINS enthält Wildcard '*' – alle Origins erlaubt. "
-        "In Produktion explizite Origins setzen!"
+        "API_CORS_ORIGINS enthält Wildcard '*' – alle Origins erlaubt. In Produktion explizite Origins setzen!"
     )
 app.add_middleware(
     CORSMiddleware,

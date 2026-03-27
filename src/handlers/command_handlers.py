@@ -62,11 +62,11 @@ async def cmd_hilfe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Kann dem Partner Aufgaben zuweisen\n"
         "• Sonntags bekommst du einen Wochenrückblick\n\n"
         "💬 Schreib oder sprich einfach frei!\n"
-        "_z.B. \"Erinnere mich morgen um 10 an Zahnarzt\"_\n"
-        "_z.B. \"Timer 25 Minuten\"_\n"
-        "_z.B. \"Aufgabe: Steuer bis Freitag\"_\n"
-        "_z.B. \"Erstelle eine Tabelle meiner Aufgaben\"_\n"
-        "_z.B. \"Präsentation zu Remote Work\"_"
+        '_z.B. "Erinnere mich morgen um 10 an Zahnarzt"_\n'
+        '_z.B. "Timer 25 Minuten"_\n'
+        '_z.B. "Aufgabe: Steuer bis Freitag"_\n'
+        '_z.B. "Erstelle eine Tabelle meiner Aufgaben"_\n'
+        '_z.B. "Präsentation zu Remote Work"_'
     )
     await update.message.reply_text(text, parse_mode="Markdown")
 
@@ -79,13 +79,9 @@ async def cmd_kalender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📅 Lade Kalender...")
 
     try:
-        events = await bot.calendar_service.get_upcoming_events(
-            user_key=bot.name.lower(), days=7
-        )
+        events = await bot.calendar_service.get_upcoming_events(user_key=bot.name.lower(), days=7)
         if not events:
-            await update.message.reply_text(
-                "📅 Keine Termine in den nächsten 7 Tagen."
-            )
+            await update.message.reply_text("📅 Keine Termine in den nächsten 7 Tagen.")
             return
 
         tz = pytz.timezone(settings.TIMEZONE)
@@ -109,8 +105,7 @@ async def cmd_kalender(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Kalender-Fehler: {e}")
         await update.message.reply_text(
-            "❌ Kalender konnte nicht geladen werden. "
-            "Ist Google Calendar verbunden? (/start für Setup)"
+            "❌ Kalender konnte nicht geladen werden. Ist Google Calendar verbunden? (/start für Setup)"
         )
 
 
@@ -123,6 +118,7 @@ async def cmd_briefing(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         from src.scheduler.briefing import generate_briefing
+
         text = await generate_briefing(bot)
         await update.message.reply_text(text, parse_mode="Markdown")
     except Exception as e:
@@ -139,21 +135,15 @@ async def cmd_notiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not args:
         await update.message.reply_text(
             "📝 *Notiz speichern:*\nSchreib einfach:\n`/notiz Hier dein Text`\n\n"
-            "Oder schreib mir frei: _\"Notiz: Milch kaufen\"_",
-            parse_mode="Markdown"
+            'Oder schreib mir frei: _"Notiz: Milch kaufen"_',
+            parse_mode="Markdown",
         )
         return
 
     content = " ".join(args)
     try:
-        note = await bot.notes_service.create_note(
-            user_key=bot.name.lower(),
-            content=content,
-            is_shared=False
-        )
-        await update.message.reply_text(
-            f"✅ Notiz gespeichert!\n📝 _{content}_", parse_mode="Markdown"
-        )
+        _note = await bot.notes_service.create_note(user_key=bot.name.lower(), content=content, is_shared=False)
+        await update.message.reply_text(f"✅ Notiz gespeichert!\n📝 _{content}_", parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Notiz-Fehler: {e}")
         await update.message.reply_text("❌ Notiz konnte nicht gespeichert werden.")
@@ -190,10 +180,10 @@ async def cmd_erinnerung(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "⏰ *Erinnerung setzen:*\n\n"
             "Schreib mir frei:\n"
-            "_\"Erinnere mich morgen um 9 Uhr an das Meeting\"_\n"
-            "_\"In 2 Stunden: Wäsche aus der Maschine\"_\n\n"
+            '_"Erinnere mich morgen um 9 Uhr an das Meeting"_\n'
+            '_"In 2 Stunden: Wäsche aus der Maschine"_\n\n'
             "Ich verstehe natürliche Zeitangaben!",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         return
 
@@ -202,12 +192,9 @@ async def cmd_erinnerung(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"⏰ Verarbeite: _{raw}_...", parse_mode="Markdown")
 
     try:
-        result = await bot.ai_service.parse_reminder(
-            text=raw,
-            user_key=bot.name.lower()
-        )
+        result = await bot.ai_service.parse_reminder(text=raw, user_key=bot.name.lower())
         if result:
-            reminder = await bot.reminder_service.create_reminder(
+            _reminder = await bot.reminder_service.create_reminder(
                 user_key=bot.name.lower(),
                 user_chat_id=update.effective_chat.id,
                 content=result["content"],
@@ -216,13 +203,12 @@ async def cmd_erinnerung(update: Update, context: ContextTypes.DEFAULT_TYPE):
             time_str = result["remind_at"].strftime("%d.%m.%Y um %H:%M Uhr")
             await update.message.reply_text(
                 f"✅ Erinnerung gesetzt!\n⏰ {time_str}\n📌 _{result['content']}_",
-                parse_mode="Markdown"
+                parse_mode="Markdown",
             )
         else:
             await update.message.reply_text(
-                "❓ Konnte Datum/Uhrzeit nicht erkennen. "
-                "Beispiel: _\"Morgen um 10 Uhr: Zahnarzt\"_",
-                parse_mode="Markdown"
+                '❓ Konnte Datum/Uhrzeit nicht erkennen. Beispiel: _"Morgen um 10 Uhr: Zahnarzt"_',
+                parse_mode="Markdown",
             )
     except Exception as e:
         logger.error(f"Erinnerungs-Fehler: {e}")
@@ -235,9 +221,7 @@ async def cmd_erinnerungen(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     try:
-        reminders = await bot.reminder_service.get_active_reminders(
-            user_key=bot.name.lower()
-        )
+        reminders = await bot.reminder_service.get_active_reminders(user_key=bot.name.lower())
         if not reminders:
             await update.message.reply_text("⏰ Keine aktiven Erinnerungen.")
             return
@@ -265,8 +249,7 @@ async def cmd_gedaechtnis(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not memories and not top_facts:
             await update.message.reply_text(
-                "🧠 Ich habe noch nichts Wichtiges über dich gespeichert.\n"
-                "Erzähl mir etwas über dich!"
+                "🧠 Ich habe noch nichts Wichtiges über dich gespeichert.\nErzähl mir etwas über dich!"
             )
             return
 
@@ -314,8 +297,7 @@ async def cmd_done(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
     if not args:
         await update.message.reply_text(
-            "✅ *Aufgabe abhaken:*\n`/done <Nummer>`\n\nz.B. `/done 3`\n\n"
-            "Aufgaben siehst du mit /tasks",
+            "✅ *Aufgabe abhaken:*\n`/done <Nummer>`\n\nz.B. `/done 3`\n\nAufgaben siehst du mit /tasks",
             parse_mode="Markdown",
         )
         return
@@ -324,9 +306,7 @@ async def cmd_done(update: Update, context: ContextTypes.DEFAULT_TYPE):
         task_id = int(args[0].strip("#"))
         task = await bot.task_service.complete_task(task_id=task_id, user_key=bot.name.lower())
         if task:
-            await update.message.reply_text(
-                f"✅ Erledigt: _{task['title']}_", parse_mode="Markdown"
-            )
+            await update.message.reply_text(f"✅ Erledigt: _{task['title']}_", parse_mode="Markdown")
         else:
             await update.message.reply_text(f"❓ Aufgabe #{task_id} nicht gefunden. (/tasks)")
     except (ValueError, IndexError):
@@ -347,7 +327,10 @@ async def cmd_autonomie(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         from src.services.database import UserProfile, get_db
         from src.services.proposal_service import (
-            TYPE_CALENDAR_CREATE, TYPE_REMINDER_CREATE, TYPE_NOTE_CREATE, TYPE_TASK_CREATE
+            TYPE_CALENDAR_CREATE,
+            TYPE_REMINDER_CREATE,
+            TYPE_NOTE_CREATE,
+            TYPE_TASK_CREATE,
         )
 
         all_types = {
@@ -419,6 +402,7 @@ async def cmd_profil(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         from src.services.database import UserProfile, get_db
+
         with get_db()() as session:
             profile = session.query(UserProfile).filter_by(user_key=user_key).first()
             if not profile:
@@ -451,9 +435,7 @@ async def cmd_profil(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if field == "arbeitszeit" and len(args) >= 3:
                 profile.work_start = args[1]
                 profile.work_end = args[2]
-                await update.message.reply_text(
-                    f"✅ Arbeitszeit gesetzt: {args[1]} – {args[2]}"
-                )
+                await update.message.reply_text(f"✅ Arbeitszeit gesetzt: {args[1]} – {args[2]}")
             elif field == "ruhezeit" and value:
                 profile.quiet_start = value.split()[0]
                 await update.message.reply_text(f"✅ Ruhezeit gesetzt: ab {profile.quiet_start}")
@@ -513,7 +495,7 @@ async def cmd_tabelle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "`/tabelle meine offenen Aufgaben`\n"
             "`/tabelle Termine diese Woche`\n"
             "`/tabelle Ausgaben: Miete 800, Strom 120, Internet 40`\n\n"
-            "Oder einfach frei: _\"Erstelle eine Tabelle meiner Aufgaben\"_",
+            'Oder einfach frei: _"Erstelle eine Tabelle meiner Aufgaben"_',
             parse_mode="Markdown",
         )
         return
@@ -548,15 +530,13 @@ async def cmd_praesentation(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "`/praesentation Remote Work Best Practices`\n"
             "`/praesentation Meine Projektziele 2025`\n"
             "`/praesentation Einführung in Python`\n\n"
-            "Oder einfach frei: _\"Erstelle eine Präsentation zu Thema X\"_",
+            'Oder einfach frei: _"Erstelle eine Präsentation zu Thema X"_',
             parse_mode="Markdown",
         )
         return
 
     topic = " ".join(args)
-    await update.message.reply_text(
-        f"📊 Erstelle Präsentation zu _{topic}_...", parse_mode="Markdown"
-    )
+    await update.message.reply_text(f"📊 Erstelle Präsentation zu _{topic}_...", parse_mode="Markdown")
 
     try:
         response = await bot.ai_service._handle_presentation_create(
@@ -639,8 +619,7 @@ async def cmd_gemeinsam(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append("⚠️ *Terminüberschneidungen:*")
         for m_e, p_e, dt in conflicts[:3]:
             lines.append(
-                f"• {dt.strftime('%a %d.%m. %H:%M')} – "
-                f"_{m_e.get('summary', '?')}_ vs _{p_e.get('summary', '?')}_"
+                f"• {dt.strftime('%a %d.%m. %H:%M')} – _{m_e.get('summary', '?')}_ vs _{p_e.get('summary', '?')}_"
             )
         lines.append("")
 
@@ -661,6 +640,7 @@ async def cmd_tts(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_key = bot.name.lower()
     try:
         from src.services.database import UserProfile, get_db
+
         with get_db()() as session:
             profile = session.query(UserProfile).filter_by(user_key=user_key).first()
             if not profile:
@@ -732,7 +712,7 @@ async def cmd_spotify(update: Update, context: ContextTypes.DEFAULT_TYPE):
             current = await sp.current(user_key)
             await update.message.reply_text(
                 f"🎵 *Spotify verbunden*\n\n{current or 'Nichts aktiv.'}\n\n"
-                "Steuerung per Text: _\"Spiel Jazz\"_, _\"Pause\"_, _\"Nächster Song\"_",
+                'Steuerung per Text: _"Spiel Jazz"_, _"Pause"_, _"Nächster Song"_',
                 parse_mode="Markdown",
             )
         else:
@@ -859,13 +839,13 @@ async def cmd_fokus_ende(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_key = bot.name.lower()
     try:
         from src.services.database import UserProfile, get_db
+
         with get_db()() as session:
             profile = session.query(UserProfile).filter_by(user_key=user_key).first()
             if profile and profile.focus_mode_until:
                 profile.focus_mode_until = None
                 await update.message.reply_text(
-                    "✅ *Fokus-Modus beendet.*\n\n"
-                    "Willkommen zurück! Was kann ich für dich tun?",
+                    "✅ *Fokus-Modus beendet.*\n\nWillkommen zurück! Was kann ich für dich tun?",
                     parse_mode="Markdown",
                 )
             else:
@@ -888,7 +868,7 @@ async def cmd_rezept(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "`/rezept Pasta Carbonara`\n"
             "`/rezept Schokoladenkuchen`\n"
             "`/rezept Was kann ich mit Brokkoli machen?`\n\n"
-            "Oder einfach schreiben: _\"Zeig mir ein Rezept für Schnitzel\"_",
+            'Oder einfach schreiben: _"Zeig mir ein Rezept für Schnitzel"_',
             parse_mode="Markdown",
         )
         return
@@ -1023,8 +1003,7 @@ async def cmd_dokumente(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not docs:
             await update.message.reply_text(
-                "📂 Noch keine gescannten Dokumente.\n\n"
-                "Schick mir ein Foto um zu starten, oder /scan für Anleitung."
+                "📂 Noch keine gescannten Dokumente.\n\nSchick mir ein Foto um zu starten, oder /scan für Anleitung."
             )
             return
 
@@ -1098,10 +1077,10 @@ async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "📅 *Termin erstellen:*\n\n"
             "Schreib mir:\n"
-            "_\"Zahnarzt am 15. März um 10 Uhr\"_\n"
-            "_\"Meeting nächsten Montag 14:00-15:00\"_\n\n"
+            '_"Zahnarzt am 15. März um 10 Uhr"_\n'
+            '_"Meeting nächsten Montag 14:00-15:00"_\n\n'
             "Ich erstelle den Termin automatisch in Google Calendar.",
-            parse_mode="Markdown"
+            parse_mode="Markdown",
         )
         return
 
@@ -1109,12 +1088,9 @@ async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"📅 Erstelle Termin: _{raw}_...", parse_mode="Markdown")
 
     try:
-        result = await bot.ai_service.parse_calendar_event(
-            text=raw,
-            user_key=bot.name.lower()
-        )
+        result = await bot.ai_service.parse_calendar_event(text=raw, user_key=bot.name.lower())
         if result:
-            event = await bot.calendar_service.create_event(
+            _event = await bot.calendar_service.create_event(
                 user_key=bot.name.lower(),
                 summary=result["summary"],
                 start=result["start"],
@@ -1122,15 +1098,13 @@ async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 description=result.get("description", ""),
             )
             await update.message.reply_text(
-                f"✅ Termin erstellt!\n📅 *{result['summary']}*\n"
-                f"🕐 {result['start'].strftime('%d.%m.%Y %H:%M')}",
-                parse_mode="Markdown"
+                f"✅ Termin erstellt!\n📅 *{result['summary']}*\n🕐 {result['start'].strftime('%d.%m.%Y %H:%M')}",
+                parse_mode="Markdown",
             )
         else:
             await update.message.reply_text(
-                "❓ Konnte den Termin nicht erkennen. "
-                "Beispiel: _\"Zahnarzt am 15.3. um 10 Uhr\"_",
-                parse_mode="Markdown"
+                '❓ Konnte den Termin nicht erkennen. Beispiel: _"Zahnarzt am 15.3. um 10 Uhr"_',
+                parse_mode="Markdown",
             )
     except Exception as e:
         logger.error(f"Termin-Fehler: {e}")
@@ -1138,6 +1112,7 @@ async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ── Einkaufsliste Commands ────────────────────────────────────────────────────
+
 
 async def cmd_einkaufsliste(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Zeigt die aktuelle Einkaufsliste."""
@@ -1169,7 +1144,7 @@ async def cmd_einkauf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "🛒 *Einkauf hinzufügen:*\n\n"
             "Verwendung: `/einkauf Milch, Brot, 500g Butter`\n\n"
-            "Oder schreib einfach: _\"Kauf noch Tomaten\"_",
+            'Oder schreib einfach: _"Kauf noch Tomaten"_',
             parse_mode="Markdown",
         )
         return
@@ -1185,8 +1160,7 @@ async def cmd_einkauf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         items = [{"name": i} for i in items_raw]
         count = await bot.shopping_service.add_items_bulk(user_key, items)
         await update.message.reply_text(
-            f"✅ {count} Artikel auf die Einkaufsliste:\n" +
-            "\n".join(f"• {i['name']}" for i in items),
+            f"✅ {count} Artikel auf die Einkaufsliste:\n" + "\n".join(f"• {i['name']}" for i in items),
             parse_mode="Markdown",
         )
     except Exception as e:
@@ -1195,6 +1169,7 @@ async def cmd_einkauf(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 # ── Email Commands ────────────────────────────────────────────────────────────
+
 
 async def cmd_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Zeigt die Gmail-Inbox (letzte 10 ungelesene Mails)."""
@@ -1210,8 +1185,7 @@ async def cmd_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_key = bot.name.lower()
         if not bot.email_service.is_connected(user_key):
             await update.message.reply_text(
-                "📭 Gmail nicht verbunden.\n\n"
-                "Verbinden mit: /email\\_connect",
+                "📭 Gmail nicht verbunden.\n\nVerbinden mit: /email\\_connect",
                 parse_mode="Markdown",
             )
             return
@@ -1319,6 +1293,7 @@ async def cmd_email_aktionen(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 # ── Fahrzeit Command ──────────────────────────────────────────────────────────
 
+
 async def cmd_fahrzeit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Berechnet die Fahrzeit zu einem Ort. Verwendung: /fahrzeit <Ziel>"""
     bot = get_bot(context)
@@ -1329,7 +1304,7 @@ async def cmd_fahrzeit(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "🗺 *Fahrzeit berechnen:*\n\n"
             "Verwendung: `/fahrzeit Berlin Hbf`\n\n"
-            "Oder schreib: _\"Wann muss ich los für meinen 14 Uhr Termin in München?\"_",
+            'Oder schreib: _"Wann muss ich los für meinen 14 Uhr Termin in München?"_',
             parse_mode="Markdown",
         )
         return
@@ -1341,8 +1316,7 @@ async def cmd_fahrzeit(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not bot.mobility_service.available:
             await update.message.reply_text(
-                "❌ Fahrzeit nicht verfügbar.\n"
-                "Bitte `OPENROUTE_API_KEY` in `.env` eintragen.",
+                "❌ Fahrzeit nicht verfügbar.\nBitte `OPENROUTE_API_KEY` in `.env` eintragen.",
                 parse_mode="Markdown",
             )
             return
@@ -1352,7 +1326,10 @@ async def cmd_fahrzeit(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         route = await bot.mobility_service.get_travel_time(origin="", destination=destination)
         if not route:
-            await update.message.reply_text(f"❌ Route nach _{destination}_ konnte nicht berechnet werden.", parse_mode="Markdown")
+            await update.message.reply_text(
+                f"❌ Route nach _{destination}_ konnte nicht berechnet werden.",
+                parse_mode="Markdown",
+            )
             return
 
         text = bot.mobility_service.format_route(route)
@@ -1365,6 +1342,7 @@ async def cmd_fahrzeit(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ---------------------------------------------------------------------------
 # /marketplace – Feature-Verwaltung
 # ---------------------------------------------------------------------------
+
 
 async def cmd_marketplace(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Zeigt alle Features mit Toggle-Buttons."""
@@ -1387,10 +1365,15 @@ async def cmd_marketplace(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             status = "✅ aktiv" if feat["enabled"] else "❌ inaktiv"
             action = "deaktivieren" if feat["enabled"] else "aktivieren"
-            keyboard.append([
-                InlineKeyboardButton(f"{feat['emoji']} {feat['name']} — {status}", callback_data=f"mkt_info_{feat['id']}"),
-                InlineKeyboardButton(action.capitalize(), callback_data=f"mkt_toggle_{feat['id']}"),
-            ])
+            keyboard.append(
+                [
+                    InlineKeyboardButton(
+                        f"{feat['emoji']} {feat['name']} — {status}",
+                        callback_data=f"mkt_info_{feat['id']}",
+                    ),
+                    InlineKeyboardButton(action.capitalize(), callback_data=f"mkt_toggle_{feat['id']}"),
+                ]
+            )
 
     text = (
         "🛍 *Feature-Marketplace*\n\n"
@@ -1438,10 +1421,15 @@ async def callback_marketplace_toggle(update: Update, context: ContextTypes.DEFA
         else:
             status = "✅ aktiv" if feat["enabled"] else "❌ inaktiv"
             action = "deaktivieren" if feat["enabled"] else "aktivieren"
-            keyboard.append([
-                InlineKeyboardButton(f"{feat['emoji']} {feat['name']} — {status}", callback_data=f"mkt_info_{feat['id']}"),
-                InlineKeyboardButton(action.capitalize(), callback_data=f"mkt_toggle_{feat['id']}"),
-            ])
+            keyboard.append(
+                [
+                    InlineKeyboardButton(
+                        f"{feat['emoji']} {feat['name']} — {status}",
+                        callback_data=f"mkt_info_{feat['id']}",
+                    ),
+                    InlineKeyboardButton(action.capitalize(), callback_data=f"mkt_toggle_{feat['id']}"),
+                ]
+            )
 
     text = (
         "🛍 *Feature-Marketplace*\n\n"

@@ -48,6 +48,7 @@ async def update_task(
     else:
         # Direktes DB-Update für andere Status
         from src.services.database import Task, get_db
+
         with get_db()() as session:
             task = session.query(Task).filter_by(id=task_id, user_key=user_key).first()
             if not task:

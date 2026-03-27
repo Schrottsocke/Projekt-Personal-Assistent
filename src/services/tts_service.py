@@ -27,6 +27,7 @@ class TTSService:
     def _check_availability(self):
         try:
             import gtts  # noqa: F401
+
             self._available = True
             logger.info("TTS-Service: gTTS verfügbar.")
         except ImportError:
@@ -54,12 +55,10 @@ class TTSService:
 
         try:
             from gtts import gTTS
+
             tts = gTTS(text=text, lang=lang, slow=False)
 
-            tmp = tempfile.NamedTemporaryFile(
-                suffix=".mp3", prefix="tts_", delete=False,
-                dir=Path("data/documents")
-            )
+            tmp = tempfile.NamedTemporaryFile(suffix=".mp3", prefix="tts_", delete=False, dir=Path("data/documents"))
             tmp.close()
             tts.save(tmp.name)
             logger.debug(f"TTS generiert: {tmp.name} ({len(text)} Zeichen)")
@@ -71,9 +70,10 @@ class TTSService:
     def _clean_markdown(self, text: str) -> str:
         """Entfernt Markdown-Zeichen die gTTS vorlesen würde."""
         import re
-        text = re.sub(r"\*+", "", text)   # Bold/Italic
-        text = re.sub(r"_+", "", text)    # Italic
-        text = re.sub(r"`+", "", text)    # Code
+
+        text = re.sub(r"\*+", "", text)  # Bold/Italic
+        text = re.sub(r"_+", "", text)  # Italic
+        text = re.sub(r"`+", "", text)  # Code
         text = re.sub(r"#+\s", "", text)  # Headers
         text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)  # Links → Text
         text = re.sub(r"•\s", "- ", text)

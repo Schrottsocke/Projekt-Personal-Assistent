@@ -30,6 +30,7 @@ class TaskService:
 
     async def initialize(self):
         from src.services.database import get_db, init_db
+
         init_db()
         self._db = get_db()
         logger.info("Task Service initialisiert.")
@@ -44,6 +45,7 @@ class TaskService:
         assigned_by: Optional[str] = None,
     ) -> dict:
         from src.services.database import Task
+
         with self._db() as session:
             task = Task(
                 user_key=user_key,
@@ -68,6 +70,7 @@ class TaskService:
 
     async def get_open_tasks(self, user_key: str) -> list[dict]:
         from src.services.database import Task
+
         with self._db() as session:
             tasks = (
                 session.query(Task)
@@ -79,6 +82,7 @@ class TaskService:
 
     async def get_all_tasks(self, user_key: str, limit: int = 20) -> list[dict]:
         from src.services.database import Task
+
         with self._db() as session:
             tasks = (
                 session.query(Task)
@@ -91,6 +95,7 @@ class TaskService:
 
     async def complete_task(self, task_id: int, user_key: str) -> Optional[dict]:
         from src.services.database import Task
+
         with self._db() as session:
             task = session.query(Task).filter_by(id=task_id, user_key=user_key).first()
             if not task:
@@ -101,6 +106,7 @@ class TaskService:
 
     async def delete_task(self, task_id: int, user_key: str) -> bool:
         from src.services.database import Task
+
         with self._db() as session:
             task = session.query(Task).filter_by(id=task_id, user_key=user_key).first()
             if task:

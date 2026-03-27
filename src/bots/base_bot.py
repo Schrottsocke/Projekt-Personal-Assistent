@@ -7,13 +7,9 @@ import logging
 from telegram import Update, BotCommand
 from telegram.ext import (
     Application,
-    CommandHandler,
-    MessageHandler,
-    ConversationHandler,
-    filters,
     ContextTypes,
 )
-from config.settings import BotConfig, settings
+from config.settings import BotConfig
 
 logger = logging.getLogger(__name__)
 
@@ -101,9 +97,7 @@ class BaseAssistantBot:
         return user_id == self.owner_id
 
     async def _unauthorized(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await update.message.reply_text(
-            "⛔ Keine Berechtigung. Dieser Bot ist privat."
-        )
+        await update.message.reply_text("⛔ Keine Berechtigung. Dieser Bot ist privat.")
 
     async def _check_auth(self, update: Update) -> bool:
         if not self._is_authorized(update.effective_user.id):

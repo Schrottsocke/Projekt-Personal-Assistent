@@ -11,7 +11,6 @@ Natürliche Sprache → HA-Service-Call:
 """
 
 import logging
-from typing import Optional
 
 import httpx
 
@@ -67,9 +66,7 @@ class SmartHomeService:
             logger.error(f"HA-States-Fehler: {e}")
             return []
 
-    async def call_service(
-        self, domain: str, service: str, entity_id: str = "", extra: dict = None
-    ) -> bool:
+    async def call_service(self, domain: str, service: str, entity_id: str = "", extra: dict = None) -> bool:
         """
         Ruft einen HA-Service auf.
         Beispiel: domain="light", service="turn_on", entity_id="light.wohnzimmer"
@@ -108,7 +105,7 @@ class SmartHomeService:
             # Interessante Entities filtern
             lights_on = [s for s in states if s["entity_id"].startswith("light.") and s["state"] == "on"]
             switches_on = [s for s in states if s["entity_id"].startswith("switch.") and s["state"] == "on"]
-            covers = [s for s in states if s["entity_id"].startswith("cover.")]
+            _covers = [s for s in states if s["entity_id"].startswith("cover.")]
             climate = [s for s in states if s["entity_id"].startswith("climate.")]
 
             lines = ["🏠 *Smart Home Status*\n"]
@@ -159,6 +156,7 @@ class SmartHomeService:
                 extra = {}
                 # Helligkeit erkennen
                 import re
+
                 m = re.search(r"(\d+)\s*%", cmd)
                 if m:
                     extra["brightness_pct"] = int(m.group(1))
@@ -179,6 +177,7 @@ class SmartHomeService:
         # Heizung / Thermostat
         if any(w in cmd for w in ["heizung", "thermostat", "temperatur", "grad", "°"]):
             import re
+
             m = re.search(r"(\d+(?:[.,]\d+)?)\s*(?:grad|°c|°)", cmd)
             if m:
                 temp = float(m.group(1).replace(",", "."))
@@ -200,6 +199,7 @@ class SmartHomeService:
         # Szenen
         if any(w in cmd for w in ["szene", "scene", "modus"]):
             import re
+
             m = re.search(r"(?:szene|scene|modus)\s+(.+)", cmd)
             scene_name = m.group(1) if m else entity_hint
             entity = f"scene.{scene_name.lower().replace(' ', '_')}" if scene_name else ""
