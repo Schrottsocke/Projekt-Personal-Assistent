@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.dependencies import get_current_user, get_calendar_service
-from api.schemas.calendar import CalendarEventCreate, CalendarEventOut
+from api.schemas.calendar import CalendarEventCreate
 
 router = APIRouter()
 

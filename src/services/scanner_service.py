@@ -4,7 +4,6 @@ Nutzt die bestehende Vision-API (Gemini Flash via OpenRouter) für OCR.
 PyPDF2 wird für direkte Text-Extraktion aus PDFs verwendet.
 """
 
-import json
 import logging
 from typing import Optional
 
@@ -89,6 +88,7 @@ Antworte NUR mit diesem JSON:
             ]
 
             from config.settings import settings
+
             response = await ai_service._complete(
                 messages=messages,
                 model=settings.VISION_MODEL,
@@ -202,6 +202,7 @@ Klassifiziere und extrahiere Aktionen. Antworte NUR mit diesem JSON:
 
         try:
             import json as _json
+
             response = await ai_service._complete(
                 messages=[{"role": "user", "content": prompt}],
                 json_mode=True,
@@ -244,9 +245,7 @@ Klassifiziere und extrahiere Aktionen. Antworte NUR mit diesem JSON:
     # Aktions-Routing
     # ------------------------------------------------------------------
 
-    async def classify_and_route(
-        self, scan_result: dict, user_key: str, bot
-    ) -> str:
+    async def classify_and_route(self, scan_result: dict, user_key: str, bot) -> str:
         """
         Wertet das Scan-Ergebnis aus und erstellt Proposals für erkannte Aktionen.
 

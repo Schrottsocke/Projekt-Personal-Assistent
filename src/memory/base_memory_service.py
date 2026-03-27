@@ -32,6 +32,7 @@ class BaseMemoryService:
 
             if settings.MEMORY_MODE == "cloud" and settings.MEM0_API_KEY:
                 from mem0 import MemoryClient
+
                 self._memory = MemoryClient(api_key=settings.MEM0_API_KEY)
                 self._available = True
                 logger.info("mem0: Cloud-Modus aktiv.")

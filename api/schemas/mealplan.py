@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class MealPlanCreate(BaseModel):
-    planned_date: str          # YYYY-MM-DD
+    planned_date: str  # YYYY-MM-DD
     recipe_title: str
     recipe_chefkoch_id: Optional[str] = None
     recipe_image_url: Optional[str] = None

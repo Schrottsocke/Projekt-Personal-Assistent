@@ -57,17 +57,13 @@ def _verify_signature(body: bytes, signature_header: str, secret: str) -> bool:
     """Verifiziert die HMAC-SHA256-Signatur von GitHub."""
     if not signature_header or not signature_header.startswith("sha256="):
         return False
-    expected = "sha256=" + hmac.new(
-        secret.encode(), body, hashlib.sha256
-    ).hexdigest()
+    expected = "sha256=" + hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, signature_header)
 
 
 def _run(cmd: list[str], cwd: Path = PROJ_DIR) -> tuple[int, str]:
     """Führt einen Shell-Befehl aus und gibt (returncode, output) zurück."""
-    result = subprocess.run(
-        cmd, cwd=str(cwd), capture_output=True, text=True, timeout=120
-    )
+    result = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, timeout=120)
     output = (result.stdout + result.stderr).strip()
     return result.returncode, output
 
@@ -78,9 +74,7 @@ def deploy() -> tuple[bool, str]:
 
     # 1. Git pull
     logger.info("git pull --rebase ...")
-    rc, out = _run(
-        ["sudo", "-u", BOT_USER, "git", "pull", "--rebase", "origin", BRANCH]
-    )
+    rc, out = _run(["sudo", "-u", BOT_USER, "git", "pull", "--rebase", "origin", BRANCH])
     lines.append(f"git pull: rc={rc}\n{out}")
     if rc != 0:
         logger.error(f"git pull fehlgeschlagen: {out}")
@@ -91,8 +85,16 @@ def deploy() -> tuple[bool, str]:
     if VENV_PIP.exists():
         logger.info("pip install -r requirements.txt ...")
         rc, out = _run(
-            ["sudo", "-u", BOT_USER, str(VENV_PIP), "install", "-r",
-             str(PROJ_DIR / "requirements.txt"), "-q"]
+            [
+                "sudo",
+                "-u",
+                BOT_USER,
+                str(VENV_PIP),
+                "install",
+                "-r",
+                str(PROJ_DIR / "requirements.txt"),
+                "-q",
+            ]
         )
         lines.append(f"pip install: rc={rc}\n{out}")
         if rc != 0:
@@ -120,12 +122,16 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             rc, commit = _run(["git", "rev-parse", "--short", "HEAD"])
-            self.wfile.write(json.dumps({
-                "status": "ok",
-                "commit": commit.strip() if rc == 0 else "unknown",
-                "branch": BRANCH,
-                "port": PORT,
-            }).encode())
+            self.wfile.write(
+                json.dumps(
+                    {
+                        "status": "ok",
+                        "commit": commit.strip() if rc == 0 else "unknown",
+                        "branch": BRANCH,
+                        "port": PORT,
+                    }
+                ).encode()
+            )
         else:
             self.send_response(404)
             self.end_headers()
@@ -177,6 +183,7 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
 
         # Deploy asynchron starten (Handler darf nicht blockieren)
         import threading
+
         threading.Thread(target=deploy, daemon=True).start()
 
 

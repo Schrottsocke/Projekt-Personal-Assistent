@@ -13,7 +13,7 @@ router = APIRouter()
 @router.get("/week", response_model=list[MealPlanOut])
 async def get_week(
     user_key: Annotated[str, Depends(get_current_user)],
-    start: str = "",   # YYYY-MM-DD, leer = aktuelle Woche
+    start: str = "",  # YYYY-MM-DD, leer = aktuelle Woche
 ):
     from src.services.database import MealPlanEntry, get_db
     from datetime import datetime, timedelta
@@ -51,6 +51,7 @@ async def add_meal(
     user_key: Annotated[str, Depends(get_current_user)],
 ):
     from src.services.database import MealPlanEntry, get_db
+
     with get_db()() as session:
         entry = MealPlanEntry(user_key=user_key, **body.model_dump())
         session.add(entry)
@@ -65,6 +66,7 @@ async def delete_meal(
     user_key: Annotated[str, Depends(get_current_user)],
 ):
     from src.services.database import MealPlanEntry, get_db
+
     with get_db()() as session:
         entry = session.query(MealPlanEntry).filter_by(id=entry_id, user_key=user_key).first()
         if not entry:

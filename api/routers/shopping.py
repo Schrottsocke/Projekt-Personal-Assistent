@@ -4,7 +4,11 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from api.dependencies import get_current_user, get_shopping_service, get_chefkoch_service
+from api.dependencies import (
+    get_current_user,
+    get_shopping_service,
+    get_chefkoch_service,
+)
 from api.schemas.shopping import ShoppingItemCreate, ShoppingItemOut, ShoppingItemUpdate
 
 router = APIRouter()

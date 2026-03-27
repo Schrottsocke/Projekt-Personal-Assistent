@@ -46,6 +46,7 @@ class SpotifyService:
             return
         try:
             import spotipy  # noqa: F401
+
             self._available = True
             logger.info("SpotifyService: spotipy verfügbar.")
         except ImportError:
@@ -57,8 +58,8 @@ class SpotifyService:
 
     def get_auth_url(self, user_key: str) -> str:
         """Erstellt die OAuth2-Auth-URL für den Nutzer."""
-        import spotipy
         from spotipy.oauth2 import SpotifyOAuth
+
         auth = SpotifyOAuth(
             client_id=settings.SPOTIFY_CLIENT_ID,
             client_secret=settings.SPOTIFY_CLIENT_SECRET,
@@ -238,6 +239,7 @@ class SpotifyService:
     def _save_token(self, user_key: str, token_info: dict):
         try:
             from src.services.database import UserProfile, get_db
+
             with get_db()() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 if profile:
@@ -248,6 +250,7 @@ class SpotifyService:
     def _load_token(self, user_key: str) -> Optional[dict]:
         try:
             from src.services.database import UserProfile, get_db
+
             with get_db()() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 if profile and profile.spotify_token_json:

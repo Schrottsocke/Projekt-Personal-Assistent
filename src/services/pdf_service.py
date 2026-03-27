@@ -6,7 +6,6 @@ Fallback: Pillow-basiertes PDF (image only) wenn img2pdf/reportlab fehlen.
 
 import io
 import logging
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -75,8 +74,6 @@ class PdfService:
     ) -> bytes:
         import img2pdf
         from pypdf import PdfWriter, PdfReader
-        from reportlab.pdfgen import canvas
-        from reportlab.lib.units import pt
 
         # Schritt 1: Bild → PDF (lossless via img2pdf)
         image_pdf_bytes = img2pdf.convert(image_bytes)
@@ -87,9 +84,7 @@ class PdfService:
         page_height = float(page.mediabox.height)
 
         # Schritt 2: Text-Layer mit reportlab
-        text_pdf_bytes = self._build_text_layer(
-            ocr_text, words_data, page_width, page_height, image_bytes
-        )
+        text_pdf_bytes = self._build_text_layer(ocr_text, words_data, page_width, page_height, image_bytes)
 
         # Schritt 3: Beide Layer zusammenführen
         writer = PdfWriter()
@@ -135,19 +130,20 @@ class PdfService:
         return packet.getvalue()
 
     def _has_word_positions(self, words_data: dict) -> bool:
-        return (
-            words_data
-            and "text" in words_data
-            and "left" in words_data
-            and len(words_data["text"]) > 0
-        )
+        return words_data and "text" in words_data and "left" in words_data and len(words_data["text"]) > 0
 
     def _add_words_with_positions(
-        self, c, words_data: dict, page_width: float, page_height: float, image_bytes: bytes
+        self,
+        c,
+        words_data: dict,
+        page_width: float,
+        page_height: float,
+        image_bytes: bytes,
     ):
         """Platziert Wörter an pytesseract-Koordinaten (skaliert auf PDF-Größe)."""
         try:
             from PIL import Image as PILImage
+
             img = PILImage.open(io.BytesIO(image_bytes))
             img_width, img_height = img.size
         except Exception:
@@ -159,7 +155,7 @@ class PdfService:
         texts = words_data.get("text", [])
         lefts = words_data.get("left", [])
         tops = words_data.get("top", [])
-        widths = words_data.get("width", [])
+        _widths = words_data.get("width", [])
         heights = words_data.get("height", [])
         confs = words_data.get("conf", [])
 
@@ -184,7 +180,6 @@ class PdfService:
 
     def _add_plain_text(self, c, text: str, page_width: float, page_height: float):
         """Fügt Volltext als unsichtbaren Block oben-links ein."""
-        from reportlab.lib.units import pt
 
         c.setFont("Helvetica", 8)
         y = page_height - 20

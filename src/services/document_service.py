@@ -7,7 +7,6 @@ import logging
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from config.settings import settings
 
@@ -103,7 +102,11 @@ class DocumentService:
         for row_idx, row_data in enumerate(rows, start=3):
             fill = alt_fill if row_idx % 2 == 1 else PatternFill()
             for col_idx, value in enumerate(row_data, start=1):
-                cell = ws.cell(row=row_idx, column=col_idx, value=str(value) if value is not None else "")
+                cell = ws.cell(
+                    row=row_idx,
+                    column=col_idx,
+                    value=str(value) if value is not None else "",
+                )
                 cell.fill = fill
                 cell.border = border
                 cell.alignment = Alignment(wrap_text=True)
@@ -136,7 +139,7 @@ class DocumentService:
         Der Aufrufer ist verantwortlich, die Datei nach dem Senden zu löschen.
         """
         from pptx import Presentation
-        from pptx.util import Inches, Pt, Emu
+        from pptx.util import Inches, Pt
         from pptx.dml.color import RGBColor
         from pptx.enum.text import PP_ALIGN
 
@@ -145,11 +148,11 @@ class DocumentService:
         prs.slide_height = Inches(7.5)
 
         # Farben
-        COLOR_DARK = RGBColor(0x1F, 0x49, 0x7D)   # Dunkelblau
-        COLOR_ACCENT = RGBColor(0x44, 0x72, 0xC4)  # Mittelblau
+        COLOR_DARK = RGBColor(0x1F, 0x49, 0x7D)  # Dunkelblau
+        _COLOR_ACCENT = RGBColor(0x44, 0x72, 0xC4)  # Mittelblau
         COLOR_WHITE = RGBColor(0xFF, 0xFF, 0xFF)
-        COLOR_TEXT = RGBColor(0x26, 0x26, 0x26)    # Fast Schwarz
-        COLOR_LIGHT = RGBColor(0xDC, 0xE6, 0xF1)   # Hellblau
+        COLOR_TEXT = RGBColor(0x26, 0x26, 0x26)  # Fast Schwarz
+        COLOR_LIGHT = RGBColor(0xDC, 0xE6, 0xF1)  # Hellblau
 
         slide_layouts = prs.slide_layouts
 
@@ -163,9 +166,7 @@ class DocumentService:
         fill.fore_color.rgb = COLOR_DARK
 
         # Titeltext
-        txBox = title_slide.shapes.add_textbox(
-            Inches(1.5), Inches(2.5), Inches(10.33), Inches(1.8)
-        )
+        txBox = title_slide.shapes.add_textbox(Inches(1.5), Inches(2.5), Inches(10.33), Inches(1.8))
         tf = txBox.text_frame
         tf.word_wrap = True
         p = tf.paragraphs[0]
@@ -177,9 +178,7 @@ class DocumentService:
         run.font.color.rgb = COLOR_WHITE
 
         # Datum
-        date_box = title_slide.shapes.add_textbox(
-            Inches(1.5), Inches(4.5), Inches(10.33), Inches(0.6)
-        )
+        date_box = title_slide.shapes.add_textbox(Inches(1.5), Inches(4.5), Inches(10.33), Inches(0.6))
         dtf = date_box.text_frame
         dp = dtf.paragraphs[0]
         dp.alignment = PP_ALIGN.CENTER
@@ -201,20 +200,19 @@ class DocumentService:
             bg.fill.fore_color.rgb = COLOR_WHITE
 
             # Blauer Balken oben
-            from pptx.util import Emu
             bar = content_slide.shapes.add_shape(
                 1,  # MSO_SHAPE_TYPE.RECTANGLE
-                0, 0,
-                prs.slide_width, Inches(1.3)
+                0,
+                0,
+                prs.slide_width,
+                Inches(1.3),
             )
             bar.fill.solid()
             bar.fill.fore_color.rgb = COLOR_DARK
             bar.line.fill.background()
 
             # Folientitel im blauen Balken
-            title_box = content_slide.shapes.add_textbox(
-                Inches(0.5), Inches(0.15), Inches(12.33), Inches(1.0)
-            )
+            title_box = content_slide.shapes.add_textbox(Inches(0.5), Inches(0.15), Inches(12.33), Inches(1.0))
             ttf = title_box.text_frame
             tp = ttf.paragraphs[0]
             trun = tp.add_run()
@@ -225,9 +223,7 @@ class DocumentService:
 
             # Bullet-Points
             if bullets:
-                content_box = content_slide.shapes.add_textbox(
-                    Inches(0.8), Inches(1.6), Inches(11.73), Inches(5.5)
-                )
+                content_box = content_slide.shapes.add_textbox(Inches(0.8), Inches(1.6), Inches(11.73), Inches(5.5))
                 ctf = content_box.text_frame
                 ctf.word_wrap = True
 

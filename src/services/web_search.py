@@ -4,7 +4,6 @@ Liefert aufbereitete Suchergebnisse für den KI-Kontext.
 """
 
 import logging
-from typing import Optional
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -25,6 +24,7 @@ class WebSearchService:
         if settings.TAVILY_API_KEY:
             try:
                 from tavily import TavilyClient
+
                 self._tavily = TavilyClient(api_key=settings.TAVILY_API_KEY)
                 self._mode = "tavily"
                 logger.info("WebSearch: Tavily aktiv.")
@@ -34,6 +34,7 @@ class WebSearchService:
 
         try:
             from duckduckgo_search import DDGS
+
             self._mode = "duckduckgo"
             logger.info("WebSearch: DuckDuckGo aktiv.")
         except ImportError:
@@ -58,6 +59,7 @@ class WebSearchService:
     async def _search_tavily(self, query: str, max_results: int) -> list[dict]:
         try:
             import asyncio
+
             loop = asyncio.get_event_loop()
             response = await loop.run_in_executor(
                 None,
@@ -66,22 +68,26 @@ class WebSearchService:
                     max_results=max_results,
                     search_depth="basic",
                     include_answer=True,
-                )
+                ),
             )
             results = []
             # Direkte KI-Antwort von Tavily (falls vorhanden)
             if response.get("answer"):
-                results.append({
-                    "title": "Zusammenfassung",
-                    "url": "",
-                    "snippet": response["answer"],
-                })
+                results.append(
+                    {
+                        "title": "Zusammenfassung",
+                        "url": "",
+                        "snippet": response["answer"],
+                    }
+                )
             for r in response.get("results", [])[:max_results]:
-                results.append({
-                    "title": r.get("title", ""),
-                    "url": r.get("url", ""),
-                    "snippet": r.get("content", "")[:400],
-                })
+                results.append(
+                    {
+                        "title": r.get("title", ""),
+                        "url": r.get("url", ""),
+                        "snippet": r.get("content", "")[:400],
+                    }
+                )
             return results
         except Exception as e:
             logger.error(f"Tavily-Fehler: {e}. Versuche DuckDuckGo...")
@@ -91,6 +97,7 @@ class WebSearchService:
         try:
             import asyncio
             from duckduckgo_search import DDGS
+
             loop = asyncio.get_event_loop()
 
             def _run():

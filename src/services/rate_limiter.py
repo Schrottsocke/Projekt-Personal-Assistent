@@ -23,8 +23,8 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 # Grenzen
-RATE_LIMIT_MINUTE = 20   # max Nachrichten pro Minute
-RATE_LIMIT_DAY = 300     # max Nachrichten pro Tag
+RATE_LIMIT_MINUTE = 20  # max Nachrichten pro Minute
+RATE_LIMIT_DAY = 300  # max Nachrichten pro Tag
 
 
 class RateLimiter:

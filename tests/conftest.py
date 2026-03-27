@@ -1,8 +1,6 @@
 """Gemeinsame Fixtures für alle Tests."""
 
-import os
 import pytest
-from unittest.mock import patch
 
 # Test-Secrets setzen BEVOR Settings importiert wird
 TEST_SECRET_KEY = "test-secret-key-that-is-at-least-32-characters-long"

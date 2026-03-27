@@ -9,7 +9,7 @@ class ChatMessageIn(BaseModel):
 
 class ChatMessageOut(BaseModel):
     id: Optional[int] = None
-    role: str          # "user" | "assistant"
+    role: str  # "user" | "assistant"
     content: str
     created_at: Optional[datetime] = None
 

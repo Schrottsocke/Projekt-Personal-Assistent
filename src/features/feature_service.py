@@ -132,14 +132,16 @@ def get_feature_status_list(user_key: str) -> list[dict[str, Any]]:
     for feat in CATALOG:
         available = _settings_satisfied(feat)
         enabled = available and flags.get(feat.id, feat.default_enabled)
-        result.append({
-            "id": feat.id,
-            "emoji": feat.emoji,
-            "name": feat.name,
-            "description": feat.description,
-            "available": available,
-            "enabled": enabled,
-            "required_settings": feat.required_settings,
-            "default_enabled": feat.default_enabled,
-        })
+        result.append(
+            {
+                "id": feat.id,
+                "emoji": feat.emoji,
+                "name": feat.name,
+                "description": feat.description,
+                "available": available,
+                "enabled": enabled,
+                "required_settings": feat.required_settings,
+                "default_enabled": feat.default_enabled,
+            }
+        )
     return result

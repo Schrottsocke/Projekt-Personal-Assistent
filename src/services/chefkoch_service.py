@@ -21,8 +21,8 @@ _DIFFICULTY_LABELS = {
 # Anfrage-Header, die einen normalen Browser imitieren
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/124.0.0.0 Safari/537.36",
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36",
     "Accept": "application/json",
 }
 
@@ -64,7 +64,9 @@ class ChefkochService:
         except httpx.HTTPStatusError as e:
             logger.error(
                 "Chefkoch search HTTP-Fehler %s für '%s': %s",
-                e.response.status_code, query, e,
+                e.response.status_code,
+                query,
+                e,
             )
         except Exception as e:
             logger.error("Chefkoch search Fehler für '%s': %s", query, e)
@@ -90,7 +92,9 @@ class ChefkochService:
         except httpx.HTTPStatusError as e:
             logger.error(
                 "Chefkoch get_recipe HTTP-Fehler %s für ID '%s': %s",
-                e.response.status_code, recipe_id, e,
+                e.response.status_code,
+                recipe_id,
+                e,
             )
         except Exception as e:
             logger.error("Chefkoch get_recipe Fehler für ID '%s': %s", recipe_id, e)
@@ -249,6 +253,7 @@ class ChefkochService:
 # ------------------------------------------------------------------
 # Hilfsfunktionen (modulprivat)
 # ------------------------------------------------------------------
+
 
 def _rating_to_stars(rating: float) -> str:
     """Wandelt einen Dezimalwert (0–5) in eine Sterne-Darstellung um."""

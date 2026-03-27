@@ -43,9 +43,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Warte eine Minute und schreib dann nochmal."
             )
         else:
-            await update.message.reply_text(
-                "📊 Tages-Limit erreicht. Morgen bin ich wieder voll dabei!"
-            )
+            await update.message.reply_text("📊 Tages-Limit erreicht. Morgen bin ich wieder voll dabei!")
         return
 
     # 2. Eingabelänge prüfen und ggf. kürzen
@@ -60,6 +58,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # 3. Fokus-Modus prüfen
     try:
         from src.services.database import UserProfile, get_db
+
         with get_db()() as session:
             profile = session.query(UserProfile).filter_by(user_key=user_key).first()
             if profile and profile.focus_mode_until:
@@ -92,8 +91,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if sp and sp.available and user_message.startswith("http") and "code=" in user_message:
             if sp.exchange_code(user_key, user_message.strip()):
                 await update.message.reply_text(
-                    "✅ *Spotify verbunden!* Du kannst jetzt Musik steuern.\n"
-                    "Sag z.B. _\"Spiel Jazz\"_ oder _\"Pause\"_",
+                    '✅ *Spotify verbunden!* Du kannst jetzt Musik steuern.\nSag z.B. _"Spiel Jazz"_ oder _"Pause"_',
                     parse_mode="Markdown",
                 )
             else:
@@ -116,6 +114,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if tts_svc and tts_svc.available:
                 try:
                     from src.services.database import UserProfile, get_db
+
                     with get_db()() as session:
                         profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                         if profile and profile.tts_enabled:
@@ -178,15 +177,22 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error(f"Voice-Handler-Fehler für {bot.name}: {e}", exc_info=True)
-        await update.message.reply_text(
-            "❌ Sprachnachricht konnte nicht verarbeitet werden. Versuche es als Text."
-        )
+        await update.message.reply_text("❌ Sprachnachricht konnte nicht verarbeitet werden. Versuche es als Text.")
 
 
 # Keywords die den Dokument-Scan-Workflow auslösen (in Caption)
 _SCAN_KEYWORDS = {
-    "scan", "dokument", "brief", "rechnung", "vertrag", "arztbrief",
-    "behörde", "ausweis", "beleg", "kontoauszug", "quittung",
+    "scan",
+    "dokument",
+    "brief",
+    "rechnung",
+    "vertrag",
+    "arztbrief",
+    "behörde",
+    "ausweis",
+    "beleg",
+    "kontoauszug",
+    "quittung",
 }
 
 
@@ -230,9 +236,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if _is_scan_intent(caption):
             await update.message.reply_text("🔍 Analysiere Dokument...")
             from src.workflows.document_scan_workflow import run_document_scan
-            result = await run_document_scan(
-                bytes(image_bytes), user_key, chat_id, bot, caption
-            )
+
+            result = await run_document_scan(bytes(image_bytes), user_key, chat_id, bot, caption)
             await update.message.reply_text(result, parse_mode="Markdown")
             return
 
@@ -245,8 +250,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if not analysis:
             await update.message.reply_text(
-                "🖼️ Ich kann Bilder leider gerade nicht analysieren. "
-                "Versuche es später nochmal."
+                "🖼️ Ich kann Bilder leider gerade nicht analysieren. Versuche es später nochmal."
             )
             return
 
@@ -284,7 +288,13 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     doc = update.message.document
 
-    IMAGE_MIMETYPES = {"image/jpeg", "image/png", "image/gif", "image/webp", "image/bmp"}
+    IMAGE_MIMETYPES = {
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "image/bmp",
+    }
 
     allowed, _ = rate_limiter.check(user_key)
     if not allowed:
@@ -302,9 +312,8 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if _is_scan_intent(caption):
                 await update.message.reply_text("🔍 Analysiere Dokument...")
                 from src.workflows.document_scan_workflow import run_document_scan
-                result = await run_document_scan(
-                    bytes(image_bytes), user_key, chat_id, bot, caption
-                )
+
+                result = await run_document_scan(bytes(image_bytes), user_key, chat_id, bot, caption)
                 await update.message.reply_text(result, parse_mode="Markdown")
             else:
                 analysis = await bot.ai_service.analyze_image(
@@ -329,11 +338,17 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # PDF-Text via PyPDF2 extrahieren, dann Analyse
             text = _extract_pdf_text(bytes(pdf_bytes))
-            from src.workflows.document_scan_workflow import _analyze_document, _save_to_db, _format_response
+            from src.workflows.document_scan_workflow import (
+                _analyze_document,
+                _save_to_db,
+                _format_response,
+            )
+
             analysis = await _analyze_document(text, caption, bot.ai_service)
 
             doc_type_label = analysis.get("document_type", "Sonstiges")
             import datetime as dt
+
             today = dt.datetime.now().strftime("%Y-%m-%d")
             filename = f"{today}_{doc_type_label}.pdf"
 
@@ -396,6 +411,7 @@ def _extract_pdf_text(pdf_bytes: bytes) -> str:
     try:
         import io
         from PyPDF2 import PdfReader
+
         reader = PdfReader(io.BytesIO(pdf_bytes))
         pages = []
         for page in reader.pages[:10]:  # Max 10 Seiten

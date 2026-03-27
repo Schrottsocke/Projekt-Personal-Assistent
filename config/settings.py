@@ -11,6 +11,7 @@ load_dotenv(BASE_DIR / ".env")
 
 class BotConfig:
     """Konfiguration für einen einzelnen Bot/User"""
+
     def __init__(self, name: str, token: str, user_id: int, google_token_path: str):
         self.name = name
         self.token = token
@@ -50,7 +51,7 @@ class Settings:
     SPOTIFY_REDIRECT_URI: str = os.getenv("SPOTIFY_REDIRECT_URI", "http://localhost:8888/callback")
 
     # Smart Home – Home Assistant (optional)
-    HA_URL: str = os.getenv("HA_URL", "")           # z.B. http://homeassistant.local:8123
+    HA_URL: str = os.getenv("HA_URL", "")  # z.B. http://homeassistant.local:8123
     HA_TOKEN: str = os.getenv("HA_TOKEN", "")
 
     # Web Search
@@ -124,13 +125,13 @@ class Settings:
                 name="Taake",
                 token=cls.BOT_TOKEN_TAAKE,
                 user_id=cls.TELEGRAM_USER_ID_TAAKE,
-                google_token_path=str(cls.GOOGLE_TOKEN_PATH_TAAKE.relative_to(BASE_DIR))
+                google_token_path=str(cls.GOOGLE_TOKEN_PATH_TAAKE.relative_to(BASE_DIR)),
             ),
             "nina": BotConfig(
                 name="Nina",
                 token=cls.BOT_TOKEN_NINA,
                 user_id=cls.TELEGRAM_USER_ID_NINA,
-                google_token_path=str(cls.GOOGLE_TOKEN_PATH_NINA.relative_to(BASE_DIR))
+                google_token_path=str(cls.GOOGLE_TOKEN_PATH_NINA.relative_to(BASE_DIR)),
             ),
         }
 
@@ -163,26 +164,23 @@ class Settings:
         if cls.API_SECRET_KEY in _insecure_defaults:
             errors.append(
                 "API_SECRET_KEY ist nicht gesetzt oder unsicher. "
-                "Generiere ein Secret: python -c \"import secrets; print(secrets.token_hex(32))\""
+                'Generiere ein Secret: python -c "import secrets; print(secrets.token_hex(32))"'
             )
         elif len(cls.API_SECRET_KEY) < 32:
-            errors.append(
-                "API_SECRET_KEY muss mindestens 32 Zeichen lang sein (aktuell: %d)" % len(cls.API_SECRET_KEY)
-            )
+            errors.append("API_SECRET_KEY muss mindestens 32 Zeichen lang sein (aktuell: %d)" % len(cls.API_SECRET_KEY))
 
         return errors
-
-
 
     def get_system_prompt(self, user_key: str = None) -> str:
         """Gibt den personalisierten System-Prompt fuer einen User zurueck."""
         prompts = {
-            'taake': 'Du bist ein persoenlicher KI-Assistent fuer Taake. Du bist hilfsbereit, praezise und effizient. Antworte auf Deutsch.',
-            'nina': 'Du bist ein persoenlicher KI-Assistent fuer Nina. Du bist einfuehlsam, organisiert und unterstuetzend. Antworte auf Deutsch.',
+            "taake": "Du bist ein persoenlicher KI-Assistent fuer Taake. Du bist hilfsbereit, praezise und effizient. Antworte auf Deutsch.",
+            "nina": "Du bist ein persoenlicher KI-Assistent fuer Nina. Du bist einfuehlsam, organisiert und unterstuetzend. Antworte auf Deutsch.",
         }
-        default = 'Du bist ein hilfreicher persoenlicher KI-Assistent. Antworte auf Deutsch.'
+        default = "Du bist ein hilfreicher persoenlicher KI-Assistent. Antworte auf Deutsch."
         if not user_key:
             return default
         return prompts.get(user_key.lower(), default)
+
 
 settings = Settings()

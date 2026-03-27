@@ -1,7 +1,6 @@
 """Tests für config/settings.py – Validierung, Defaults, BotConfig."""
 
-import pytest
-from config.settings import Settings, BotConfig
+from config.settings import Settings
 
 
 class TestSettingsDefaults:

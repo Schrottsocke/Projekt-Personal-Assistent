@@ -4,7 +4,6 @@ Proposal Handler: Verarbeitet Button-Klicks (✅/❌) und /vorschlaege Command.
 
 import logging
 import re
-from datetime import datetime
 import pytz
 from telegram import Update
 from telegram.ext import (
@@ -62,8 +61,7 @@ async def _approve(query, proposal_id: int, bot):
             )
         else:
             await query.edit_message_text(
-                f"{_strip_buttons_text(query.message.text)}\n\n"
-                "⚠️ Vorschlag nicht gefunden oder bereits entschieden.",
+                f"{_strip_buttons_text(query.message.text)}\n\n⚠️ Vorschlag nicht gefunden oder bereits entschieden.",
                 parse_mode="Markdown",
             )
     except Exception as e:
@@ -103,7 +101,7 @@ async def cmd_vorschlaege(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             "📋 Keine offenen Vorschläge.\n\n"
             "Vorschläge entstehen automatisch wenn du mich bittest,\n"
-            "etwas zu erstellen – z.B. _\"Zahnarzt morgen um 10\"_.",
+            'etwas zu erstellen – z.B. _"Zahnarzt morgen um 10"_.',
             parse_mode="Markdown",
         )
         return
@@ -114,12 +112,15 @@ async def cmd_vorschlaege(update: Update, context: ContextTypes.DEFAULT_TYPE):
         dt = p["created_at"]
         if dt.tzinfo is None:
             dt = pytz.utc.localize(dt).astimezone(tz)
-        icon = {"calendar_create": "📅", "reminder_create": "⏰",
-                "note_create": "📝", "ai_suggestion": "🤖", "shared_action": "🔗"}.get(p["type"], "📋")
+        icon = {
+            "calendar_create": "📅",
+            "reminder_create": "⏰",
+            "note_create": "📝",
+            "ai_suggestion": "🤖",
+            "shared_action": "🔗",
+        }.get(p["type"], "📋")
         lines.append(
-            f"{icon} *{p['title']}*\n"
-            f"   von: {p['created_by']} · {dt.strftime('%d.%m. %H:%M')}\n"
-            f"   ID: #{p['id']}"
+            f"{icon} *{p['title']}*\n   von: {p['created_by']} · {dt.strftime('%d.%m. %H:%M')}\n   ID: #{p['id']}"
         )
 
     lines.append("\n_Scroll hoch um die Buttons zu finden, oder schreib erneut._")

@@ -8,7 +8,7 @@ dann via FastAPI Depends in die Routen injiziert.
 import logging
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import OAuth2PasswordBearer
 
 from api.auth.jwt_handler import verify_token
@@ -77,32 +77,42 @@ async def startup():
 # Dependency-Getter
 # ------------------------------------------------------------------
 
+
 def get_ai_service():
     return _svc.get("ai")
+
 
 def get_memory_service():
     return _svc.get("memory")
 
+
 def get_calendar_service():
     return _svc.get("calendar")
+
 
 def get_task_service():
     return _svc.get("task")
 
+
 def get_reminder_service():
     return _svc.get("reminder")
+
 
 def get_shopping_service():
     return _svc.get("shopping")
 
+
 def get_chefkoch_service():
     return _svc.get("chefkoch")
+
 
 def get_email_service():
     return _svc.get("email")
 
+
 def get_drive_service():
     return _svc.get("drive")
+
 
 def get_bot_shim():
     return _svc.get("bot_shim")
@@ -111,6 +121,7 @@ def get_bot_shim():
 # ------------------------------------------------------------------
 # Auth-Dependency
 # ------------------------------------------------------------------
+
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]) -> str:
     """Validiert JWT und gibt user_key ('taake' | 'nina') zurück."""

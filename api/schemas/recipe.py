@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Any
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -43,4 +43,4 @@ class SavedRecipeOut(SavedRecipeCreate):
 
 
 class ToShoppingRequest(BaseModel):
-    servings: int = 4   # Für Portionskalkulation
+    servings: int = 4  # Für Portionskalkulation

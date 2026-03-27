@@ -7,7 +7,6 @@ import logging
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 import pytz
 from google.auth.exceptions import RefreshError, TransportError
 
@@ -92,6 +91,7 @@ class CalendarService:
 
     def _load_credentials(self, user_key: str, token_path: Path):
         from google.oauth2.credentials import Credentials
+
         creds = Credentials.from_authorized_user_file(str(token_path), SCOPES)
         self._credentials[user_key] = creds
 
@@ -172,9 +172,7 @@ class CalendarService:
         """Prüft ob Google Calendar verbunden ist."""
         return user_key in self._credentials and self._credentials[user_key] is not None
 
-    async def get_upcoming_events(
-        self, user_key: str, days: int = 7, max_results: int = 15
-    ) -> list[dict]:
+    async def get_upcoming_events(self, user_key: str, days: int = 7, max_results: int = 15) -> list[dict]:
         """Gibt kommende Termine zurück (mit TTL-Cache)."""
         cache_key = f"upcoming_{user_key}_{days}_{max_results}"
         cached = self._get_cached(cache_key)

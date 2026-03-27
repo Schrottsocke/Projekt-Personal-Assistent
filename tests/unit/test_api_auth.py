@@ -1,7 +1,7 @@
 """Tests für api/routers/auth.py – Login und Refresh Endpoints."""
 
 import pytest
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock
 
 from config.settings import Settings
 
@@ -21,10 +21,10 @@ def _patch_settings(monkeypatch):
 @pytest.fixture
 def client():
     """TestClient mit gemocktem Startup."""
-    from unittest.mock import AsyncMock
     with patch("api.dependencies.startup", new_callable=AsyncMock):
         from api.main import app
         from fastapi.testclient import TestClient
+
         return TestClient(app)
 
 

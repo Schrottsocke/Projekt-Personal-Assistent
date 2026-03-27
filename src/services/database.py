@@ -16,8 +16,6 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Text,
-    ForeignKey,
-    Float,
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
@@ -41,12 +39,12 @@ class UserProfile(Base):
     # Trust-System: Komma-getrennte Proposal-Typen die auto-approved werden
     auto_approve_types = Column(Text, default="timer_create")
     # Persönlichkeitsprofil (Onboarding 2.0)
-    work_start = Column(String(10), nullable=True)   # z.B. "09:00"
-    work_end = Column(String(10), nullable=True)     # z.B. "18:00"
+    work_start = Column(String(10), nullable=True)  # z.B. "09:00"
+    work_end = Column(String(10), nullable=True)  # z.B. "18:00"
     quiet_start = Column(String(10), nullable=True)  # z.B. "22:00"
-    quiet_end = Column(String(10), nullable=True)    # z.B. "07:00"
-    focus_time = Column(String(20), nullable=True)   # "morgen" / "mittag" / "abend"
-    week_structure = Column(Text, nullable=True)     # Freitext
+    quiet_end = Column(String(10), nullable=True)  # z.B. "07:00"
+    focus_time = Column(String(20), nullable=True)  # "morgen" / "mittag" / "abend"
+    week_structure = Column(Text, nullable=True)  # Freitext
     # Fokus-Modus: bis wann aktiv (None = kein Fokus-Modus)
     focus_mode_until = Column(DateTime, nullable=True)
     # TTS: Sprachantworten aktiviert (opt-in)
@@ -88,6 +86,7 @@ class Proposal(Base):
     Vorschlag zur manuellen Genehmigung (Human-in-the-Loop).
     Status: pending → approved/rejected
     """
+
     __tablename__ = "proposals"
 
     id = Column(Integer, primary_key=True)
@@ -106,16 +105,17 @@ class Proposal(Base):
 
 class Task(Base):
     """Aufgaben/To-Do mit Status-Tracking und Cross-Bot-Zuweisung."""
+
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True)
-    user_key = Column(String(50), nullable=False)       # Besitzer der Aufgabe
-    assigned_by = Column(String(50), nullable=True)     # user_key des Zuweisers (cross-bot)
+    user_key = Column(String(50), nullable=False)  # Besitzer der Aufgabe
+    assigned_by = Column(String(50), nullable=True)  # user_key des Zuweisers (cross-bot)
     title = Column(String(300), nullable=False)
     description = Column(Text, nullable=True)
-    priority = Column(String(10), default="medium")     # high / medium / low
+    priority = Column(String(10), default="medium")  # high / medium / low
     due_date = Column(DateTime, nullable=True)
-    status = Column(String(20), default="open")         # open / in_progress / done
+    status = Column(String(20), default="open")  # open / in_progress / done
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -126,12 +126,13 @@ class MemoryFact(Base):
     Inspiriert vom JARVIS Continuous-Learning / Instinct-System.
     Fakten die öfter extrahiert oder bestätigt werden, bekommen höhere Konfidenz.
     """
+
     __tablename__ = "memory_facts"
 
     id = Column(Integer, primary_key=True)
     user_key = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
-    confirmation_count = Column(Integer, default=1)   # Wie oft wurde dieser Fakt extrahiert
+    confirmation_count = Column(Integer, default=1)  # Wie oft wurde dieser Fakt extrahiert
     last_used = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -148,37 +149,40 @@ class ConversationHistory(Base):
 
 class ShoppingItem(Base):
     """Einkaufsliste-Eintrag. Eine Liste pro User (kein separates Listen-Model)."""
+
     __tablename__ = "shopping_items"
 
     id = Column(Integer, primary_key=True)
     user_key = Column(String(50), nullable=False)
     name = Column(String(200), nullable=False)
-    quantity = Column(String(50), nullable=True)   # z.B. "500", "2", "1 Bund"
-    unit = Column(String(30), nullable=True)       # z.B. "g", "Stück", "ml"
-    category = Column(String(50), nullable=True)   # z.B. "Gemüse", "Milchprodukte"
+    quantity = Column(String(50), nullable=True)  # z.B. "500", "2", "1 Bund"
+    unit = Column(String(30), nullable=True)  # z.B. "g", "Stück", "ml"
+    category = Column(String(50), nullable=True)  # z.B. "Gemüse", "Milchprodukte"
     checked = Column(Boolean, default=False)
-    source = Column(String(100), nullable=True)    # z.B. "chefkoch:12345" oder "manual"
+    source = Column(String(100), nullable=True)  # z.B. "chefkoch:12345" oder "manual"
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class ScannedDocument(Base):
     """Gespeichertes Scan-Ergebnis für die /dokumente-Historie."""
+
     __tablename__ = "scanned_documents"
 
     id = Column(Integer, primary_key=True)
     user_key = Column(String(50), nullable=False)
-    doc_type = Column(String(100), nullable=False)       # Rechnung, Brief, etc.
-    filename = Column(String(200), nullable=False)       # YYYY-MM-DD_Typ.pdf
-    drive_link = Column(String(500), nullable=True)      # Drive webViewLink
-    drive_file_id = Column(String(100), nullable=True)   # Drive File-ID
+    doc_type = Column(String(100), nullable=False)  # Rechnung, Brief, etc.
+    filename = Column(String(200), nullable=False)  # YYYY-MM-DD_Typ.pdf
+    drive_link = Column(String(500), nullable=True)  # Drive webViewLink
+    drive_file_id = Column(String(100), nullable=True)  # Drive File-ID
     summary = Column(Text, nullable=True)
     sender = Column(String(200), nullable=True)
-    amount = Column(String(50), nullable=True)           # Betrag falls Rechnung
+    amount = Column(String(50), nullable=True)  # Betrag falls Rechnung
     scanned_at = Column(DateTime, default=datetime.utcnow)
 
 
 class SavedRecipe(Base):
     """Gespeichertes / favorisiertes Rezept (aus Chefkoch-Suche)."""
+
     __tablename__ = "saved_recipes"
 
     id = Column(Integer, primary_key=True)
@@ -187,8 +191,8 @@ class SavedRecipe(Base):
     title = Column(String(300), nullable=False)
     image_url = Column(String(500), nullable=True)
     servings = Column(Integer, default=4)
-    prep_time = Column(Integer, default=0)        # Minuten
-    cook_time = Column(Integer, default=0)        # Minuten
+    prep_time = Column(Integer, default=0)  # Minuten
+    cook_time = Column(Integer, default=0)  # Minuten
     difficulty = Column(String(50), nullable=True)
     ingredients_json = Column(Text, nullable=True)  # JSON-Array
     is_favorite = Column(Boolean, default=False)
@@ -198,15 +202,16 @@ class SavedRecipe(Base):
 
 class MealPlanEntry(Base):
     """Wochenplan-Eintrag: Rezept zu Tag + Mahlzeit."""
+
     __tablename__ = "meal_plan_entries"
 
     id = Column(Integer, primary_key=True)
     user_key = Column(String(50), nullable=False)
-    planned_date = Column(String(10), nullable=False)      # YYYY-MM-DD
+    planned_date = Column(String(10), nullable=False)  # YYYY-MM-DD
     recipe_chefkoch_id = Column(String(50), nullable=True)
     recipe_title = Column(String(300), nullable=False)
     recipe_image_url = Column(String(500), nullable=True)
-    meal_type = Column(String(20), default="dinner")       # breakfast|lunch|dinner
+    meal_type = Column(String(20), default="dinner")  # breakfast|lunch|dinner
     servings = Column(Integer, default=4)
     notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -266,6 +271,7 @@ def init_db():
         if is_sqlite:
             with _engine.connect() as conn:
                 from sqlalchemy.exc import OperationalError
+
                 for col_sql in [
                     "ALTER TABLE user_profiles ADD COLUMN focus_mode_until DATETIME",
                     "ALTER TABLE user_profiles ADD COLUMN tts_enabled BOOLEAN DEFAULT 0",
@@ -293,9 +299,7 @@ def prune_conversation_history(days: int = 30) -> int:
     cutoff = datetime.utcnow() - timedelta(days=days)
     with _engine.connect() as conn:
         result = conn.execute(
-            sqlalchemy.text(
-                "DELETE FROM conversation_history WHERE created_at < :cutoff"
-            ),
+            sqlalchemy.text("DELETE FROM conversation_history WHERE created_at < :cutoff"),
             {"cutoff": cutoff},
         )
         conn.commit()

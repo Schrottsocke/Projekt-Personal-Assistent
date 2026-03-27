@@ -112,7 +112,11 @@ Beispiele für tone_adjustment:
             return json.loads(response)
         except Exception as e:
             logger.warning(f"Stimmungserkennung fehlgeschlagen: {e}")
-            return {"mood": "neutral", "intensity": 0.3, "tone_adjustment": "Normaler Ton."}
+            return {
+                "mood": "neutral",
+                "intensity": 0.3,
+                "tone_adjustment": "Normaler Ton.",
+            }
 
     # =========================================================================
     # 3. PROAKTIVE MUSTERERKENNUNG (Scheduler-Job)
@@ -130,13 +134,12 @@ Beispiele für tone_adjustment:
 
         # Daten sammeln
         memories = await bot.memory_service.get_all_memories(user_key=user_key)
-        memories_text = "\n".join(
-            f"- {m.get('memory', '')}" for m in memories[:20]
-        ) or "Keine gespeicherten Infos."
+        memories_text = "\n".join(f"- {m.get('memory', '')}" for m in memories[:20]) or "Keine gespeicherten Infos."
 
         # Letzte Konversationen
         try:
             from src.services.database import ConversationHistory, get_db
+
             with get_db()() as session:
                 recent = (
                     session.query(ConversationHistory)
@@ -145,38 +148,37 @@ Beispiele für tone_adjustment:
                     .limit(30)
                     .all()
                 )
-                chat_text = "\n".join(
-                    f"[{r.role}]: {r.content[:100]}" for r in reversed(recent)
-                ) or "Keine Gespräche."
+                chat_text = "\n".join(f"[{r.role}]: {r.content[:100]}" for r in reversed(recent)) or "Keine Gespräche."
         except Exception:
             chat_text = "Keine Gespräche."
 
         # Kalender der nächsten 14 Tage
         try:
-            events = await bot.calendar_service.get_upcoming_events(
-                user_key=user_key, days=14
+            events = await bot.calendar_service.get_upcoming_events(user_key=user_key, days=14)
+            events_text = (
+                "\n".join(
+                    f"- {e.get('summary', '?')} ({e.get('start', {}).get('dateTime', e.get('start', {}).get('date', '?'))})"
+                    for e in events
+                )
+                or "Keine Termine."
             )
-            events_text = "\n".join(
-                f"- {e.get('summary', '?')} ({e.get('start', {}).get('dateTime', e.get('start', {}).get('date', '?'))})"
-                for e in events
-            ) or "Keine Termine."
         except Exception:
             events_text = "Kalender nicht verfügbar."
 
         # Aktive Erinnerungen
         try:
             reminders = await bot.reminder_service.get_active_reminders(user_key=user_key)
-            reminders_text = "\n".join(
-                f"- {r['content']} ({r['remind_at'].strftime('%d.%m. %H:%M')})"
-                for r in reminders
-            ) or "Keine aktiven Erinnerungen."
+            reminders_text = (
+                "\n".join(f"- {r['content']} ({r['remind_at'].strftime('%d.%m. %H:%M')})" for r in reminders)
+                or "Keine aktiven Erinnerungen."
+            )
         except Exception:
             reminders_text = "Keine Erinnerungen."
 
         prompt = f"""Du bist ein intelligenter persönlicher Assistent.
 Analysiere die folgenden Daten und generiere PROAKTIVE, nützliche Vorschläge.
 
-Aktuelles Datum: {now.strftime('%A, %d.%m.%Y %H:%M')}
+Aktuelles Datum: {now.strftime("%A, %d.%m.%Y %H:%M")}
 Nutzer: {user_key}
 
 === GEDÄCHTNIS (was du über den Nutzer weißt) ===
@@ -241,9 +243,7 @@ Payload je nach Typ:
     # 4. CROSS-USER AWARENESS
     # =========================================================================
 
-    async def detect_cross_user_mention(
-        self, user_key: str, message: str, partner_key: str
-    ) -> Optional[dict]:
+    async def detect_cross_user_mention(self, user_key: str, message: str, partner_key: str) -> Optional[dict]:
         """
         Prüft ob eine Nachricht den Partner erwähnt und extrahiert
         relevanten Kontext, der an den Partner-Bot weitergegeben werden soll.
@@ -307,6 +307,7 @@ Beispiele:
         # Konversations-History der letzten Woche
         try:
             from src.services.database import ConversationHistory, Proposal, get_db
+
             with get_db()() as session:
                 chats = (
                     session.query(ConversationHistory)
@@ -317,9 +318,9 @@ Beispiele:
                     .order_by(ConversationHistory.created_at.asc())
                     .all()
                 )
-                chat_summary = "\n".join(
-                    f"[{c.role}]: {c.content[:80]}" for c in chats[-30:]
-                ) or "Keine Gespräche diese Woche."
+                chat_summary = (
+                    "\n".join(f"[{c.role}]: {c.content[:80]}" for c in chats[-30:]) or "Keine Gespräche diese Woche."
+                )
 
                 # Proposals der Woche
                 proposals = (
@@ -343,25 +344,19 @@ Beispiele:
 
         # Memories
         memories = await bot.memory_service.get_all_memories(user_key=user_key)
-        memories_text = "\n".join(
-            f"- {m.get('memory', '')}" for m in memories[:10]
-        ) or "Keine."
+        memories_text = "\n".join(f"- {m.get('memory', '')}" for m in memories[:10]) or "Keine."
 
         # Kalender nächste Woche
         try:
-            events = await bot.calendar_service.get_upcoming_events(
-                user_key=user_key, days=7
-            )
-            next_week = "\n".join(
-                f"- {e.get('summary', '?')}" for e in events
-            ) or "Keine Termine."
+            events = await bot.calendar_service.get_upcoming_events(user_key=user_key, days=7)
+            next_week = "\n".join(f"- {e.get('summary', '?')}" for e in events) or "Keine Termine."
         except Exception:
             next_week = "Kalender nicht verfügbar."
 
         prompt = f"""Du bist {name}s persönlicher Assistent.
 Erstelle einen kurzen, persönlichen Wochenrückblick.
 
-Heute: {now.strftime('%A, %d.%m.%Y')}
+Heute: {now.strftime("%A, %d.%m.%Y")}
 
 === GESPRÄCHE DIESE WOCHE ===
 {chat_summary}
@@ -385,6 +380,4 @@ Das Review soll:
 - Max 12 Sätze, auf Deutsch
 - Markdown-Formatierung nutzen"""
 
-        return await self._ai._complete(
-            messages=[{"role": "user", "content": prompt}]
-        )
+        return await self._ai._complete(messages=[{"role": "user", "content": prompt}])

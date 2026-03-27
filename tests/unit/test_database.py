@@ -1,7 +1,7 @@
 """Tests für src/services/database.py – Models, Session, CRUD."""
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
@@ -108,9 +108,7 @@ class TestTask:
 class TestReminder:
     def test_create_reminder(self, session):
         remind_at = datetime(2026, 4, 1, 10, 0)
-        reminder = Reminder(
-            user_key="taake", chat_id="123", content="Termin", remind_at=remind_at
-        )
+        reminder = Reminder(user_key="taake", chat_id="123", content="Termin", remind_at=remind_at)
         session.add(reminder)
         session.commit()
         result = session.query(Reminder).first()
@@ -138,9 +136,7 @@ class TestMemoryFact:
 
 class TestConversationHistory:
     def test_create_entry(self, session):
-        entry = ConversationHistory(
-            user_key="taake", role="user", content="Hallo"
-        )
+        entry = ConversationHistory(user_key="taake", role="user", content="Hallo")
         session.add(entry)
         session.commit()
         result = session.query(ConversationHistory).first()

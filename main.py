@@ -35,6 +35,7 @@ from src.services.pdf_service import PdfService
 from src.bots.taake_bot import TaakeBot
 from src.bots.nina_bot import NinaBot
 
+
 # Logging konfigurieren
 def setup_logging():
     settings.LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -121,25 +122,25 @@ async def main():
     CORE_SERVICES = {"ai_service", "memory_service"}
 
     SERVICE_DEFINITIONS = [
-        ("ai_service",        AIService,        False),
-        ("memory_service",    MemoryService,    True),
-        ("calendar_service",  CalendarService,  True),
-        ("notes_service",     NotesService,     True),
-        ("reminder_service",  ReminderService,  True),
-        ("proposal_service",  ProposalService,  True),
-        ("task_service",      TaskService,      True),
-        ("document_service",  DocumentService,  True),
-        ("tts_service",       TTSService,       False),
-        ("spotify_service",   SpotifyService,   False),
+        ("ai_service", AIService, False),
+        ("memory_service", MemoryService, True),
+        ("calendar_service", CalendarService, True),
+        ("notes_service", NotesService, True),
+        ("reminder_service", ReminderService, True),
+        ("proposal_service", ProposalService, True),
+        ("task_service", TaskService, True),
+        ("document_service", DocumentService, True),
+        ("tts_service", TTSService, False),
+        ("spotify_service", SpotifyService, False),
         ("smarthome_service", SmartHomeService, False),
-        ("chefkoch_service",  ChefkochService,  False),
-        ("drive_service",     DriveService,     True),
-        ("shopping_service",  ShoppingService,  False),
-        ("email_service",     EmailService,     True),
-        ("scanner_service",   ScannerService,   False),
-        ("mobility_service",  MobilityService,  False),
-        ("ocr_service",       OcrService,       False),
-        ("pdf_service",       PdfService,       False),
+        ("chefkoch_service", ChefkochService, False),
+        ("drive_service", DriveService, True),
+        ("shopping_service", ShoppingService, False),
+        ("email_service", EmailService, True),
+        ("scanner_service", ScannerService, False),
+        ("mobility_service", MobilityService, False),
+        ("ocr_service", OcrService, False),
+        ("pdf_service", PdfService, False),
     ]
 
     services = {}

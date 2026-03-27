@@ -31,15 +31,14 @@ class BotMemoryService(BaseMemoryService):
 
     async def _setup_db(self):
         from src.services.database import get_db
+
         self._db = get_db()
 
     # ------------------------------------------------------------------
     # Conversation Turns
     # ------------------------------------------------------------------
 
-    async def add_conversation_turn(
-        self, user_key: str, user_message: str, assistant_response: str
-    ):
+    async def add_conversation_turn(self, user_key: str, user_message: str, assistant_response: str):
         """Speichert einen Gespraechsaustausch im Gedaechtnis."""
         await self.add_messages(
             messages=[
@@ -61,10 +60,9 @@ class BotMemoryService(BaseMemoryService):
         try:
             from src.services.database import MemoryFact
             from datetime import datetime
+
             with self._db() as session:
-                existing = session.query(MemoryFact).filter_by(
-                    user_key=user_key, content=content
-                ).first()
+                existing = session.query(MemoryFact).filter_by(user_key=user_key, content=content).first()
                 if existing:
                     existing.confirmation_count += 1
                     existing.last_used = datetime.utcnow()
@@ -77,6 +75,7 @@ class BotMemoryService(BaseMemoryService):
         """Gibt die bestaetigtesten Fakten sortiert nach Konfidenz zurueck."""
         try:
             from src.services.database import MemoryFact
+
             with self._db() as session:
                 facts = (
                     session.query(MemoryFact)
@@ -105,6 +104,7 @@ class BotMemoryService(BaseMemoryService):
         """Markiert User als onboardet in der lokalen DB."""
         try:
             from src.services.database import UserProfile
+
             with self._db() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 if not profile:
@@ -119,6 +119,7 @@ class BotMemoryService(BaseMemoryService):
         """Prueft ob User bereits onboardet wurde."""
         try:
             from src.services.database import UserProfile
+
             with self._db() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 return bool(profile and profile.is_onboarded)

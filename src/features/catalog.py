@@ -4,7 +4,7 @@ Jedes Feature hat eine ID, Emoji, Name, Beschreibung,
 zugehörige Intents, Commands und optionale Konfigurationsvoraussetzungen.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -15,7 +15,7 @@ class Feature:
     description: str
     intents: list[str]
     commands: list[str]
-    required_settings: list[str]   # Settings-Keys die gesetzt sein müssen
+    required_settings: list[str]  # Settings-Keys die gesetzt sein müssen
     default_enabled: bool = True
 
 
