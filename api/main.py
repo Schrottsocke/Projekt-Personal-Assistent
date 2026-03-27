@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from config.settings import settings
 from api import dependencies
@@ -81,4 +82,39 @@ async def root():
 
 @app.get("/health", tags=["Status"])
 async def health():
-    return {"status": "healthy"}
+    """Echter Health-Check: prüft DB-Verbindung und kritische Services."""
+    import sqlalchemy
+    from src.services.database import _engine
+
+    checks = {}
+    overall_healthy = True
+
+    # 1. Datenbank-Check
+    try:
+        if _engine is None:
+            checks["database"] = "not_initialized"
+            overall_healthy = False
+        else:
+            with _engine.connect() as conn:
+                conn.execute(sqlalchemy.text("SELECT 1"))
+            checks["database"] = "ok"
+    except Exception as e:
+        checks["database"] = f"error: {e}"
+        overall_healthy = False
+
+    # 2. Kritische Services prüfen (AI, Memory)
+    for name in ("ai", "memory", "calendar"):
+        svc = dependencies._svc.get(name)
+        if svc is None:
+            checks[name] = "not_initialized"
+            overall_healthy = False
+        else:
+            checks[name] = "ok"
+
+    status_str = "healthy" if overall_healthy else "unhealthy"
+    status_code = 200 if overall_healthy else 503
+
+    return JSONResponse(
+        status_code=status_code,
+        content={"status": status_str, "services": checks},
+    )
