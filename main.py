@@ -4,9 +4,13 @@ Main Entry Point: Startet beide Bots parallel.
 
 import asyncio
 import logging
+import logging.handlers
 import signal
 import sys
+import uuid
 from pathlib import Path
+
+import structlog
 
 # Projektpfad zum Python-Pfad hinzufügen
 sys.path.insert(0, str(Path(__file__).parent))
@@ -41,15 +45,18 @@ from src.bots.nina_bot import NinaBot
 def setup_logging():
     settings.LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-    handlers = [
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler(settings.LOG_FILE),
-    ]
+    log_level = getattr(logging, settings.LOG_LEVEL, logging.INFO)
+
+    # Console: human-readable; File: JSON mit Rotation (10 MB, 5 Backups)
+    console_handler = logging.StreamHandler(sys.stdout)
+    file_handler = logging.handlers.RotatingFileHandler(
+        settings.LOG_FILE, maxBytes=10 * 1024 * 1024, backupCount=5, encoding="utf-8"
+    )
 
     logging.basicConfig(
-        level=getattr(logging, settings.LOG_LEVEL, logging.INFO),
-        format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
-        handlers=handlers,
+        level=log_level,
+        format="%(message)s",
+        handlers=[console_handler, file_handler],
     )
 
     # Externe Libraries ruhigstellen
@@ -58,8 +65,38 @@ def setup_logging():
     logging.getLogger("apscheduler").setLevel(logging.WARNING)
     logging.getLogger("googleapiclient").setLevel(logging.WARNING)
 
+    # structlog konfigurieren
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.stdlib.filter_by_level,
+            structlog.stdlib.add_logger_name,
+            structlog.stdlib.add_log_level,
+            structlog.stdlib.PositionalArgumentsFormatter(),
+            structlog.processors.TimeStamper(fmt="iso"),
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.processors.UnicodeDecoder(),
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
 
-logger = logging.getLogger(__name__)
+    # Console: lesbar; File: JSON
+    console_formatter = structlog.stdlib.ProcessorFormatter(
+        processor=structlog.dev.ConsoleRenderer(),
+    )
+    json_formatter = structlog.stdlib.ProcessorFormatter(
+        processor=structlog.processors.JSONRenderer(),
+    )
+
+    console_handler.setFormatter(console_formatter)
+    file_handler.setFormatter(json_formatter)
+
+
+logger = structlog.get_logger(__name__)
 
 
 async def _deliver_missed_reminders(reminder_service, taake_app, nina_app):
