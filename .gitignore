@@ -39,3 +39,25 @@ data/chroma_db/
 
 # Docker
 .dockerignore
+
+# Flutter / Dart
+app/.dart_tool/
+app/.packages
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/.metadata
+app/pubspec.lock
+*.dart.js
+
+# OS
+Thumbs.db
+*~
+
+# Temporäre Dateien
+*.tmp
+*.bak
+*.orig
+
+# Claude Code
+.claude/
