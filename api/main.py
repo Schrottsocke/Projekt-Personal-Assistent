@@ -6,9 +6,12 @@ Läuft auf Port 8000, getrennt vom Telegram-Bot.
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 from config.settings import settings
 from api import dependencies
@@ -36,12 +39,16 @@ async def lifespan(app: FastAPI):
     logger.info("DualMind API wird beendet.")
 
 
+limiter = Limiter(key_func=get_remote_address, default_limits=[settings.RATE_LIMIT_DEFAULT])
+
 app = FastAPI(
     title="DualMind Personal Assistant API",
     version="1.0.0",
     description="REST API für TaakeBot & NinaBot. Telegram-Bot bleibt unverändert.",
     lifespan=lifespan,
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS – Flutter App darf zugreifen
 origins = settings.API_CORS_ORIGINS

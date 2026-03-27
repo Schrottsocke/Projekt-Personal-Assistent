@@ -3,17 +3,23 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.dependencies import get_current_user, get_ai_service, get_bot_shim
 from api.schemas.chat import ChatMessageIn, ChatResponse, ChatMessageOut
+from config.settings import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/message", response_model=ChatResponse)
+@limiter.limit(settings.RATE_LIMIT_CHAT)
 async def send_message(
+    request: Request,
     body: ChatMessageIn,
     user_key: Annotated[str, Depends(get_current_user)],
     ai_svc=Depends(get_ai_service),
