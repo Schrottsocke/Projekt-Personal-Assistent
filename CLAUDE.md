@@ -186,6 +186,7 @@ Verfuegbare Claude Code Skills:
 - `/new-issue` – Genau ein GitHub Issue erstellen oder als Entwurf ausgeben
 - `/work-next` – Naechstes Issue nach Prioritaet bearbeiten (kompletter GitHub-Flow)
 - `/closeout` – Nach Issue-Abschluss: gleiche Session oder neue Session entscheiden
+- `/automation-check` – Automation-Gesundheitscheck: Workflows, Labels, Templates, Secrets
 
 ## Ende
 

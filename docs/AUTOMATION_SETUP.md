@@ -1,0 +1,117 @@
+# Automation Setup Guide
+
+Anleitung zur Einrichtung der GitHub-Automation für dieses Repository.
+
+## Übersicht der Workflows
+
+| Workflow | Trigger | Zweck |
+|----------|---------|-------|
+| `ci.yml` | Push/PR auf `main` | Lint (ruff) + Tests (pytest, 50% Coverage) |
+| `auto-add-to-project.yml` | Issue/PR opened | Items automatisch ins GitHub Project einfügen |
+| `stale.yml` | Täglich 06:00 UTC | Inaktive Issues/PRs markieren und schließen |
+| `triage.yml` | Montags 08:00 UTC + manuell | Wöchentlicher Triage-Report als Issue |
+| `pr-labeler.yml` | PR opened/synchronize | Automatische Area- und Size-Labels für PRs |
+| `label-sync.yml` | Manuell + Push auf `labels.yml` | Standard-Labels synchronisieren |
+
+## 1. GitHub Project einrichten
+
+### Project erstellen
+
+1. Gehe zu `https://github.com/users/Schrottsocke/projects`
+2. Klick auf **New project**
+3. Wähle **Board** als Vorlage
+4. Benenne es z.B. "DualMind Assistent"
+
+### Projekt-Nummer finden
+
+Die Nummer steht in der URL: `https://github.com/users/Schrottsocke/projects/X` → `X` ist die Nummer.
+
+### Empfohlene Project-Felder
+
+| Feld | Typ | Werte |
+|------|-----|-------|
+| Status | Single Select | Backlog, Todo, In Progress, Review, Done |
+| Priority | Single Select | P0-critical, P1-high, P2-medium |
+
+### Project Built-in Automations
+
+Im Project unter **Settings → Workflows** aktivieren:
+
+- **Item added to project** → Status auf "Backlog" setzen
+- **Item closed** → Status auf "Done" setzen
+- **Pull request merged** → Status auf "Done" setzen
+
+## 2. Repository Secrets & Variables
+
+### Variables (Settings → Secrets and variables → Actions → Variables)
+
+| Name | Wert | Beschreibung |
+|------|------|--------------|
+| `PROJECT_NUMBER` | `<Projekt-Nummer>` | Nummer des GitHub Projects |
+
+### Secrets (Settings → Secrets and variables → Actions → Secrets)
+
+| Name | Beschreibung | Erstellung |
+|------|--------------|------------|
+| `PROJECT_TOKEN` | Personal Access Token für Project-Zugriff | Siehe unten |
+
+### Personal Access Token erstellen
+
+1. Gehe zu `https://github.com/settings/tokens`
+2. Klick auf **Generate new token (classic)**
+3. Name: z.B. "Project Automation"
+4. Scopes auswählen:
+   - `project` (vollständig)
+   - `repo` (für Issue/PR-Zugriff)
+5. Token generieren und als `PROJECT_TOKEN` Secret speichern
+
+> **Hinweis:** `GITHUB_TOKEN` wird automatisch bereitgestellt und braucht nicht manuell konfiguriert zu werden. Es reicht für die meisten Workflows, aber nicht für Project-Board-Zugriff.
+
+## 3. Labels synchronisieren
+
+Nach dem ersten Push dieses Branches:
+
+1. Gehe zu **Actions → Label Sync**
+2. Klick auf **Run workflow**
+3. Alle Labels aus `.github/labels.yml` werden automatisch erstellt
+
+Dies muss nur einmal ausgeführt werden. Danach werden Labels bei Änderungen an `labels.yml` automatisch synchronisiert.
+
+## 4. Erste Nutzung
+
+### Checkliste
+
+- [ ] GitHub Project erstellt und Nummer notiert
+- [ ] `PROJECT_NUMBER` als Repository Variable gesetzt
+- [ ] `PROJECT_TOKEN` als Repository Secret gesetzt
+- [ ] Label-Sync Workflow einmalig ausgeführt
+- [ ] Project Built-in Automations aktiviert (Backlog/Done)
+- [ ] Test: Neues Issue über Template erstellt → erscheint im Project Board
+
+### Claude Code Skills
+
+| Skill | Beschreibung |
+|-------|--------------|
+| `/triage` | Repo-Gesundheitscheck (Lint, Tests, Issues, Code-Scan) |
+| `/new-issue` | Ein GitHub Issue erstellen |
+| `/work-next` | Nächstes Issue nach Priorität bearbeiten |
+| `/closeout` | Nach Issue-Abschluss: gleiche/neue Session entscheiden |
+| `/automation-check` | Automation-Gesundheitscheck (Workflows, Labels, Secrets) |
+
+## 5. Troubleshooting
+
+### Auto-Add-to-Project funktioniert nicht
+
+- Prüfe ob `PROJECT_NUMBER` Variable korrekt gesetzt ist
+- Prüfe ob `PROJECT_TOKEN` Secret vorhanden ist und `project` Scope hat
+- Token darf nicht abgelaufen sein
+
+### Labels fehlen nach PR-Labeling
+
+- Label-Sync Workflow ausführen (erstellt fehlende Labels)
+- Prüfe `.github/labeler.yml` für korrekte Pfad-Zuordnungen
+
+### Triage-Report wird nicht erstellt
+
+- Prüfe ob der Workflow unter Actions → Triage Report aktiv ist
+- Manuell triggern: Actions → Triage Report → Run workflow

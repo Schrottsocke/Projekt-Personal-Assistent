@@ -1,0 +1,77 @@
+name: Bug Report
+description: Einen Fehler melden
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke für den Bug-Report! Bitte fülle die Felder möglichst vollständig aus.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorität
+      description: Wie kritisch ist der Fehler?
+      options:
+        - P2-medium – Störend, aber Workaround vorhanden
+        - P1-high – Wichtige Funktion beeinträchtigt
+        - P0-critical – System nicht nutzbar
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      description: Welcher Teil des Systems ist betroffen?
+      options:
+        - Bot (Telegram)
+        - API (REST/Auth)
+        - App (Flutter)
+        - Deploy/Infra
+        - Config
+        - Sonstiges
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Was passiert? Was sollte stattdessen passieren?
+      placeholder: |
+        **Ist-Zustand:** ...
+        **Soll-Zustand:** ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zur Reproduktion
+      description: Wie kann der Fehler reproduziert werden?
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Fehlermeldungen
+      description: Relevante Log-Ausgaben oder Fehlermeldungen
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Screenshots, Links, Umgebungsinfos
+    validations:
+      required: false
