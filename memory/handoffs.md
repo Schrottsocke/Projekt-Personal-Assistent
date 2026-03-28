@@ -1,7 +1,7 @@
 # Handoffs
 
 Session-Uebergaben, offene Faeden zwischen Sessions, naechste Schritte.
-Wird aggressiv bereinigt – nur die letzten Eintraege behalten.
+Wird aggressiv bereinigt - nur die letzten Eintraege behalten.
 
 ## Eintraege
 
