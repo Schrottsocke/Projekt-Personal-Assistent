@@ -12,7 +12,7 @@ Prüfe ob alle GitHub-Workflows, Labels und Automation-Konfigurationen korrekt e
 ### 1. Workflow-Dateien prüfen
 
 Lies alle Dateien in `.github/workflows/` und prüfe:
-- Sind alle erwarteten Workflows vorhanden? (`ci.yml`, `auto-add-to-project.yml`, `stale.yml`, `triage.yml`, `pr-labeler.yml`, `label-sync.yml`)
+- Sind alle erwarteten Workflows vorhanden? (`ci.yml`, `auto-add-to-project.yml`, `stale.yml`, `triage.yml`, `repo-review.yml`, `pr-labeler.yml`, `label-sync.yml`)
 - Ist die YAML-Syntax korrekt? (grundlegende Strukturprüfung)
 - Stimmen die Trigger-Events? (schedule, workflow_dispatch, push, pull_request)
 
