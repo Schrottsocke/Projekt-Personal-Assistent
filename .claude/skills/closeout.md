@@ -28,7 +28,17 @@ Identifiziere das naechste Issue nach Prioritaet (P0 → P1 → P2 → ohne Labe
 
 Wenn keine offenen Issues: melden und Session sauber beenden.
 
-### 3. Entscheidung treffen
+### 3. Memory-Check
+
+Pruefe kurz ob in dieser Session etwas memory-wuerdiges passiert ist:
+- Nicht-offensichtlicher Bug oder Workaround?
+- Wiederverwendbares Pattern entdeckt?
+- Offene Faeden fuer die naechste Session?
+
+Wenn ja: `/save-memory` ausfuehren bevor die Session-Entscheidung getroffen wird.
+Wenn nein: weiter zu Schritt 4.
+
+### 4. Entscheidung treffen
 
 #### Option A: In derselben Session weitermachen
 
@@ -48,7 +58,7 @@ Wenn EINER dieser Punkte zutrifft:
 - in der Session gab es Plan-Loops, Drift oder Wiederholungen
 - fuer das naechste Issue waere eine frische Analyse sinnvoller
 
-### 4. Ausgabe
+### 5. Ausgabe
 
 ```
 ## Session-Entscheidung
