@@ -46,7 +46,11 @@ async def get_week(
             .order_by(MealPlanEntry.planned_date, MealPlanEntry.meal_type)
             .all()
         )
-    return rows
+        result = [
+            {c.name: getattr(r, c.name) for c in r.__table__.columns}
+            for r in rows
+        ]
+    return result
 
 
 @router.post("", response_model=MealPlanOut, status_code=status.HTTP_201_CREATED)
@@ -63,7 +67,8 @@ async def add_meal(
         session.add(entry)
         session.flush()
         session.refresh(entry)
-        return entry
+        result = {c.name: getattr(entry, c.name) for c in entry.__table__.columns}
+    return result
 
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)

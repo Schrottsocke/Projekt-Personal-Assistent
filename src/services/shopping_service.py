@@ -243,6 +243,9 @@ class ShoppingService:
                 "quantity": item.quantity,
                 "unit": item.unit,
                 "category": item.category,
+                "checked": item.checked,
+                "source": item.source,
+                "created_at": item.created_at,
             }
         logger.debug(f"[{user_key}] Einkaufsartikel hinzugefügt: {name}")
         return result
@@ -348,6 +351,7 @@ class ShoppingService:
                     "category": i.category,
                     "checked": i.checked,
                     "source": i.source,
+                    "created_at": i.created_at,
                 }
                 for i in items
             ]

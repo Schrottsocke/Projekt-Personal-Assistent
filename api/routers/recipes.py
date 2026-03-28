@@ -67,18 +67,6 @@ async def search_recipes(
     return [_parse_recipe(r) for r in results]
 
 
-@router.get("/{chefkoch_id}")
-async def get_recipe(
-    chefkoch_id: str,
-    user_key: Annotated[str, Depends(get_current_user)],
-    chefkoch_svc=Depends(get_chefkoch_service),
-):
-    recipe = await chefkoch_svc.get_recipe(chefkoch_id)
-    if not recipe:
-        raise HTTPException(status_code=404, detail="Rezept nicht gefunden.")
-    return _parse_recipe(recipe)
-
-
 @router.get("/saved", response_model=list[SavedRecipeOut])
 async def list_saved(
     user_key: Annotated[str, Depends(get_current_user)],
@@ -87,7 +75,11 @@ async def list_saved(
 
     with get_db()() as session:
         rows = session.query(SavedRecipe).filter_by(user_key=user_key).all()
-    return rows
+        result = [
+            {c.name: getattr(r, c.name) for c in r.__table__.columns}
+            for r in rows
+        ]
+    return result
 
 
 @router.post("/saved", response_model=SavedRecipeOut, status_code=status.HTTP_201_CREATED)
@@ -104,7 +96,8 @@ async def save_recipe(
         session.add(rec)
         session.flush()
         session.refresh(rec)
-        return rec
+        result = {c.name: getattr(rec, c.name) for c in rec.__table__.columns}
+    return result
 
 
 @router.patch("/saved/{recipe_id}/favorite")
@@ -138,6 +131,18 @@ async def delete_saved(
         if not rec:
             raise HTTPException(status_code=404, detail="Rezept nicht gefunden.")
         session.delete(rec)
+
+
+@router.get("/{chefkoch_id}")
+async def get_recipe(
+    chefkoch_id: str,
+    user_key: Annotated[str, Depends(get_current_user)],
+    chefkoch_svc=Depends(get_chefkoch_service),
+):
+    recipe = await chefkoch_svc.get_recipe(chefkoch_id)
+    if not recipe:
+        raise HTTPException(status_code=404, detail="Rezept nicht gefunden.")
+    return _parse_recipe(recipe)
 
 
 @router.post("/{chefkoch_id}/to-shopping")

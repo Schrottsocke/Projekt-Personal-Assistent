@@ -63,13 +63,7 @@ class TaskService:
             )
             session.add(task)
             session.flush()
-            result = {
-                "id": task.id,
-                "title": title,
-                "priority": priority,
-                "status": STATUS_OPEN,
-                "assigned_by": assigned_by,
-            }
+            result = self._task_to_dict(task)
         logger.info(f"Task #{result['id']} erstellt für '{user_key}': {title[:60]}")
         return result
 
@@ -129,6 +123,7 @@ class TaskService:
             due = task.due_date.replace(tzinfo=pytz.utc).astimezone(self.tz)
         return {
             "id": task.id,
+            "user_key": task.user_key,
             "title": task.title,
             "description": task.description or "",
             "priority": task.priority,
