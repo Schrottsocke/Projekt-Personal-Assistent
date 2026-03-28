@@ -310,6 +310,11 @@ def get_db():
     """Gibt einen Session-Factory-Context-Manager zurück."""
     if _SessionLocal is None:
         init_db()
+    if _SessionLocal is None:
+        raise RuntimeError(
+            "Datenbank konnte nicht initialisiert werden. "
+            "Prüfe DATABASE_URL in der Konfiguration."
+        )
     return _session_context
 
 
