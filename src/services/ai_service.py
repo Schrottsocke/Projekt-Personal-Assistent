@@ -119,10 +119,15 @@ class AIService:
         )
         return base_prompt + time_context
 
+    @property
+    def intelligence(self):
+        """Public Property für den Intelligence Service (lazy-init)."""
+        return self._get_intelligence_service()
+
     def _get_intelligence_service(self):
         """Lazy-init des Intelligence Service."""
         if self._intelligence is None:
-            from services.intelligence_service import IntelligenceService
+            from services.intelligence import IntelligenceService
 
             self._intelligence = IntelligenceService(self)
         return self._intelligence
@@ -130,7 +135,7 @@ class AIService:
     def _get_web_search_service(self):
         """Lazy-init des Web Search Service."""
         if self._web_search is None:
-            from services.web_search_service import WebSearchService
+            from services.web_search import WebSearchService
 
             self._web_search = WebSearchService(self)
         return self._web_search
