@@ -29,9 +29,7 @@ class TestTasksCRUD:
 
     def test_complete_task(self, client, auth_headers):
         # Erstellen
-        create_resp = client.post(
-            "/tasks", json={"title": "Abschließen"}, headers=auth_headers
-        )
+        create_resp = client.post("/tasks", json={"title": "Abschließen"}, headers=auth_headers)
         task_id = create_resp.json()["id"]
 
         # Abschließen
@@ -44,9 +42,7 @@ class TestTasksCRUD:
         assert resp.json()["status"] == "done"
 
     def test_delete_task(self, client, auth_headers):
-        create_resp = client.post(
-            "/tasks", json={"title": "Löschen"}, headers=auth_headers
-        )
+        create_resp = client.post("/tasks", json={"title": "Löschen"}, headers=auth_headers)
         task_id = create_resp.json()["id"]
 
         resp = client.delete(f"/tasks/{task_id}", headers=auth_headers)
