@@ -274,11 +274,28 @@ class AssistantScheduler:
                 now = datetime.now(tz)
                 current_minutes = now.hour * 60 + now.minute
 
-                quiet_h, quiet_m = (int(x) for x in profile.quiet_start.split(":"))
+                try:
+                    parts = profile.quiet_start.split(":")
+                    quiet_h, quiet_m = int(parts[0]), int(parts[1])
+                except (ValueError, IndexError):
+                    logger.warning(
+                        "Ungültiges quiet_start-Format: %r – Quiet Hours übersprungen",
+                        profile.quiet_start,
+                    )
+                    return False
+
                 quiet_start_min = quiet_h * 60 + quiet_m
 
                 quiet_end_str = profile.quiet_end or "07:00"
-                end_h, end_m = (int(x) for x in quiet_end_str.split(":"))
+                try:
+                    parts = quiet_end_str.split(":")
+                    end_h, end_m = int(parts[0]), int(parts[1])
+                except (ValueError, IndexError):
+                    logger.warning(
+                        "Ungültiges quiet_end-Format: %r – Quiet Hours übersprungen",
+                        quiet_end_str,
+                    )
+                    return False
                 quiet_end_min = end_h * 60 + end_m
 
                 if quiet_start_min > quiet_end_min:
