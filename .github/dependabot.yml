@@ -10,3 +10,15 @@ updates:
       prefix: "fix(deps)"
     labels:
       - "P2-medium"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "fix(ci)"
+    labels:
+      - "P2-medium"
+      - "area/ci"

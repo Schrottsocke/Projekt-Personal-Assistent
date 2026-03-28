@@ -1,0 +1,23 @@
+# Default owner
+* @schrottsocke
+
+# Bot
+/src/ @schrottsocke
+/main.py @schrottsocke
+
+# API
+/api/ @schrottsocke
+
+# App
+/app/ @schrottsocke
+
+# CI & Automation
+/.github/ @schrottsocke
+
+# Config
+/config/ @schrottsocke
+
+# Deploy
+/deploy/ @schrottsocke
+/Dockerfile @schrottsocke
+/docker-compose.yml @schrottsocke
