@@ -2,12 +2,16 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.dependencies import get_current_user, get_task_service
 from api.schemas.task import TaskCreate, TaskOut, TaskStatusUpdate
+from config.settings import settings
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("", response_model=list[TaskOut])
@@ -22,7 +26,9 @@ async def list_tasks(
 
 
 @router.post("", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def create_task(
+    request: Request,
     body: TaskCreate,
     user_key: Annotated[str, Depends(get_current_user)],
     task_svc=Depends(get_task_service),
@@ -37,7 +43,9 @@ async def create_task(
 
 
 @router.patch("/{task_id}", response_model=TaskOut)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def update_task(
+    request: Request,
     task_id: int,
     body: TaskStatusUpdate,
     user_key: Annotated[str, Depends(get_current_user)],
@@ -62,7 +70,9 @@ async def update_task(
 
 
 @router.delete("/{task_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def delete_task(
+    request: Request,
     task_id: int,
     user_key: Annotated[str, Depends(get_current_user)],
     task_svc=Depends(get_task_service),

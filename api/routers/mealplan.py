@@ -2,12 +2,16 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.dependencies import get_current_user
 from api.schemas.mealplan import MealPlanCreate, MealPlanOut
+from config.settings import settings
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/week", response_model=list[MealPlanOut])
@@ -46,7 +50,9 @@ async def get_week(
 
 
 @router.post("", response_model=MealPlanOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def add_meal(
+    request: Request,
     body: MealPlanCreate,
     user_key: Annotated[str, Depends(get_current_user)],
 ):
@@ -61,7 +67,9 @@ async def add_meal(
 
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def delete_meal(
+    request: Request,
     entry_id: int,
     user_key: Annotated[str, Depends(get_current_user)],
 ):

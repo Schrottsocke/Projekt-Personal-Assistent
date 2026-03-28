@@ -2,12 +2,16 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.dependencies import get_current_user, get_calendar_service
 from api.schemas.calendar import CalendarEventCreate
+from config.settings import settings
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 def _to_out(event: dict) -> dict:
@@ -45,7 +49,9 @@ async def calendar_week(
 
 
 @router.post("/events")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def create_event(
+    request: Request,
     body: CalendarEventCreate,
     user_key: Annotated[str, Depends(get_current_user)],
     cal_svc=Depends(get_calendar_service),

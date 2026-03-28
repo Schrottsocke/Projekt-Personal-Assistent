@@ -106,7 +106,12 @@ class Settings:
     RATE_LIMIT_LOGIN: str = os.getenv("RATE_LIMIT_LOGIN", "5/minute")
     RATE_LIMIT_CHAT: str = os.getenv("RATE_LIMIT_CHAT", "30/minute")
     RATE_LIMIT_DEFAULT: str = os.getenv("RATE_LIMIT_DEFAULT", "60/minute")
+    RATE_LIMIT_UPLOAD: str = os.getenv("RATE_LIMIT_UPLOAD", "10/minute")
+    RATE_LIMIT_WRITE: str = os.getenv("RATE_LIMIT_WRITE", "30/minute")
     API_TOKEN_EXPIRE_DAYS: int = int(os.getenv("API_TOKEN_EXPIRE_DAYS", "30"))
+
+    # Upload-Limits
+    MAX_UPLOAD_SIZE: int = int(os.getenv("MAX_UPLOAD_SIZE", str(50 * 1024 * 1024)))  # 50MB
 
     # Webhook Deployer
     WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
