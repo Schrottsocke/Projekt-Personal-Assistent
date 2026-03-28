@@ -7,7 +7,6 @@ import logging
 import logging.handlers
 import signal
 import sys
-import uuid
 from pathlib import Path
 
 import structlog
