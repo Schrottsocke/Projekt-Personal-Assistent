@@ -3,7 +3,9 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.dependencies import (
     get_current_user,
@@ -11,9 +13,11 @@ from api.dependencies import (
     get_shopping_service,
 )
 from api.schemas.recipe import SavedRecipeCreate, SavedRecipeOut, ToShoppingRequest
+from config.settings import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+limiter = Limiter(key_func=get_remote_address)
 
 CHEFKOCH_BASE = "https://www.chefkoch.de/rezepte"
 
@@ -87,7 +91,9 @@ async def list_saved(
 
 
 @router.post("/saved", response_model=SavedRecipeOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def save_recipe(
+    request: Request,
     body: SavedRecipeCreate,
     user_key: Annotated[str, Depends(get_current_user)],
 ):
@@ -102,7 +108,9 @@ async def save_recipe(
 
 
 @router.patch("/saved/{recipe_id}/favorite")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def toggle_favorite(
+    request: Request,
     recipe_id: int,
     user_key: Annotated[str, Depends(get_current_user)],
 ):
@@ -117,7 +125,9 @@ async def toggle_favorite(
 
 
 @router.delete("/saved/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def delete_saved(
+    request: Request,
     recipe_id: int,
     user_key: Annotated[str, Depends(get_current_user)],
 ):
@@ -131,7 +141,9 @@ async def delete_saved(
 
 
 @router.post("/{chefkoch_id}/to-shopping")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def recipe_to_shopping(
+    request: Request,
     chefkoch_id: str,
     body: ToShoppingRequest,
     user_key: Annotated[str, Depends(get_current_user)],

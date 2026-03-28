@@ -2,7 +2,9 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.dependencies import (
     get_current_user,
@@ -10,8 +12,10 @@ from api.dependencies import (
     get_chefkoch_service,
 )
 from api.schemas.shopping import ShoppingItemCreate, ShoppingItemOut, ShoppingItemUpdate
+from config.settings import settings
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/items", response_model=list[ShoppingItemOut])
@@ -24,7 +28,9 @@ async def get_items(
 
 
 @router.post("/items", response_model=ShoppingItemOut, status_code=status.HTTP_201_CREATED)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def add_item(
+    request: Request,
     body: ShoppingItemCreate,
     user_key: Annotated[str, Depends(get_current_user)],
     shopping_svc=Depends(get_shopping_service),
@@ -40,7 +46,9 @@ async def add_item(
 
 
 @router.patch("/items/{item_id}", response_model=ShoppingItemOut)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def update_item(
+    request: Request,
     item_id: int,
     body: ShoppingItemUpdate,
     user_key: Annotated[str, Depends(get_current_user)],
@@ -58,7 +66,9 @@ async def update_item(
 
 
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def delete_item(
+    request: Request,
     item_id: int,
     user_key: Annotated[str, Depends(get_current_user)],
     shopping_svc=Depends(get_shopping_service),
@@ -69,7 +79,9 @@ async def delete_item(
 
 
 @router.delete("/items/checked", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def clear_checked(
+    request: Request,
     user_key: Annotated[str, Depends(get_current_user)],
     shopping_svc=Depends(get_shopping_service),
 ):
@@ -77,7 +89,9 @@ async def clear_checked(
 
 
 @router.post("/from-recipe/{chefkoch_id}")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
 async def add_from_recipe(
+    request: Request,
     chefkoch_id: str,
     user_key: Annotated[str, Depends(get_current_user)],
     shopping_svc=Depends(get_shopping_service),
