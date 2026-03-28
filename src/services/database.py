@@ -311,10 +311,7 @@ def get_db():
     if _SessionLocal is None:
         init_db()
     if _SessionLocal is None:
-        raise RuntimeError(
-            "Datenbank konnte nicht initialisiert werden. "
-            "Prüfe DATABASE_URL in der Konfiguration."
-        )
+        raise RuntimeError("Datenbank konnte nicht initialisiert werden. Prüfe DATABASE_URL in der Konfiguration.")
     return _session_context
 
 
