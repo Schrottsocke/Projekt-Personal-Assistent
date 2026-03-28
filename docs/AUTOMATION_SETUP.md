@@ -170,3 +170,29 @@ Dies muss nur einmal ausgeführt werden. Danach werden Labels bei Änderungen an
 
 - Prüfe ob der Workflow unter Actions → Triage Report aktiv ist
 - Manuell triggern: Actions → Triage Report → Run workflow
+
+## 7. Autopilot-Schicht
+
+Die Autopilot-Schicht erkennt Handlungsbedarf autonom und erstellt GitHub Issues.
+Sie fuehrt keine Produktcode-Aenderungen durch.
+
+| Workflow | Trigger | Zweck |
+|----------|---------|-------|
+| `autopilot-review.yml` | Taeglich 07:00 UTC + manuell | Taegliches Dashboard: CI, P0/P1, PRs, Labels, Memory |
+| `autopilot-issue-sync.yml` | Freitag 08:00 UTC + manuell | Issues erstellen/schliessen bei klaren Befunden |
+| `autopilot-reminders.yml` | Montag 07:30 UTC + manuell | P0-Reminder, needs-review Labels |
+
+Alle Autopilot-Issues tragen das Label `autopilot`.
+
+### Einrichtung
+
+1. Label-Sync Workflow ausfuehren (erstellt `autopilot` Label)
+2. Keine zusaetzlichen Secrets noetig
+
+### Test
+
+1. `autopilot-review.yml` mit `dry_run: true` manuell ausfuehren
+2. `autopilot-issue-sync.yml` mit `dry_run: true` manuell ausfuehren
+3. In Claude Code Session: `/autopilot-status` ausfuehren
+
+Details: siehe `docs/autopilot-policy.md`

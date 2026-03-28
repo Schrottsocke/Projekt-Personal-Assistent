@@ -1,0 +1,291 @@
+name: Autopilot Issue Sync
+
+on:
+  schedule:
+    - cron: '0 8 * * 5'  # Freitag 08:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Nur ausgeben, keine Issues erstellen/updaten'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  actions: read
+
+jobs:
+  issue-sync:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure autopilot label exists
+        run: gh label create autopilot --repo "$REPO" --description "Automatisch von Autopilot-Workflows erstellt" --color "1D76DB" || true
+
+      - name: Collect findings
+        id: findings
+        run: |
+          set -euo pipefail
+          TODAY=$(date -u +%Y-%m-%d)
+          FOURTEEN_DAYS_AGO=$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          # --- CI Failures ---
+          RUNS_JSON=$(gh run list --repo "$REPO" --limit 30 \
+            --json conclusion,name || echo '[]')
+          CI_FAILURES=$(echo "$RUNS_JSON" | jq '[.[] | select(.conclusion == "failure")] | length')
+          CI_SUMMARY=$(echo "$RUNS_JSON" | jq -r '
+            [.[] | select(.conclusion == "failure")]
+            | group_by(.name)
+            | .[]
+            | "- **\(.[0].name)**: \(length)x fehlgeschlagen"
+          ')
+
+          # --- Stale PRs (>14 Tage) ---
+          PRS_JSON=$(gh pr list --repo "$REPO" --state open \
+            --json number,title,updatedAt || echo '[]')
+          STALE_PRS=$(echo "$PRS_JSON" | jq --arg cutoff "$FOURTEEN_DAYS_AGO" \
+            '[.[] | select(.updatedAt < $cutoff)] | length')
+          STALE_LIST=$(echo "$PRS_JSON" | jq -r --arg cutoff "$FOURTEEN_DAYS_AGO" '
+            [.[] | select(.updatedAt < $cutoff)]
+            | .[:10]
+            | .[]
+            | "- #\(.number) \(.title) (letzte Aktivitaet: \(.updatedAt[:10]))"
+          ')
+
+          # --- Unlabeled Issues ---
+          UNLABELED=$(gh issue list --repo "$REPO" --state open \
+            --json number,title,labels \
+            --jq '[.[] | select(.labels | length == 0)] | length')
+          UNLABELED_LIST=$(gh issue list --repo "$REPO" --state open \
+            --json number,title,labels \
+            --jq '[.[] | select(.labels | length == 0)] | .[:10] | .[] | "- #\(.number) \(.title)"')
+
+          # --- Memory Review ---
+          MEMORY_DUE="false"
+          MEMORY_FILES=""
+          for f in memory/automation.md memory/debugging.md memory/app.md memory/handoffs.md; do
+            if [ -f "$f" ]; then
+              REVIEW_DATE=$(grep -oP 'Review bis:\s*\K\d{4}-\d{2}-\d{2}' "$f" || echo "")
+              if [ -n "$REVIEW_DATE" ] && [[ "$TODAY" > "$REVIEW_DATE" || "$TODAY" == "$REVIEW_DATE" ]]; then
+                MEMORY_DUE="true"
+                MEMORY_FILES="${MEMORY_FILES}- \`${f}\` (faellig seit ${REVIEW_DATE})\n"
+              fi
+            fi
+          done
+
+          {
+            echo "ci_failures=$CI_FAILURES"
+            echo "stale_prs=$STALE_PRS"
+            echo "unlabeled=$UNLABELED"
+            echo "memory_due=$MEMORY_DUE"
+            echo "today=$TODAY"
+          } >> "$GITHUB_OUTPUT"
+
+          # Speichere Details fuer spaetere Steps
+          echo "$CI_SUMMARY" > /tmp/ci_summary.txt
+          echo "$STALE_LIST" > /tmp/stale_list.txt
+          echo "$UNLABELED_LIST" > /tmp/unlabeled_list.txt
+          printf '%b' "$MEMORY_FILES" > /tmp/memory_files.txt
+
+      - name: Sync CI-Failures Issue
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          CI_FAILURES="${{ steps.findings.outputs.ci_failures }}"
+          TODAY="${{ steps.findings.outputs.today }}"
+          TITLE="[Autopilot] CI-Failures beheben"
+
+          EXISTING=$(gh issue list --repo "$REPO" --state open \
+            --label autopilot --json number,title \
+            --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")
+
+          if [ "$CI_FAILURES" -gt 3 ]; then
+            BODY=$(cat << EOF
+          ## CI-Failures erkannt – ${TODAY}
+
+          **${CI_FAILURES} fehlgeschlagene Runs** in den letzten 30 Workflow-Runs.
+
+          $(cat /tmp/ci_summary.txt)
+
+          ### Empfehlung
+          Workflow-Logs pruefen und Failures beheben.
+
+          ---
+          _Erstellt von [autopilot-issue-sync](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_
+          EOF
+          )
+
+            if [ -n "$EXISTING" ]; then
+              gh issue comment "$EXISTING" --repo "$REPO" --body "$BODY"
+              echo "Updated CI-Failures issue #${EXISTING}"
+            else
+              gh issue create --repo "$REPO" \
+                --title "$TITLE" \
+                --body "$BODY" \
+                --label autopilot --label area/ci --label task
+              echo "Created CI-Failures issue"
+            fi
+          elif [ -n "$EXISTING" ] && [ "$CI_FAILURES" -le 3 ]; then
+            gh issue close "$EXISTING" --repo "$REPO" \
+              --comment "CI-Failures auf ${CI_FAILURES} gesunken (Schwelle: >3). Issue wird automatisch geschlossen."
+            echo "Closed resolved CI-Failures issue #${EXISTING}"
+          fi
+
+      - name: Sync Stale PRs Issue
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          STALE_PRS="${{ steps.findings.outputs.stale_prs }}"
+          TODAY="${{ steps.findings.outputs.today }}"
+          TITLE="[Autopilot] Stale PRs reviewen"
+
+          EXISTING=$(gh issue list --repo "$REPO" --state open \
+            --label autopilot --json number,title \
+            --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")
+
+          if [ "$STALE_PRS" -gt 0 ]; then
+            BODY=$(cat << EOF
+          ## Stale PRs erkannt – ${TODAY}
+
+          **${STALE_PRS} PRs** ohne Aktivitaet seit >14 Tagen:
+
+          $(cat /tmp/stale_list.txt)
+
+          ### Empfehlung
+          PRs reviewen, mergen oder schliessen.
+
+          ---
+          _Erstellt von [autopilot-issue-sync](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_
+          EOF
+          )
+
+            if [ -n "$EXISTING" ]; then
+              gh issue comment "$EXISTING" --repo "$REPO" --body "$BODY"
+              echo "Updated Stale PRs issue #${EXISTING}"
+            else
+              gh issue create --repo "$REPO" \
+                --title "$TITLE" \
+                --body "$BODY" \
+                --label autopilot --label task
+              echo "Created Stale PRs issue"
+            fi
+          elif [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --repo "$REPO" \
+              --comment "Keine stale PRs (>14 Tage) mehr vorhanden. Issue wird automatisch geschlossen."
+            echo "Closed resolved Stale PRs issue #${EXISTING}"
+          fi
+
+      - name: Sync Unlabeled Issues Issue
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          UNLABELED="${{ steps.findings.outputs.unlabeled }}"
+          TODAY="${{ steps.findings.outputs.today }}"
+          TITLE="[Autopilot] Issues ohne Labels"
+
+          EXISTING=$(gh issue list --repo "$REPO" --state open \
+            --label autopilot --json number,title \
+            --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")
+
+          if [ "$UNLABELED" -gt 3 ]; then
+            BODY=$(cat << EOF
+          ## Issues ohne Labels – ${TODAY}
+
+          **${UNLABELED} Issues** ohne Labels:
+
+          $(cat /tmp/unlabeled_list.txt)
+
+          ### Empfehlung
+          Priority- und Area-Labels vergeben.
+
+          ---
+          _Erstellt von [autopilot-issue-sync](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_
+          EOF
+          )
+
+            if [ -n "$EXISTING" ]; then
+              gh issue comment "$EXISTING" --repo "$REPO" --body "$BODY"
+              echo "Updated Unlabeled Issues issue #${EXISTING}"
+            else
+              gh issue create --repo "$REPO" \
+                --title "$TITLE" \
+                --body "$BODY" \
+                --label autopilot --label task
+              echo "Created Unlabeled Issues issue"
+            fi
+          elif [ -n "$EXISTING" ] && [ "$UNLABELED" -le 3 ]; then
+            gh issue close "$EXISTING" --repo "$REPO" \
+              --comment "Unlabeled Issues auf ${UNLABELED} gesunken (Schwelle: >3). Issue wird automatisch geschlossen."
+            echo "Closed resolved Unlabeled Issues issue #${EXISTING}"
+          fi
+
+      - name: Sync Memory Review Issue
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          MEMORY_DUE="${{ steps.findings.outputs.memory_due }}"
+          TODAY="${{ steps.findings.outputs.today }}"
+          TITLE="[Autopilot] Memory-Review faellig"
+
+          EXISTING=$(gh issue list --repo "$REPO" --state open \
+            --label autopilot --json number,title \
+            --jq "[.[] | select(.title == \"$TITLE\")] | .[0].number // empty")
+
+          if [ "$MEMORY_DUE" = "true" ]; then
+            BODY=$(cat << EOF
+          ## Memory-Review faellig – ${TODAY}
+
+          Folgende Memory-Dateien haben ihr Review-Datum ueberschritten:
+
+          $(cat /tmp/memory_files.txt)
+
+          ### Empfehlung
+          In einer Claude Code Session \`/memory-review\` ausfuehren.
+
+          ---
+          _Erstellt von [autopilot-issue-sync](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_
+          EOF
+          )
+
+            if [ -n "$EXISTING" ]; then
+              gh issue comment "$EXISTING" --repo "$REPO" --body "$BODY"
+              echo "Updated Memory Review issue #${EXISTING}"
+            else
+              gh issue create --repo "$REPO" \
+                --title "$TITLE" \
+                --body "$BODY" \
+                --label autopilot --label area/docs --label task
+              echo "Created Memory Review issue"
+            fi
+          elif [ -n "$EXISTING" ]; then
+            gh issue close "$EXISTING" --repo "$REPO" \
+              --comment "Memory-Review wurde durchgefuehrt. Issue wird automatisch geschlossen."
+            echo "Closed resolved Memory Review issue #${EXISTING}"
+          fi
+
+      - name: Dry run output
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "=== DRY RUN – Autopilot Issue Sync ==="
+          echo ""
+          echo "CI-Failures: ${{ steps.findings.outputs.ci_failures }}"
+          echo "Stale PRs: ${{ steps.findings.outputs.stale_prs }}"
+          echo "Unlabeled: ${{ steps.findings.outputs.unlabeled }}"
+          echo "Memory due: ${{ steps.findings.outputs.memory_due }}"
+          echo ""
+          echo "--- CI Summary ---"
+          cat /tmp/ci_summary.txt
+          echo "--- Stale PRs ---"
+          cat /tmp/stale_list.txt
+          echo "--- Unlabeled ---"
+          cat /tmp/unlabeled_list.txt
+          echo "--- Memory ---"
+          cat /tmp/memory_files.txt
+          echo "=== Keine Issues erstellt/aktualisiert ==="
