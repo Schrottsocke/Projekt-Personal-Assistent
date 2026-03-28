@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Ensure autopilot label exists
+        if: ${{ !inputs.dry_run }}
         run: gh label create autopilot --repo "$REPO" --description "Automatisch von Autopilot-Workflows erstellt" --color "1D76DB" || true
 
       - name: Collect findings

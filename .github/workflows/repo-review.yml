@@ -27,6 +27,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Ensure repo-review label exists
+        if: ${{ !inputs.dry_run }}
         run: gh label create repo-review --repo "$REPO" --description "Auto-generierte Repo-Review Reports" --color "D4C5F9" || true
 
       - name: P0/P1 Urgency Check

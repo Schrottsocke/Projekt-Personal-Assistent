@@ -26,6 +26,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Ensure triage label exists
+        if: ${{ !inputs.dry_run }}
         run: gh label create triage --repo "$REPO" --description "Auto-generated triage reports" --color "0E8A16" || true
 
       - name: Collect triage data
