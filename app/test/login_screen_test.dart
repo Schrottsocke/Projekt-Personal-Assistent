@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:dualmind/screens/login_screen.dart';
 import 'package:dualmind/providers/auth_provider.dart';
@@ -28,12 +29,18 @@ class FakeAuthNotifier extends AsyncNotifier<String?> implements AuthNotifier {
 
 // ─── Helper: LoginScreen in Test-App wrappen ────────────────────────
 Widget createTestApp({required FakeAuthNotifier authNotifier}) {
+  final router = GoRouter(
+    routes: [
+      GoRoute(path: '/', builder: (_, __) => const LoginScreen()),
+      GoRoute(path: '/home', builder: (_, __) => const Scaffold(body: Text('Home'))),
+    ],
+  );
   return ProviderScope(
     overrides: [
       authProvider.overrideWith(() => authNotifier),
     ],
-    child: const MaterialApp(
-      home: LoginScreen(),
+    child: MaterialApp.router(
+      routerConfig: router,
     ),
   );
 }
