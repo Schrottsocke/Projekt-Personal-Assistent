@@ -10,8 +10,41 @@ permissions:
   contents: read
 
 jobs:
+  # ── Detect which areas changed ───────────────────────────────
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      python: ${{ steps.filter.outputs.python }}
+      docker: ${{ steps.filter.outputs.docker }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            python:
+              - 'main.py'
+              - 'src/**'
+              - 'api/**'
+              - 'config/**'
+              - 'tests/**'
+              - 'requirements*.txt'
+              - 'ruff.toml'
+              - 'pytest.ini'
+            docker:
+              - 'Dockerfile'
+              - 'docker-compose.yml'
+              - 'requirements*.txt'
+              - 'main.py'
+              - 'src/**'
+              - 'api/**'
+              - 'config/**'
+
+  # ── Python lint (only on Python changes) ─────────────────────
   lint:
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.python == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,16 +58,21 @@ jobs:
         run: ruff check --select S --exit-zero .
         continue-on-error: true
 
+  # ── Docker build (only on Docker/source changes) ─────────────
   docker:
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.docker == 'true'
     steps:
       - uses: actions/checkout@v4
       - name: Build Docker image
         run: docker build -t personal-assistant:ci .
 
+  # ── Python tests (only on Python changes) ────────────────────
   test:
     runs-on: ubuntu-latest
-    needs: lint
+    needs: [changes, lint]
+    if: needs.changes.outputs.python == 'true'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
