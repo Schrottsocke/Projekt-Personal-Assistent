@@ -41,15 +41,15 @@ Sie fuehrt **keine Produktcode-Aenderungen** durch.
 |----------|----------|---------|-------|
 | `autopilot-review.yml` | Taeglich 07:00 UTC | `workflow_dispatch` (dry_run) | Dashboard: CI, P0/P1, PRs, Labels, Memory |
 | `autopilot-issue-sync.yml` | Freitag 08:00 UTC | `workflow_dispatch` (dry_run) | Issues erstellen/schliessen bei klaren Befunden |
-| `autopilot-reminders.yml` | Montag 07:30 UTC | `workflow_dispatch` | P0-Reminder, needs-review Labels |
+| `autopilot-reminders.yml` | Montag 07:30 UTC | `workflow_dispatch` (dry_run) | P0-Reminder, needs-review Labels |
 
 ### Zusammenspiel mit bestehenden Workflows
 
-| Workflow | Schedule | Rolle |
-|----------|----------|-------|
-| `triage.yml` | Montag 08:00 UTC | Woechentlicher Issue/PR-Bericht |
-| `repo-review.yml` | Mittwoch 08:00 UTC | Woechentlicher Health-Check |
-| `stale.yml` | Taeglich 06:00 UTC | Stale-Markierung und Auto-Close |
+| Workflow | Schedule | Manuell | Rolle |
+|----------|----------|---------|-------|
+| `triage.yml` | Montag 08:00 UTC | `workflow_dispatch` (dry_run) | Woechentlicher Issue/PR-Bericht |
+| `repo-review.yml` | Mittwoch 08:00 UTC | `workflow_dispatch` (dry_run) | Woechentlicher Health-Check |
+| `stale.yml` | Taeglich 06:00 UTC | `workflow_dispatch` (dry_run) | Stale-Markierung und Auto-Close |
 
 Die Autopilot-Workflows **ergaenzen** die bestehenden Workflows:
 - `autopilot-review` liefert ein taegliches Dashboard (triage/repo-review sind woechentlich)
@@ -77,18 +77,39 @@ Die Autopilot-Workflows **ergaenzen** die bestehenden Workflows:
 
 ## Test-Anleitung
 
+### Dry-Run-Verhalten pro Workflow
+
+| Workflow | Bei `dry_run: true` | Unterdrueckt |
+|----------|---------------------|--------------|
+| `autopilot-review` | Report mit Score im Log | Issue erstellen/updaten, Label anlegen |
+| `autopilot-issue-sync` | Befunde + Schwellen im Log | Issues erstellen/schliessen, Label anlegen |
+| `autopilot-reminders` | Betroffene Issues/PRs + Aktionszaehler im Log | Kommentare schreiben, Labels setzen |
+| `repo-review` | Report im Log | Issue erstellen/updaten, Label anlegen |
+| `triage` | Report im Log | Issue erstellen/updaten, Label anlegen |
+| `stale` | Debug-Output (actions/stale) | Stale-Markierung, Auto-Close |
+
 ### Erster Test (Dry Run)
 
-1. **Label erstellen:** Label-Sync Workflow manuell ausfuehren
-2. **autopilot-review testen:**
-   - Actions → Autopilot Review → Run workflow → dry_run: true
-   - Output pruefen: Report sollte im Workflow-Log erscheinen
+1. **Label erstellen:** Label-Sync Workflow manuell ausfuehren (einmalig, kein dry_run noetig)
+2. **autopilot-review testen (empfohlener Einstieg):**
+   - GitHub UI: Actions → "Autopilot Review" → "Run workflow"
+   - Branch: `main`
+   - Input: `dry_run` Checkbox aktivieren
+   - Klick: "Run workflow"
+   - Erwartung: Step "Dry run output" zeigt Report mit Score und Metriken
+   - Pruefen: Kein neues Issue mit Label `autopilot`, kein Label angelegt
 3. **autopilot-issue-sync testen:**
-   - Actions → Autopilot Issue Sync → Run workflow → dry_run: true
-   - Output pruefen: Befunde und Schwellen im Log
+   - Actions → "Autopilot Issue Sync" → Run workflow → dry_run: true
+   - Erwartung: Befunde (CI-Failures, Stale PRs, Unlabeled, Memory) im Log
 4. **autopilot-reminders testen:**
-   - Actions → Autopilot Reminders → Run workflow
-   - Pruefen ob Labels/Kommentare korrekt gesetzt werden
+   - Actions → "Autopilot Reminders" → Run workflow → dry_run: true
+   - Erwartung: Betroffene Issues/PRs gelistet, Aktionszaehler, "UNTERDRUECKT (dry_run)"
+5. **stale testen:**
+   - Actions → "Stale Issues" → Run workflow → dry_run: true
+   - Erwartung: Debug-Output zeigt welche Issues/PRs markiert wuerden
+6. **repo-review und triage:**
+   - Jeweils mit dry_run: true testen
+   - Erwartung: Report im Log, kein Issue erstellt
 
 ### Produktiv-Test
 

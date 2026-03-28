@@ -77,16 +77,29 @@ jobs:
           ONE_DAY_AGO=$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ)
           THREE_DAYS_AGO=$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ)
 
-          echo "--- P0-Issues ohne Assignee (>24h) ---"
+          echo "--- Erkannt: P0-Issues ohne Assignee (>24h) ---"
+          P0_TARGETS=$(gh issue list --repo "$REPO" --state open --label P0-critical \
+            --json number,title,assignees,createdAt \
+            --jq "[.[] | select(.createdAt < \"$ONE_DAY_AGO\" and (.assignees | length == 0)) | \"#\(.number) \(.title)\"] | length" || echo "0")
           gh issue list --repo "$REPO" --state open --label P0-critical \
             --json number,title,assignees,createdAt \
-            --jq ".[] | select(.createdAt < \"$ONE_DAY_AGO\" and (.assignees | length == 0)) | \"#\(.number) \(.title)\"" || echo "(keine)"
+            --jq ".[] | select(.createdAt < \"$ONE_DAY_AGO\" and (.assignees | length == 0)) | \"  #\(.number) \(.title)\"" || true
+          echo "-> Wuerde Reminder-Kommentar schreiben auf: ${P0_TARGETS} Issue(s)"
+          echo "-> UNTERDRUECKT (dry_run)"
           echo ""
 
-          echo "--- PRs ohne Review (>3 Tage) ---"
+          echo "--- Erkannt: PRs ohne Review (>3 Tage) ---"
+          PR_TARGETS=$(gh pr list --repo "$REPO" --state open \
+            --json number,title,createdAt,reviewDecision,labels \
+            --jq "[.[] | select(.createdAt < \"$THREE_DAYS_AGO\" and (.reviewDecision == \"\" or .reviewDecision == null) and ([.labels[].name] | any(. == \"needs-review\") | not))] | length" || echo "0")
           gh pr list --repo "$REPO" --state open \
             --json number,title,createdAt,reviewDecision,labels \
-            --jq ".[] | select(.createdAt < \"$THREE_DAYS_AGO\" and (.reviewDecision == \"\" or .reviewDecision == null) and ([.labels[].name] | any(. == \"needs-review\") | not)) | \"#\(.number) \(.title)\"" || echo "(keine)"
+            --jq ".[] | select(.createdAt < \"$THREE_DAYS_AGO\" and (.reviewDecision == \"\" or .reviewDecision == null) and ([.labels[].name] | any(. == \"needs-review\") | not)) | \"  #\(.number) \(.title)\"" || true
+          echo "-> Wuerde Label 'needs-review' setzen auf: ${PR_TARGETS} PR(s)"
+          echo "-> UNTERDRUECKT (dry_run)"
           echo ""
 
-          echo "=== Keine Kommentare/Labels gesetzt ==="
+          echo "=== Zusammenfassung ==="
+          echo "Erkannte Aktionen: $((P0_TARGETS + PR_TARGETS))"
+          echo "Ausgefuehrte Aktionen: 0 (dry_run)"
+          echo "=== Keine Kommentare geschrieben, keine Labels gesetzt ==="
