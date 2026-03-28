@@ -1,5 +1,5 @@
 # Telegram
-python-telegram-bot[job-queue]==21.6
+python-telegram-bot[job-queue]==22.7
 
 # AI
 openai==1.54.0
