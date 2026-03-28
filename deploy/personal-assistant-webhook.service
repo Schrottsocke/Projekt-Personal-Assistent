@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=root
+User=assistant
 WorkingDirectory=/home/assistant/projekt-personal-assistent
 Environment=PATH=/home/assistant/projekt-personal-assistent/venv/bin:/usr/bin:/bin
 EnvironmentFile=/home/assistant/projekt-personal-assistent/.env
