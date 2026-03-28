@@ -1,0 +1,49 @@
+# Konfiguration für actions/labeler@v5
+# Labels werden automatisch basierend auf geänderten Dateien vergeben
+
+area/bot:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'src/**'
+          - 'main.py'
+
+area/api:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'api/**'
+
+area/app:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'app/**'
+
+area/deploy:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'deploy/**'
+          - 'Dockerfile'
+          - 'docker-compose.yml'
+
+area/ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '.github/**'
+
+area/config:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'config/**'
+          - '.env.example'
+          - 'ruff.toml'
+          - 'pytest.ini'
+
+area/tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'tests/**'
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**'

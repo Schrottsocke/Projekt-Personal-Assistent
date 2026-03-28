@@ -1,0 +1,78 @@
+# Priority
+- name: P0-critical
+  color: "B60205"
+  description: "System nicht nutzbar"
+- name: P1-high
+  color: "D93F0B"
+  description: "Wichtige Funktion beeinträchtigt"
+- name: P2-medium
+  color: "FBCA04"
+  description: "Störend, aber Workaround vorhanden"
+
+# Type
+- name: bug
+  color: "D73A4A"
+  description: "Fehler im bestehenden Verhalten"
+- name: enhancement
+  color: "A2EEEF"
+  description: "Neues Feature oder Verbesserung"
+- name: task
+  color: "0075CA"
+  description: "Allgemeine Aufgabe oder Wartung"
+- name: documentation
+  color: "0075CA"
+  description: "Dokumentationsänderungen"
+
+# Area
+- name: area/bot
+  color: "C5DEF5"
+  description: "Telegram Bot (src/, main.py)"
+- name: area/api
+  color: "C5DEF5"
+  description: "REST API (api/)"
+- name: area/app
+  color: "C5DEF5"
+  description: "Flutter App (app/)"
+- name: area/deploy
+  color: "C5DEF5"
+  description: "Deployment & Infrastruktur"
+- name: area/ci
+  color: "C5DEF5"
+  description: "CI/CD & GitHub Workflows"
+- name: area/config
+  color: "C5DEF5"
+  description: "Konfiguration"
+- name: area/tests
+  color: "C5DEF5"
+  description: "Tests"
+
+# Size (for PRs)
+- name: size/XS
+  color: "3CBF00"
+  description: "< 10 Zeilen geändert"
+- name: size/S
+  color: "5D9801"
+  description: "< 50 Zeilen geändert"
+- name: size/M
+  color: "7F7203"
+  description: "< 200 Zeilen geändert"
+- name: size/L
+  color: "A14C05"
+  description: "< 500 Zeilen geändert"
+- name: size/XL
+  color: "C32607"
+  description: "500+ Zeilen geändert"
+
+# Status
+- name: stale
+  color: "EDEDED"
+  description: "Inaktiv seit 60+ Tagen"
+- name: triage
+  color: "0E8A16"
+  description: "Auto-generierte Triage Reports"
+- name: blocked
+  color: "B60205"
+  description: "Blockiert durch externe Abhängigkeit"
+- name: needs-review
+  color: "FBCA04"
+  description: "Review erforderlich"

@@ -1,0 +1,56 @@
+name: Aufgabe
+description: Eine allgemeine Aufgabe oder Wartungsarbeit
+labels: ["task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Aufgabe erfassen – Refactoring, Doku, Tests, Infrastruktur etc.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorität
+      options:
+        - P2-medium
+        - P1-high
+        - P0-critical
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options:
+        - Bot (Telegram)
+        - API (REST/Auth)
+        - App (Flutter)
+        - Deploy/Infra
+        - Config
+        - Tests
+        - Dokumentation
+        - CI/CD
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Was soll gemacht werden?
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Akzeptanzkriterien
+      description: Wann ist die Aufgabe erledigt?
+      placeholder: |
+        - [ ] ...
+        - [ ] ...
+    validations:
+      required: false

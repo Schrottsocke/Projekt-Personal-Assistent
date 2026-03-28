@@ -1,0 +1,64 @@
+name: Feature Request
+description: Ein neues Feature oder eine Verbesserung vorschlagen
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke für den Vorschlag! Beschreibe bitte, was du dir wünschst.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorität
+      description: Wie wichtig ist dieses Feature?
+      options:
+        - P2-medium – Nice to have
+        - P1-high – Wichtig für den täglichen Einsatz
+        - P0-critical – Blockiert andere Arbeit
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      description: Welcher Teil des Systems ist betroffen?
+      options:
+        - Bot (Telegram)
+        - API (REST/Auth)
+        - App (Flutter)
+        - Deploy/Infra
+        - Config
+        - Sonstiges
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Was soll das Feature tun? Welches Problem löst es?
+      placeholder: |
+        **Problem:** ...
+        **Lösung:** ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternativen
+      description: Hast du alternative Lösungen in Betracht gezogen?
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Zusätzlicher Kontext
+      description: Screenshots, Mockups, Links
+    validations:
+      required: false
