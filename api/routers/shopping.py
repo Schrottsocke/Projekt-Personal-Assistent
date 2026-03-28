@@ -65,6 +65,16 @@ async def update_item(
     return item
 
 
+@router.delete("/items/checked", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def clear_checked(
+    request: Request,
+    user_key: Annotated[str, Depends(get_current_user)],
+    shopping_svc=Depends(get_shopping_service),
+):
+    await shopping_svc.clear_checked(user_key)
+
+
 @router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def delete_item(
@@ -76,16 +86,6 @@ async def delete_item(
     ok = await shopping_svc.remove_item(user_key, item_id)
     if not ok:
         raise HTTPException(status_code=404, detail="Item nicht gefunden.")
-
-
-@router.delete("/items/checked", status_code=status.HTTP_204_NO_CONTENT)
-@limiter.limit(settings.RATE_LIMIT_WRITE)
-async def clear_checked(
-    request: Request,
-    user_key: Annotated[str, Depends(get_current_user)],
-    shopping_svc=Depends(get_shopping_service),
-):
-    await shopping_svc.clear_checked(user_key)
 
 
 @router.post("/from-recipe/{chefkoch_id}")
