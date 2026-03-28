@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 import base64
+from email.utils import parseaddr
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -404,7 +405,9 @@ Wenn keine Aufgaben/Termine/Fristen gefunden, leere Listen verwenden."""
         for i, mail in enumerate(emails, 1):
             icon = "📧" if mail.get("is_unread") else "📨"
             subject = mail.get("subject", "(kein Betreff)")[:60]
-            sender = mail.get("from", "").split("<")[0].strip()[:30]
+            raw_from = mail.get("from", "")
+            name, addr = parseaddr(raw_from)
+            sender = (name or addr or "Unbekannt")[:30]
             snippet = mail.get("snippet", "")[:80]
             lines.append(f"{icon} *{i}. {subject}*\n   Von: {sender}\n   _{snippet}_\n")
 
