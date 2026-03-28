@@ -75,6 +75,11 @@
   color: "C32607"
   description: "500+ Zeilen geändert"
 
+# Autopilot
+- name: autopilot
+  color: "1D76DB"
+  description: "Automatisch von Autopilot-Workflows erstellt"
+
 # Status
 - name: stale
   color: "EDEDED"

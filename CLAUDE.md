@@ -197,6 +197,7 @@ Verfuegbare Claude Code Skills:
 - `/work-next` – Naechstes Issue nach Prioritaet bearbeiten (kompletter GitHub-Flow)
 - `/closeout` – Nach Issue-Abschluss: gleiche Session oder neue Session entscheiden
 - `/automation-check` – Automation-Gesundheitscheck: Workflows, Labels, Templates, Secrets
+- `/autopilot-status` – Status der Autopilot-Schicht: Workflows, Issues, Memory-Review
 - `/save-memory` – Erkenntnisse aus der Session in memory/ speichern
 - `/memory-review` – Memory-Dateien reviewen, kuerzen, archivieren
 

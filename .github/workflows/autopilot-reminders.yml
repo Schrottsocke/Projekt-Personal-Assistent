@@ -1,0 +1,60 @@
+name: Autopilot Reminders
+
+on:
+  schedule:
+    - cron: '30 7 * * 1'  # Montag 07:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  reminders:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Remind unassigned P0 issues
+        run: |
+          set -euo pipefail
+          ONE_DAY_AGO=$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          P0_JSON=$(gh issue list --repo "$REPO" --state open --label P0-critical \
+            --json number,title,assignees,createdAt || echo '[]')
+
+          echo "$P0_JSON" | jq -r --arg cutoff "$ONE_DAY_AGO" '
+            .[] | select(.createdAt < $cutoff and (.assignees | length == 0))
+            | .number
+          ' | while read -r ISSUE_NUM; do
+            if [ -n "$ISSUE_NUM" ]; then
+              gh issue comment "$ISSUE_NUM" --repo "$REPO" \
+                --body "**Autopilot-Reminder:** Dieses P0-critical Issue ist seit >24h offen und hat keinen Assignee. Bitte zeitnah zuweisen und bearbeiten."
+              echo "Reminded on P0 issue #${ISSUE_NUM}"
+            fi
+          done
+
+      - name: Label PRs without review
+        run: |
+          set -euo pipefail
+          THREE_DAYS_AGO=$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          PRS_JSON=$(gh pr list --repo "$REPO" --state open \
+            --json number,createdAt,reviewDecision,labels || echo '[]')
+
+          echo "$PRS_JSON" | jq -r --arg cutoff "$THREE_DAYS_AGO" '
+            .[]
+            | select(
+                .createdAt < $cutoff
+                and (.reviewDecision == "" or .reviewDecision == null)
+                and ([.labels[].name] | any(. == "needs-review") | not)
+              )
+            | .number
+          ' | while read -r PR_NUM; do
+            if [ -n "$PR_NUM" ]; then
+              gh pr edit "$PR_NUM" --repo "$REPO" --add-label "needs-review"
+              echo "Added needs-review label to PR #${PR_NUM}"
+            fi
+          done

@@ -1,0 +1,333 @@
+name: Autopilot Review
+
+on:
+  schedule:
+    - cron: '0 7 * * *'  # Taeglich 07:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Nur ausgeben, kein Issue erstellen/updaten'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  actions: read
+
+jobs:
+  autopilot-review:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure autopilot label exists
+        run: gh label create autopilot --repo "$REPO" --description "Automatisch von Autopilot-Workflows erstellt" --color "1D76DB" || true
+
+      - name: CI Health Check
+        id: ci_health
+        run: |
+          set -euo pipefail
+
+          RUNS_JSON=$(gh run list --repo "$REPO" --limit 30 \
+            --json status,conclusion,name,createdAt,headBranch || echo '[]')
+
+          FAILURE_COUNT=$(echo "$RUNS_JSON" | jq '[.[] | select(.conclusion == "failure")] | length')
+
+          FAILURE_SUMMARY=$(echo "$RUNS_JSON" | jq -r '
+            [.[] | select(.conclusion == "failure")]
+            | group_by(.name)
+            | .[]
+            | "- **\(.[0].name)**: \(length)x fehlgeschlagen (zuletzt: \(.[0].createdAt[:10]), Branch: `\(.[0].headBranch)`)"
+          ')
+
+          echo "failure_count=$FAILURE_COUNT" >> "$GITHUB_OUTPUT"
+
+          cat > /tmp/ci_health.md << 'SECTION_EOF'
+          ### CI/Workflow Health
+          SECTION_EOF
+
+          if [ "$FAILURE_COUNT" -eq 0 ]; then
+            echo "_Keine Failures in den letzten 30 Runs._" >> /tmp/ci_health.md
+          else
+            echo "**${FAILURE_COUNT} fehlgeschlagene Runs** in den letzten 30 Workflow-Runs:" >> /tmp/ci_health.md
+            echo "" >> /tmp/ci_health.md
+            echo "$FAILURE_SUMMARY" >> /tmp/ci_health.md
+          fi
+
+      - name: P0/P1 Urgency Check
+        id: urgency
+        run: |
+          set -euo pipefail
+          THREE_DAYS_AGO=$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          FOURTEEN_DAYS_AGO=$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          P0_JSON=$(gh issue list --repo "$REPO" --state open --label P0-critical \
+            --json number,title,assignees,createdAt || echo '[]')
+          P0_COUNT=$(echo "$P0_JSON" | jq 'length')
+
+          P0_OVERDUE=$(echo "$P0_JSON" | jq --arg cutoff "$THREE_DAYS_AGO" \
+            '[.[] | select(.createdAt < $cutoff)] | length')
+
+          P1_JSON=$(gh issue list --repo "$REPO" --state open --label P1-high \
+            --json number,title,assignees,createdAt || echo '[]')
+          P1_COUNT=$(echo "$P1_JSON" | jq 'length')
+
+          P1_OVERDUE=$(echo "$P1_JSON" | jq --arg cutoff "$FOURTEEN_DAYS_AGO" \
+            '[.[] | select(.createdAt < $cutoff)] | length')
+
+          {
+            echo "p0_count=$P0_COUNT"
+            echo "p0_overdue=$P0_OVERDUE"
+            echo "p1_count=$P1_COUNT"
+            echo "p1_overdue=$P1_OVERDUE"
+          } >> "$GITHUB_OUTPUT"
+
+          cat > /tmp/urgency.md << 'SECTION_EOF'
+          ### Offene Prioritaets-Issues
+          SECTION_EOF
+
+          if [ "$P0_COUNT" -eq 0 ] && [ "$P1_COUNT" -eq 0 ]; then
+            echo "_Keine offenen P0/P1-Issues._" >> /tmp/urgency.md
+          else
+            if [ "$P0_COUNT" -gt 0 ]; then
+              echo "- **P0-critical:** ${P0_COUNT} offen" >> /tmp/urgency.md
+              if [ "$P0_OVERDUE" -gt 0 ]; then
+                echo "  - davon **${P0_OVERDUE} ueberfaellig** (>3 Tage)" >> /tmp/urgency.md
+              fi
+            fi
+            if [ "$P1_COUNT" -gt 0 ]; then
+              echo "- **P1-high:** ${P1_COUNT} offen" >> /tmp/urgency.md
+              if [ "$P1_OVERDUE" -gt 0 ]; then
+                echo "  - davon **${P1_OVERDUE} ueberfaellig** (>14 Tage)" >> /tmp/urgency.md
+              fi
+            fi
+          fi
+
+      - name: PR Health Check
+        id: pr_health
+        run: |
+          set -euo pipefail
+          SEVEN_DAYS_AGO=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          PRS_JSON=$(gh pr list --repo "$REPO" --state open \
+            --json number,title,updatedAt,reviewDecision,author || echo '[]')
+
+          STALE_PRS=$(echo "$PRS_JSON" | jq --arg cutoff "$SEVEN_DAYS_AGO" \
+            '[.[] | select(.updatedAt < $cutoff)] | length')
+
+          NO_REVIEW=$(echo "$PRS_JSON" | jq \
+            '[.[] | select(.reviewDecision == "" or .reviewDecision == null)] | length')
+
+          STALE_LIST=$(echo "$PRS_JSON" | jq -r --arg cutoff "$SEVEN_DAYS_AGO" '
+            [.[] | select(.updatedAt < $cutoff)]
+            | .[:10]
+            | .[]
+            | "- #\(.number) \(.title) (letzte Aktivitaet: \(.updatedAt[:10]))"
+          ')
+
+          {
+            echo "stale_prs=$STALE_PRS"
+            echo "no_review=$NO_REVIEW"
+          } >> "$GITHUB_OUTPUT"
+
+          cat > /tmp/pr_health.md << 'SECTION_EOF'
+          ### PR-Status
+          SECTION_EOF
+
+          if [ "$STALE_PRS" -eq 0 ] && [ "$NO_REVIEW" -eq 0 ]; then
+            echo "_Alle PRs aktiv und reviewed._" >> /tmp/pr_health.md
+          else
+            if [ "$STALE_PRS" -gt 0 ]; then
+              echo "**${STALE_PRS} PRs ohne Aktivitaet (>7 Tage):**" >> /tmp/pr_health.md
+              echo "$STALE_LIST" >> /tmp/pr_health.md
+              echo "" >> /tmp/pr_health.md
+            fi
+            if [ "$NO_REVIEW" -gt 0 ]; then
+              echo "**${NO_REVIEW} PRs ohne Review**" >> /tmp/pr_health.md
+            fi
+          fi
+
+      - name: Issue Hygiene Check
+        id: issue_hygiene
+        run: |
+          set -euo pipefail
+
+          UNLABELED=$(gh issue list --repo "$REPO" --state open \
+            --json number,title,labels \
+            --jq '[.[] | select(.labels | length == 0)] | length')
+
+          NO_AREA=$(gh issue list --repo "$REPO" --state open \
+            --json number,title,labels \
+            --jq '[.[] | select([.labels[].name] | any(startswith("area/")) | not)] | length')
+
+          {
+            echo "unlabeled=$UNLABELED"
+            echo "no_area=$NO_AREA"
+          } >> "$GITHUB_OUTPUT"
+
+          cat > /tmp/issue_hygiene.md << 'SECTION_EOF'
+          ### Issue-Hygiene
+          SECTION_EOF
+
+          if [ "$UNLABELED" -eq 0 ] && [ "$NO_AREA" -eq 0 ]; then
+            echo "_Alle Issues korrekt gelabelt._" >> /tmp/issue_hygiene.md
+          else
+            if [ "$UNLABELED" -gt 0 ]; then
+              echo "- **${UNLABELED} Issues ohne Labels**" >> /tmp/issue_hygiene.md
+            fi
+            if [ "$NO_AREA" -gt 0 ]; then
+              echo "- **${NO_AREA} Issues ohne Area-Label**" >> /tmp/issue_hygiene.md
+            fi
+          fi
+
+      - name: Memory Review Check
+        id: memory_check
+        run: |
+          set -euo pipefail
+          TODAY=$(date -u +%Y-%m-%d)
+          MEMORY_DUE="false"
+
+          for f in memory/automation.md memory/debugging.md memory/app.md memory/handoffs.md; do
+            if [ -f "$f" ]; then
+              REVIEW_DATE=$(grep -oP 'Review bis:\s*\K\d{4}-\d{2}-\d{2}' "$f" || echo "")
+              if [ -n "$REVIEW_DATE" ] && [[ "$TODAY" > "$REVIEW_DATE" || "$TODAY" == "$REVIEW_DATE" ]]; then
+                MEMORY_DUE="true"
+                break
+              fi
+            fi
+          done
+
+          echo "memory_due=$MEMORY_DUE" >> "$GITHUB_OUTPUT"
+
+          cat > /tmp/memory.md << 'SECTION_EOF'
+          ### Memory-Review
+          SECTION_EOF
+
+          if [ "$MEMORY_DUE" = "true" ]; then
+            echo "**Memory-Review ist faellig.** Bitte \`/memory-review\` in einer Claude Code Session ausfuehren." >> /tmp/memory.md
+          else
+            echo "_Memory-Review noch nicht faellig._" >> /tmp/memory.md
+          fi
+
+      - name: Build report and score
+        id: report
+        run: |
+          set -euo pipefail
+          TODAY=$(date -u +%Y-%m-%d)
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+
+          P0="${{ steps.urgency.outputs.p0_count }}"
+          P0_OD="${{ steps.urgency.outputs.p0_overdue }}"
+          P1="${{ steps.urgency.outputs.p1_count }}"
+          P1_OD="${{ steps.urgency.outputs.p1_overdue }}"
+          FAILURES="${{ steps.ci_health.outputs.failure_count }}"
+          STALE="${{ steps.pr_health.outputs.stale_prs }}"
+          NO_REVIEW="${{ steps.pr_health.outputs.no_review }}"
+          UNLABELED="${{ steps.issue_hygiene.outputs.unlabeled }}"
+          NO_AREA="${{ steps.issue_hygiene.outputs.no_area }}"
+          MEMORY_DUE="${{ steps.memory_check.outputs.memory_due }}"
+
+          # Score berechnen
+          SCORE=0
+          SCORE=$((SCORE + P0 * 10))
+          SCORE=$((SCORE + P0_OD * 5))
+          SCORE=$((SCORE + P1 * 5))
+          SCORE=$((SCORE + P1_OD * 3))
+          SCORE=$((SCORE + FAILURES * 3))
+          SCORE=$((SCORE + STALE * 2))
+          SCORE=$((SCORE + NO_REVIEW * 2))
+          SCORE=$((SCORE + UNLABELED * 1))
+          SCORE=$((SCORE + NO_AREA * 1))
+          if [ "$MEMORY_DUE" = "true" ]; then SCORE=$((SCORE + 2)); fi
+
+          if [ "$SCORE" -eq 0 ]; then
+            STATUS="Alles sauber"
+          elif [ "$SCORE" -le 5 ]; then
+            STATUS="Leichte Aufmerksamkeit noetig"
+          elif [ "$SCORE" -le 15 ]; then
+            STATUS="Handlungsbedarf"
+          else
+            STATUS="Dringender Handlungsbedarf"
+          fi
+
+          cat > /tmp/autopilot-body.md << REPORT_EOF
+          ## Autopilot Review – ${TODAY}
+
+          **Status: ${STATUS}** (Score: ${SCORE})
+
+          | Metrik | Anzahl |
+          |--------|--------|
+          | P0-critical offen | ${P0} |
+          | P0 ueberfaellig (>3d) | ${P0_OD} |
+          | P1-high offen | ${P1} |
+          | P1 ueberfaellig (>14d) | ${P1_OD} |
+          | CI-Failures (letzte 30 Runs) | ${FAILURES} |
+          | PRs ohne Aktivitaet (>7d) | ${STALE} |
+          | PRs ohne Review | ${NO_REVIEW} |
+          | Issues ohne Labels | ${UNLABELED} |
+          | Issues ohne Area-Label | ${NO_AREA} |
+          | Memory-Review faellig | $(if [ "$MEMORY_DUE" = "true" ]; then echo "Ja"; else echo "Nein"; fi) |
+
+          REPORT_EOF
+
+          cat /tmp/urgency.md >> /tmp/autopilot-body.md
+          echo "" >> /tmp/autopilot-body.md
+          cat /tmp/ci_health.md >> /tmp/autopilot-body.md
+          echo "" >> /tmp/autopilot-body.md
+          cat /tmp/pr_health.md >> /tmp/autopilot-body.md
+          echo "" >> /tmp/autopilot-body.md
+          cat /tmp/issue_hygiene.md >> /tmp/autopilot-body.md
+          echo "" >> /tmp/autopilot-body.md
+          cat /tmp/memory.md >> /tmp/autopilot-body.md
+
+          # Empfehlungen
+          cat >> /tmp/autopilot-body.md << ACTIONS_EOF
+
+          ### Empfohlene Aktionen
+          $(if [ "$P0_OD" -gt 0 ]; then echo "- **P0-Issues ueberfaellig** – sofortige Bearbeitung erforderlich"; fi)
+          $(if [ "$P0" -gt 0 ] && [ "$P0_OD" -eq 0 ]; then echo "- **P0-Issues offen** – Fortschritt pruefen"; fi)
+          $(if [ "$FAILURES" -gt 3 ]; then echo "- **Viele CI-Failures** – Workflow-Logs pruefen und beheben"; fi)
+          $(if [ "$STALE" -gt 0 ]; then echo "- **Inaktive PRs** – reviewen, mergen oder schliessen"; fi)
+          $(if [ "$NO_REVIEW" -gt 0 ]; then echo "- **PRs ohne Review** – Review anfordern"; fi)
+          $(if [ "$UNLABELED" -gt 3 ]; then echo "- **Viele Issues ohne Labels** – Labels vergeben"; fi)
+          $(if [ "$MEMORY_DUE" = "true" ]; then echo "- **Memory-Review faellig** – \`/memory-review\` ausfuehren"; fi)
+          $(if [ "$SCORE" -eq 0 ]; then echo "- Alles sauber! Keine dringenden Aktionen noetig."; fi)
+
+          ---
+          _Generated by [autopilot-review workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_
+          ACTIONS_EOF
+
+      - name: Create or update autopilot issue
+        if: ${{ !inputs.dry_run }}
+        run: |
+          TODAY="${{ steps.report.outputs.today }}"
+          TITLE="[Autopilot] Daily Review ${TODAY}"
+
+          EXISTING=$(gh issue list --repo "$REPO" --state open \
+            --label autopilot --json number,title \
+            --jq '[.[] | select(.title | startswith("[Autopilot] Daily Review"))] | .[0].number // empty')
+
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$REPO" \
+              --body-file /tmp/autopilot-body.md
+            echo "Updated existing autopilot issue #${EXISTING}"
+          else
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --body-file /tmp/autopilot-body.md \
+              --label autopilot
+            echo "Created new autopilot review issue"
+          fi
+
+      - name: Dry run output
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "=== DRY RUN – Autopilot Review ==="
+          cat /tmp/autopilot-body.md
+          echo "=== Kein Issue erstellt/aktualisiert ==="
