@@ -30,14 +30,14 @@ Die Nummer steht in der URL: `https://github.com/users/Schrottsocke/projects/X` 
 
 | Feld | Typ | Werte |
 |------|-----|-------|
-| Status | Single Select | Backlog, Todo, In Progress, Review, Done |
+| Status | Single Select | Todo, In Progress, Done |
 | Priority | Single Select | P0-critical, P1-high, P2-medium |
 
 ### Project Built-in Automations
 
 Im Project unter **Settings → Workflows** aktivieren:
 
-- **Item added to project** → Status auf "Backlog" setzen
+- **Item added to project** → Status auf "Todo" setzen
 - **Item closed** → Status auf "Done" setzen
 - **Pull request merged** → Status auf "Done" setzen
 
@@ -85,7 +85,7 @@ Dies muss nur einmal ausgeführt werden. Danach werden Labels bei Änderungen an
 - [ ] `PROJECT_NUMBER` als Repository Variable gesetzt
 - [ ] `PROJECT_TOKEN` als Repository Secret gesetzt
 - [ ] Label-Sync Workflow einmalig ausgeführt
-- [ ] Project Built-in Automations aktiviert (Backlog/Done)
+- [ ] Project Built-in Automations aktiviert (Todo/Done)
 - [ ] Test: Neues Issue über Template erstellt → erscheint im Project Board
 
 ### Claude Code Skills
