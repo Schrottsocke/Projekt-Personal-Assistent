@@ -62,4 +62,5 @@ Thumbs.db
 *.orig
 
 # Claude Code
-.claude/
+.claude/*
+!.claude/skills/

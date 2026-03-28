@@ -178,6 +178,15 @@ Wenn du empfiehlst, die Session zu beenden:
 
 Nicht in derselben Antwort schon mit dem nächsten Issue beginnen.
 
+## Skills
+
+Verfuegbare Claude Code Skills:
+
+- `/triage` – Repo-Gesundheitscheck: Lint, Tests, offene Issues, neue Issues vorschlagen
+- `/new-issue` – Genau ein GitHub Issue erstellen oder als Entwurf ausgeben
+- `/work-next` – Naechstes Issue nach Prioritaet bearbeiten (kompletter GitHub-Flow)
+- `/closeout` – Nach Issue-Abschluss: gleiche Session oder neue Session entscheiden
+
 ## Ende
 
 Kurz melden:
