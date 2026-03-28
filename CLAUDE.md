@@ -25,6 +25,14 @@ Wichtig:
   - Beide exportieren `MemoryService` als Alias fuer Rueckwaertskompatibilitaet
 - `.env` enthält Secrets. Niemals committen oder ungefragt ändern.
 
+## Memory
+
+- `CLAUDE.md` – Regeln und Workflow (selten aendern)
+- `MEMORY.md` – Index fuer Gelerntes aus Sessions
+- `memory/` – thematische Erkenntnisse (Automation, Debugging, App, Handoffs)
+- `memory/` ist Dokumentation fuer Claude Code, NICHT der Python-Service (`src/memory/`)
+- Siehe `MEMORY.md` fuer Speicher-Kriterien und Wachstumsschutz
+
 ## Default
 
 Wenn die Session startet und kein klarer User-Auftrag vorliegt:
@@ -187,6 +195,8 @@ Verfuegbare Claude Code Skills:
 - `/work-next` – Naechstes Issue nach Prioritaet bearbeiten (kompletter GitHub-Flow)
 - `/closeout` – Nach Issue-Abschluss: gleiche Session oder neue Session entscheiden
 - `/automation-check` – Automation-Gesundheitscheck: Workflows, Labels, Templates, Secrets
+- `/save-memory` – Erkenntnisse aus der Session in memory/ speichern
+- `/memory-review` – Memory-Dateien reviewen, kuerzen, archivieren
 
 ## Ende
 
