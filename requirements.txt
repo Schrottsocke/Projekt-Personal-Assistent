@@ -13,7 +13,7 @@ google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.1
 
 # Scheduler
-APScheduler==3.10.4
+APScheduler==3.11.2
 
 # Database
 SQLAlchemy==2.0.36
