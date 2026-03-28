@@ -4,6 +4,12 @@ on:
   schedule:
     - cron: '30 7 * * 1'  # Montag 07:30 UTC
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Nur ausgeben, keine Kommentare/Labels setzen'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -18,6 +24,7 @@ jobs:
       REPO: ${{ github.repository }}
     steps:
       - name: Remind unassigned P0 issues
+        if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
           ONE_DAY_AGO=$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ)
@@ -37,6 +44,7 @@ jobs:
           done
 
       - name: Label PRs without review
+        if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
           THREE_DAYS_AGO=$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ)
@@ -58,3 +66,27 @@ jobs:
               echo "Added needs-review label to PR #${PR_NUM}"
             fi
           done
+
+      - name: Dry run output
+        if: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          echo "=== DRY RUN – Autopilot Reminders ==="
+          echo ""
+
+          ONE_DAY_AGO=$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ)
+          THREE_DAYS_AGO=$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          echo "--- P0-Issues ohne Assignee (>24h) ---"
+          gh issue list --repo "$REPO" --state open --label P0-critical \
+            --json number,title,assignees,createdAt \
+            --jq ".[] | select(.createdAt < \"$ONE_DAY_AGO\" and (.assignees | length == 0)) | \"#\(.number) \(.title)\"" || echo "(keine)"
+          echo ""
+
+          echo "--- PRs ohne Review (>3 Tage) ---"
+          gh pr list --repo "$REPO" --state open \
+            --json number,title,createdAt,reviewDecision,labels \
+            --jq ".[] | select(.createdAt < \"$THREE_DAYS_AGO\" and (.reviewDecision == \"\" or .reviewDecision == null) and ([.labels[].name] | any(. == \"needs-review\") | not)) | \"#\(.number) \(.title)\"" || echo "(keine)"
+          echo ""
+
+          echo "=== Keine Kommentare/Labels gesetzt ==="
