@@ -1,0 +1,90 @@
+name: Debugging / Incident
+description: Ein laufendes Problem oder einen Incident dokumentieren
+labels: ["incident"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Incident oder laufendes Debugging-Problem erfassen.
+        Ziel: schnelle Dokumentation, damit nichts verloren geht.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorität
+      description: Wie dringend ist das Problem?
+      options:
+        - P2-medium – Störend, aber Workaround vorhanden
+        - P1-high – Wichtige Funktion beeinträchtigt
+        - P0-critical – System nicht nutzbar
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Betroffener Bereich
+      description: Welcher Teil des Systems ist betroffen?
+      options:
+        - Bot (Telegram)
+        - API (REST/Auth)
+        - App (Flutter)
+        - Deploy/Infra
+        - Config
+        - Sonstiges
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Auswirkung
+      description: Wie viele Nutzer/Funktionen sind betroffen?
+      options:
+        - Einzelne Funktion
+        - Mehrere Funktionen
+        - Gesamtes System
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: symptoms
+    attributes:
+      label: Symptome
+      description: Was genau passiert? Fehlermeldungen, unerwartetes Verhalten?
+      placeholder: |
+        - Fehler: ...
+        - Beobachtung: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: timeline
+    attributes:
+      label: Zeitverlauf
+      description: Wann trat das Problem erstmals auf? Gibt es ein Muster?
+      placeholder: |
+        - Erstmals bemerkt: ...
+        - Häufigkeit: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / Fehlermeldungen
+      description: Relevante Log-Ausgaben oder Stack-Traces
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workaround
+      description: Gibt es einen temporären Workaround?
+    validations:
+      required: false

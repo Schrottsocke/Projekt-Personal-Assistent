@@ -1,0 +1,87 @@
+name: Qualität / Tests
+description: Test- oder Qualitätsverbesserung vorschlagen
+labels: ["quality"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Test-Coverage erhöhen, Linting verbessern oder andere Qualitätsmaßnahmen planen.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorität
+      options:
+        - P2-medium
+        - P1-high
+        - P0-critical
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options:
+        - Bot (Telegram)
+        - API (REST/Auth)
+        - App (Flutter)
+        - Deploy/Infra
+        - Config
+        - Tests
+        - CI/CD
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Art der Verbesserung
+      options:
+        - Neue Tests (Unit)
+        - Neue Tests (Integration)
+        - Test-Coverage erhöhen
+        - Linting / Formatierung
+        - Type Hints / Validation
+        - Error Handling
+        - Sonstiges
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Beschreibung
+      description: Was soll verbessert werden?
+      placeholder: |
+        - Modul/Datei: ...
+        - Aktuelle Coverage: ...
+        - Ziel: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Betroffene Dateien / Module
+      description: Welche Dateien oder Module sind betroffen?
+      placeholder: |
+        - tests/unit/...
+        - src/services/...
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Akzeptanzkriterien
+      description: Wann ist die Verbesserung abgeschlossen?
+      placeholder: |
+        - [ ] Coverage >= X%
+        - [ ] Keine neuen Lint-Fehler
+        - [ ] ...
+    validations:
+      required: false

@@ -59,7 +59,44 @@ Falls eigene Workflows den Project-Status ändern sollen (z.B. bei Branch-Erstel
 
 Dies ist optional und nur für fortgeschrittene Automation nötig. Die Built-in Workflows decken die meisten Fälle ab.
 
-## 2. Repository Secrets & Variables
+## 2. Issue-Templates & PR-Template
+
+### Issue-Templates
+
+Alle Templates liegen in `.github/ISSUE_TEMPLATE/` und erzwingen strukturierte Eingaben:
+
+| Template | Datei | Auto-Label | Pflichtfelder |
+|----------|-------|------------|---------------|
+| Bug Report | `bug_report.yml` | `bug` | Priorität, Bereich, Beschreibung |
+| Feature Request | `feature_request.yml` | `enhancement` | Priorität, Bereich, Beschreibung |
+| Aufgabe | `task.yml` | `task` | Priorität, Bereich, Beschreibung |
+| Debugging / Incident | `incident.yml` | `incident` | Priorität, Bereich, Auswirkung, Symptome |
+| Refactoring | `refactoring.yml` | `refactoring` | Priorität, Bereich, Umfang, Motivation |
+| Qualität / Tests | `quality.yml` | `quality` | Priorität, Bereich, Art, Beschreibung |
+
+Blank Issues sind deaktiviert (`config.yml`). Jedes Issue bekommt automatisch ein Typ-Label.
+
+### PR-Template
+
+Das PR-Template (`.github/PULL_REQUEST_TEMPLATE.md`) enthält Abschnitte für:
+
+- **Ziel / Problem** mit `Fixes #`-Referenz
+- **Betroffene Bereiche** als Checkbox-Liste
+- **Änderungen** (Kurzbeschreibung)
+- **Verifikation** (Lint, Tests, manuell)
+- **Risiken / Rollback**
+- **Checkliste** (main-Target, Secrets-Check)
+
+### Backlog-Hygiene (Stale-Workflow)
+
+Der Stale-Workflow (`stale.yml`) markiert Issues/PRs konservativ:
+
+- **60 Tage** ohne Aktivität → `stale`-Label + Erinnerungskommentar
+- **90 weitere Tage** (150 Tage gesamt) → automatisch geschlossen
+- **Ausgenommen:** `P0-critical`, `P1-high`, `blocked`
+- Nachrichten auf Deutsch, Wiedereröffnung jederzeit möglich
+
+## 3. Repository Secrets & Variables
 
 ### Variables (Settings → Secrets and variables → Actions → Variables)
 
@@ -85,7 +122,7 @@ Dies ist optional und nur für fortgeschrittene Automation nötig. Die Built-in 
 
 > **Hinweis:** `GITHUB_TOKEN` wird automatisch bereitgestellt und braucht nicht manuell konfiguriert zu werden. Es reicht für die meisten Workflows, aber nicht für Project-Board-Zugriff.
 
-## 3. Labels synchronisieren
+## 4. Labels synchronisieren
 
 Nach dem ersten Push dieses Branches:
 
@@ -95,7 +132,7 @@ Nach dem ersten Push dieses Branches:
 
 Dies muss nur einmal ausgeführt werden. Danach werden Labels bei Änderungen an `labels.yml` automatisch synchronisiert.
 
-## 4. Erste Nutzung
+## 5. Erste Nutzung
 
 ### Checkliste
 
@@ -116,7 +153,7 @@ Dies muss nur einmal ausgeführt werden. Danach werden Labels bei Änderungen an
 | `/closeout` | Nach Issue-Abschluss: gleiche/neue Session entscheiden |
 | `/automation-check` | Automation-Gesundheitscheck (Workflows, Labels, Secrets) |
 
-## 5. Troubleshooting
+## 6. Troubleshooting
 
 ### Auto-Add-to-Project funktioniert nicht
 
