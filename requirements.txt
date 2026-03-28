@@ -2,7 +2,7 @@
 python-telegram-bot[job-queue]==22.7
 
 # AI
-openai==1.54.0
+openai==2.30.0
 
 # Memory
 mem0ai==0.1.29
