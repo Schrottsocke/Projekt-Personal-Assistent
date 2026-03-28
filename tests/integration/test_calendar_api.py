@@ -19,9 +19,7 @@ class TestCalendar:
         cal_svc = deps._svc["calendar"]
         cal_svc.is_connected = MagicMock(return_value=True)
         cal_svc.get_todays_events = AsyncMock(
-            return_value=[
-                {"id": "e1", "summary": "Meeting", "start": "10:00", "end": "11:00"}
-            ]
+            return_value=[{"id": "e1", "summary": "Meeting", "start": "10:00", "end": "11:00"}]
         )
 
         resp = client.get("/calendar/today", headers=auth_headers)

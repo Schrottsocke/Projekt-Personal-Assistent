@@ -23,9 +23,7 @@ class TestShoppingCRUD:
         assert len(items) >= 2
 
     def test_check_item(self, client, auth_headers):
-        create = client.post(
-            "/shopping/items", json={"name": "Käse"}, headers=auth_headers
-        )
+        create = client.post("/shopping/items", json={"name": "Käse"}, headers=auth_headers)
         item_id = create.json()["id"]
 
         resp = client.patch(
@@ -37,9 +35,7 @@ class TestShoppingCRUD:
         assert resp.json()["checked"] is True
 
     def test_delete_item(self, client, auth_headers):
-        create = client.post(
-            "/shopping/items", json={"name": "Eier"}, headers=auth_headers
-        )
+        create = client.post("/shopping/items", json={"name": "Eier"}, headers=auth_headers)
         item_id = create.json()["id"]
 
         resp = client.delete(f"/shopping/items/{item_id}", headers=auth_headers)
@@ -51,9 +47,7 @@ class TestShoppingCRUD:
 
     def test_clear_checked(self, client, auth_headers):
         # Artikel hinzufügen und abhaken
-        create = client.post(
-            "/shopping/items", json={"name": "Tomate"}, headers=auth_headers
-        )
+        create = client.post("/shopping/items", json={"name": "Tomate"}, headers=auth_headers)
         item_id = create.json()["id"]
         client.patch(
             f"/shopping/items/{item_id}",

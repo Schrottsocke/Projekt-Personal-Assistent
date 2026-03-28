@@ -75,10 +75,7 @@ async def list_saved(
 
     with get_db()() as session:
         rows = session.query(SavedRecipe).filter_by(user_key=user_key).all()
-        result = [
-            {c.name: getattr(r, c.name) for c in r.__table__.columns}
-            for r in rows
-        ]
+        result = [{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows]
     return result
 
 

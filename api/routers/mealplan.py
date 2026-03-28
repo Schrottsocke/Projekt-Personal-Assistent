@@ -46,10 +46,7 @@ async def get_week(
             .order_by(MealPlanEntry.planned_date, MealPlanEntry.meal_type)
             .all()
         )
-        result = [
-            {c.name: getattr(r, c.name) for c in r.__table__.columns}
-            for r in rows
-        ]
+        result = [{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows]
     return result
 
 
