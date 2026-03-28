@@ -22,6 +22,15 @@
 - name: documentation
   color: "0075CA"
   description: "Dokumentationsänderungen"
+- name: incident
+  color: "E11D48"
+  description: "Debugging oder Incident-Analyse"
+- name: refactoring
+  color: "7C3AED"
+  description: "Code-Refactoring"
+- name: quality
+  color: "059669"
+  description: "Test- oder Qualitätsverbesserung"
 
 # Area
 - name: area/bot

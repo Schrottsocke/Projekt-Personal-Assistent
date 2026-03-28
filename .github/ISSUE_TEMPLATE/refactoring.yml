@@ -1,0 +1,92 @@
+name: Refactoring
+description: Code-Refactoring vorschlagen oder planen
+labels: ["refactoring"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Refactoring-Vorschlag erfassen.
+        Ziel: Code-Qualität verbessern ohne Funktionsänderung.
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorität
+      options:
+        - P2-medium
+        - P1-high
+        - P0-critical
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Bereich
+      options:
+        - Bot (Telegram)
+        - API (REST/Auth)
+        - App (Flutter)
+        - Deploy/Infra
+        - Config
+        - Tests
+        - CI/CD
+      default: 0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Umfang
+      description: Wie groß ist das Refactoring?
+      options:
+        - Klein – einzelne Datei/Funktion
+        - Mittel – mehrere Dateien im selben Modul
+        - Groß – modulübergreifend
+      default: 0
+    validations:
+      required: true
+
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Motivation
+      description: Warum ist dieses Refactoring nötig?
+      placeholder: |
+        - Aktuelles Problem: ...
+        - Gewünschter Zustand: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Betroffene Dateien / Module
+      description: Welche Dateien oder Module sind betroffen?
+      placeholder: |
+        - src/services/...
+        - api/routers/...
+    validations:
+      required: false
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risiken
+      description: Welche Risiken bestehen? Was könnte kaputtgehen?
+    validations:
+      required: false
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Akzeptanzkriterien
+      description: Wann ist das Refactoring erfolgreich?
+      placeholder: |
+        - [ ] Bestehende Tests laufen weiterhin
+        - [ ] Keine Funktionsänderung
+        - [ ] ...
+    validations:
+      required: false
