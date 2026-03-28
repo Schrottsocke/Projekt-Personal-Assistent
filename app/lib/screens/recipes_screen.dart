@@ -75,7 +75,19 @@ class _SearchTab extends ConsumerWidget {
         ),
         Expanded(child: results.when(
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Fehler: $e')),
+          error: (e, _) => Center(child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+              const SizedBox(height: 16),
+              const Text('Rezepte konnten nicht geladen werden'),
+              const SizedBox(height: 8),
+              FilledButton(
+                onPressed: () => ref.invalidate(recipeSearchProvider),
+                child: const Text('Erneut versuchen'),
+              ),
+            ],
+          )),
           data: (recipes) => recipes.isEmpty
               ? Center(child: Text(
                   ref.watch(recipeSearchQueryProvider).isEmpty ? 'Suchbegriff eingeben' : 'Keine Rezepte gefunden',
@@ -113,7 +125,19 @@ class _SavedTab extends ConsumerWidget {
     final saved = ref.watch(savedRecipesProvider);
     return saved.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Fehler: $e')),
+      error: (e, _) => Center(child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+          const SizedBox(height: 16),
+          const Text('Gespeicherte Rezepte konnten nicht geladen werden'),
+          const SizedBox(height: 8),
+          FilledButton(
+            onPressed: () => ref.invalidate(savedRecipesProvider),
+            child: const Text('Erneut versuchen'),
+          ),
+        ],
+      )),
       data: (recipes) => recipes.isEmpty
           ? const Center(child: Text('Noch keine gespeicherten Rezepte', style: TextStyle(color: Colors.grey)))
           : GridView.builder(
