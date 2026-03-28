@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "claude/**", "fix/**"]
   pull_request:
     branches: [main]
 
@@ -21,6 +21,16 @@ jobs:
       - run: pip install ruff
       - run: ruff check .
       - run: ruff format --check .
+      - name: Security lint (bandit rules via ruff)
+        run: ruff check --select S --exit-zero .
+        continue-on-error: true
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t personal-assistant:ci .
 
   test:
     runs-on: ubuntu-latest
