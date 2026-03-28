@@ -28,15 +28,45 @@ Identifiziere das naechste Issue nach Prioritaet (P0 → P1 → P2 → ohne Labe
 
 Wenn keine offenen Issues: melden und Session sauber beenden.
 
-### 3. Memory-Check
+### 3. Memory-Check (automatisch, inline)
 
-Pruefe kurz ob in dieser Session etwas memory-wuerdiges passiert ist:
-- Nicht-offensichtlicher Bug oder Workaround?
-- Wiederverwendbares Pattern entdeckt?
-- Offene Faeden fuer die naechste Session?
+Pruefe ob in dieser Session etwas memory-wuerdiges passiert ist.
+Dieser Schritt laeuft automatisch im Closeout – kein separater Prompt noetig.
 
-Wenn ja: `/save-memory` ausfuehren bevor die Session-Entscheidung getroffen wird.
-Wenn nein: weiter zu Schritt 4.
+**Prueffragen:**
+- Gab es einen nicht-offensichtlichen Bug oder Workaround?
+- Wurde ein wiederverwendbares Pattern oder eine Config-Erkenntnis entdeckt?
+- Gibt es offene Faeden fuer die naechste Session?
+
+**Wenn nichts speicherwuerdig:** `Memory: keine neuen Erkenntnisse` melden, weiter zu Schritt 4.
+
+**Wenn speicherwuerdig (max 0-3 Eintraege):**
+
+1. Lies die passende memory-Datei:
+   - CI/CD, Workflows, Labels, Deploy → `memory/automation.md`
+   - Bugs, Debug-Muster, Workarounds → `memory/debugging.md`
+   - Flutter, API-Integration, App → `memory/app.md`
+   - Offene Faeden, naechste Schritte → `memory/handoffs.md`
+
+2. Pruefe ob ein bestehender Eintrag dasselbe Thema betrifft:
+   - Ja → bestehenden Eintrag aktualisieren (ersetzen, nicht anhaengen)
+   - Nein → neuen Eintrag hinzufuegen
+
+3. Format: `- **Stichwort**: Erkenntnis (YYYY-MM-DD)`
+   - Maximal 2 Zeilen pro Eintrag
+   - Kein Chatverlauf, keine Session-Details, keine temporaeren Zustaende
+   - Nur was in einer zukuenftigen Session hilft
+
+4. Wachstum pruefen: Wenn Maximum erreicht (20, bzw. 5 bei handoffs),
+   aeltesten Eintrag nach `memory/archive/YYYY-MM-DD-thema.md` verschieben.
+
+5. `Zuletzt geprueft` auf heute setzen.
+
+**Nicht speichern wenn:**
+- Issue wurde normal abgearbeitet (kein besonderes Learning)
+- Info steht schon in `CLAUDE.md`, einem Skill oder einer memory-Datei
+- Es war ein einmaliger, bereits geloester Fehler
+- Es ist allgemeines Programmierwissen
 
 ### 4. Entscheidung treffen
 
@@ -65,6 +95,9 @@ Wenn EINER dieser Punkte zutrifft:
 
 ### Abgeschlossenes Issue
 - #XX: Titel – Status
+
+### Memory
+- [keine neuen Erkenntnisse | X Eintrag/Eintraege gespeichert in memory/datei.md]
 
 ### Naechstes Issue
 - #YY: Titel (Prioritaet)

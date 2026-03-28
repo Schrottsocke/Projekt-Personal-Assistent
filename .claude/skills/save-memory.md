@@ -62,7 +62,7 @@ Melde:
 
 ## Regeln
 
-- Nie mehr als 2 Eintraege pro Session speichern.
+- Nie mehr als 3 Eintraege pro Session speichern.
 - Im Zweifel nichts speichern.
 - Handoffs sind immer erlaubt (auch wenn sonst nichts gespeichert wird).
 - Keine Duplikate. Vor dem Schreiben bestehende Eintraege lesen.

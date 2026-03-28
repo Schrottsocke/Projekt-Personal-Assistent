@@ -52,7 +52,7 @@ Fuer Claude Code Sessions gedacht, nicht fuer Menschen.
 - `handoffs.md` wird aggressiv bereinigt: nur die letzten 5 Eintraege behalten.
 - Quartalsweise Review mit `/memory-review`.
 - Ziel: Gesamtumfang aller memory-Dateien unter 200 Zeilen.
-- Nie mehr als 2 neue Eintraege pro Session.
+- Nie mehr als 3 neue Eintraege pro Session.
 
 ## Eintragsformat
 

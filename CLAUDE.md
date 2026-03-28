@@ -32,6 +32,8 @@ Wichtig:
 - `memory/` – thematische Erkenntnisse (Automation, Debugging, App, Handoffs)
 - `memory/` ist Dokumentation fuer Claude Code, NICHT der Python-Service (`src/memory/`)
 - Siehe `MEMORY.md` fuer Speicher-Kriterien und Wachstumsschutz
+- `/closeout` fuehrt Memory-Check automatisch inline aus (kein Zusatzprompt noetig)
+- `/save-memory` nur fuer explizite Speicherung ausserhalb von Closeout
 
 ## Default
 
