@@ -61,7 +61,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           Expanded(child: state.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Fehler: $e')),
+            error: (e, _) => Center(child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.cloud_off, size: 48, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text('Daten konnten nicht geladen werden'),
+                const SizedBox(height: 8),
+                FilledButton(
+                  onPressed: () => ref.invalidate(chatProvider),
+                  child: const Text('Erneut versuchen'),
+                ),
+              ],
+            )),
             data: (messages) => messages.isEmpty
                 ? Center(
                     child: Column(

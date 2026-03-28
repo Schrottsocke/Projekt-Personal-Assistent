@@ -43,7 +43,7 @@ class HomeScreen extends ConsumerWidget {
             FilledButton(onPressed: () => ref.invalidate(dashboardProvider), child: const Text('Erneut versuchen')),
           ],
         )),
-        data: (data) => _buildContent(context, data),
+        data: (data) => _buildContent(context, ref, data),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.go('/chat'),
@@ -53,14 +53,14 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, Map<String, dynamic> data) {
+  Widget _buildContent(BuildContext context, WidgetRef ref, Map<String, dynamic> data) {
     final events = (data['events_today'] as List? ?? []).map((e) => CalendarEvent.fromJson(e as Map<String, dynamic>)).toList();
     final tasks = (data['open_tasks'] as List? ?? []);
     final shopping = data['shopping_preview'] as Map<String, dynamic>? ?? {};
     final unreadEmails = data['unread_emails'] as int? ?? 0;
 
     return RefreshIndicator(
-      onRefresh: () async {},
+      onRefresh: () async { ref.invalidate(dashboardProvider); },
       child: ListView(
         padding: const EdgeInsets.all(16),
         children: [

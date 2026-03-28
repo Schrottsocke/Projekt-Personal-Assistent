@@ -128,7 +128,7 @@ class _FeaturesSection extends ConsumerWidget {
     final state = ref.watch(featuresProvider);
     return state.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Text('Features nicht abrufbar: $e', style: const TextStyle(color: Colors.grey)),
+      error: (e, _) => const Text('Features nicht abrufbar', style: TextStyle(color: Colors.grey)),
       data: (features) => Column(
         children: features.map((feat) {
           final available = feat['available'] as bool? ?? false;

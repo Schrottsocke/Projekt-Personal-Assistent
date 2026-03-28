@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,7 +13,29 @@ import 'screens/chat_screen.dart';
 import 'screens/profile_screen.dart';
 
 void main() {
-  runApp(const ProviderScope(child: DualMindApp()));
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('FlutterError: ${details.exceptionAsString()}');
+  };
+
+  ErrorWidget.builder = (details) {
+    if (kReleaseMode) {
+      return const Center(
+        child: Text(
+          'Ein unerwarteter Fehler ist aufgetreten.',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+    return ErrorWidget(details.exception);
+  };
+
+  runZonedGuarded(
+    () => runApp(const ProviderScope(child: DualMindApp())),
+    (error, stack) {
+      debugPrint('Unhandled error: $error\n$stack');
+    },
+  );
 }
 
 class DualMindApp extends ConsumerWidget {
