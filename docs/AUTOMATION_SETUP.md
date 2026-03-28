@@ -10,6 +10,7 @@ Anleitung zur Einrichtung der GitHub-Automation für dieses Repository.
 | `auto-add-to-project.yml` | Issue/PR opened | Items automatisch ins GitHub Project einfügen |
 | `stale.yml` | Täglich 06:00 UTC | Inaktive Issues/PRs markieren und schließen |
 | `triage.yml` | Montags 08:00 UTC + manuell | Wöchentlicher Triage-Report als Issue |
+| `repo-review.yml` | Mittwochs 08:00 UTC + manuell | Urgency-Check: P0/P1, CI-Health, stale PRs |
 | `pr-labeler.yml` | PR opened/synchronize | Automatische Area- und Size-Labels für PRs |
 | `label-sync.yml` | Manuell + Push auf `labels.yml` | Standard-Labels synchronisieren |
 
@@ -37,9 +38,26 @@ Die Nummer steht in der URL: `https://github.com/users/Schrottsocke/projects/X` 
 
 Im Project unter **Settings → Workflows** aktivieren:
 
-- **Item added to project** → Status auf "Todo" setzen
-- **Item closed** → Status auf "Done" setzen
-- **Pull request merged** → Status auf "Done" setzen
+| Workflow | Trigger | Status-Feld setzen auf |
+|----------|---------|----------------------|
+| Item added to project | Item hinzugefügt | Todo |
+| Item closed | Issue/PR geschlossen | Done |
+| Pull request merged | PR gemergt | Done |
+| Code review approved | Review approved | Done |
+
+> **Hinweis:** Für "In Progress" gibt es keine automatische Built-in-Regel.
+> Empfehlung: Status manuell auf "In Progress" setzen, wenn die Arbeit beginnt.
+> Die `/work-next` Claude Skill setzt den Branch-Namen als Indikator.
+
+### Erweiterte Status-Automation (GraphQL API)
+
+Falls eigene Workflows den Project-Status ändern sollen (z.B. bei Branch-Erstellung automatisch "In Progress" setzen):
+
+- Erfordert `PROJECT_TOKEN` mit `project` Scope (bereits konfiguriert)
+- GraphQL-Mutation: `updateProjectV2ItemFieldValue`
+- Doku: https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/using-the-api-to-manage-projects
+
+Dies ist optional und nur für fortgeschrittene Automation nötig. Die Built-in Workflows decken die meisten Fälle ab.
 
 ## 2. Repository Secrets & Variables
 

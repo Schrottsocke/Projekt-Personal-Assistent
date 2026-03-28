@@ -1,0 +1,244 @@
+name: Repo Review
+
+on:
+  schedule:
+    - cron: '0 8 * * 3'  # Mittwoch 08:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Nur ausgeben, kein Issue erstellen/updaten'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+  actions: read
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure repo-review label exists
+        run: gh label create repo-review --repo "$REPO" --description "Auto-generierte Repo-Review Reports" --color "D4C5F9" || true
+
+      - name: P0/P1 Urgency Check
+        id: urgency
+        run: |
+          set -euo pipefail
+          THREE_DAYS_AGO=$(date -u -d '3 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          FOURTEEN_DAYS_AGO=$(date -u -d '14 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          # P0-critical issues
+          P0_JSON=$(gh issue list --repo "$REPO" --state open --label P0-critical \
+            --json number,title,assignees,createdAt,updatedAt || echo '[]')
+          P0_COUNT=$(echo "$P0_JSON" | jq 'length')
+
+          P0_DETAILS=$(echo "$P0_JSON" | jq -r --arg cutoff "$THREE_DAYS_AGO" '
+            .[] |
+            "- #\(.number) \(.title)\n  Assignee: \(if .assignees | length > 0 then [.assignees[].login] | join(", ") else "⚠️ _Niemand zugewiesen_" end)\n  Erstellt: \(.createdAt[:10])\(if .createdAt < $cutoff then " ⚠️ **Überfällig (>3 Tage)**" else "" end)"
+          ')
+
+          # P1-high issues
+          P1_JSON=$(gh issue list --repo "$REPO" --state open --label P1-high \
+            --json number,title,assignees,createdAt,updatedAt || echo '[]')
+          P1_COUNT=$(echo "$P1_JSON" | jq 'length')
+
+          P1_DETAILS=$(echo "$P1_JSON" | jq -r --arg cutoff "$FOURTEEN_DAYS_AGO" '
+            .[] |
+            "- #\(.number) \(.title)\n  Assignee: \(if .assignees | length > 0 then [.assignees[].login] | join(", ") else "⚠️ _Niemand zugewiesen_" end)\n  Erstellt: \(.createdAt[:10])\(if .createdAt < $cutoff then " ⚠️ **Überfällig (>14 Tage)**" else "" end)"
+          ')
+
+          {
+            echo "p0_count=$P0_COUNT"
+            echo "p1_count=$P1_COUNT"
+          } >> "$GITHUB_OUTPUT"
+
+          cat > /tmp/urgency.md << 'SECTION_EOF'
+          ### P0-critical Issues
+          SECTION_EOF
+
+          if [ "$P0_COUNT" -eq 0 ]; then
+            echo "_Keine offenen P0-Issues._" >> /tmp/urgency.md
+          else
+            echo "$P0_DETAILS" >> /tmp/urgency.md
+          fi
+
+          cat >> /tmp/urgency.md << 'SECTION_EOF'
+
+          ### P1-high Issues
+          SECTION_EOF
+
+          if [ "$P1_COUNT" -eq 0 ]; then
+            echo "_Keine offenen P1-Issues._" >> /tmp/urgency.md
+          else
+            echo "$P1_DETAILS" >> /tmp/urgency.md
+          fi
+
+      - name: CI/Workflow Health Check
+        id: ci_health
+        run: |
+          set -euo pipefail
+
+          RUNS_JSON=$(gh run list --repo "$REPO" --limit 20 \
+            --json status,conclusion,name,createdAt,headBranch || echo '[]')
+
+          FAILURE_COUNT=$(echo "$RUNS_JSON" | jq '[.[] | select(.conclusion == "failure")] | length')
+
+          FAILURE_SUMMARY=$(echo "$RUNS_JSON" | jq -r '
+            [.[] | select(.conclusion == "failure")]
+            | group_by(.name)
+            | .[]
+            | "- **\(.[0].name)**: \(length)x fehlgeschlagen (zuletzt: \(.[0].createdAt[:10]), Branch: `\(.[0].headBranch)`)"
+          ')
+
+          echo "failure_count=$FAILURE_COUNT" >> "$GITHUB_OUTPUT"
+
+          cat > /tmp/ci_health.md << 'SECTION_EOF'
+          ### CI/Workflow Health
+          SECTION_EOF
+
+          if [ "$FAILURE_COUNT" -eq 0 ]; then
+            echo "_Keine Failures in den letzten 20 Runs._" >> /tmp/ci_health.md
+          else
+            echo "**${FAILURE_COUNT} fehlgeschlagene Runs** in den letzten 20 Workflow-Runs:" >> /tmp/ci_health.md
+            echo "" >> /tmp/ci_health.md
+            echo "$FAILURE_SUMMARY" >> /tmp/ci_health.md
+          fi
+
+      - name: Stale PR Detection
+        id: stale_prs
+        run: |
+          set -euo pipefail
+          SEVEN_DAYS_AGO=$(date -u -d '7 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          PRS_JSON=$(gh pr list --repo "$REPO" --state open \
+            --json number,title,createdAt,updatedAt,reviewDecision,author || echo '[]')
+
+          # PRs older than 7 days
+          OLD_PRS=$(echo "$PRS_JSON" | jq -r --arg cutoff "$SEVEN_DAYS_AGO" '
+            [.[] | select(.updatedAt < $cutoff)]
+            | .[:10]
+            | .[]
+            | "- #\(.number) \(.title) (von @\(.author.login), letzte Aktivität: \(.updatedAt[:10]))"
+          ')
+          OLD_COUNT=$(echo "$PRS_JSON" | jq --arg cutoff "$SEVEN_DAYS_AGO" \
+            '[.[] | select(.updatedAt < $cutoff)] | length')
+
+          # PRs without review
+          NO_REVIEW=$(echo "$PRS_JSON" | jq -r '
+            [.[] | select(.reviewDecision == "" or .reviewDecision == null)]
+            | .[:10]
+            | .[]
+            | "- #\(.number) \(.title) (von @\(.author.login))"
+          ')
+          NO_REVIEW_COUNT=$(echo "$PRS_JSON" | jq \
+            '[.[] | select(.reviewDecision == "" or .reviewDecision == null)] | length')
+
+          {
+            echo "old_count=$OLD_COUNT"
+            echo "no_review_count=$NO_REVIEW_COUNT"
+          } >> "$GITHUB_OUTPUT"
+
+          cat > /tmp/stale_prs.md << 'SECTION_EOF'
+          ### PRs ohne Aktivität (>7 Tage)
+          SECTION_EOF
+
+          if [ "$OLD_COUNT" -eq 0 ]; then
+            echo "_Keine inaktiven PRs._" >> /tmp/stale_prs.md
+          else
+            echo "$OLD_PRS" >> /tmp/stale_prs.md
+          fi
+
+          cat >> /tmp/stale_prs.md << 'SECTION_EOF'
+
+          ### PRs ohne Review
+          SECTION_EOF
+
+          if [ "$NO_REVIEW_COUNT" -eq 0 ]; then
+            echo "_Alle offenen PRs haben Reviews._" >> /tmp/stale_prs.md
+          else
+            echo "$NO_REVIEW" >> /tmp/stale_prs.md
+          fi
+
+      - name: Build report
+        id: report
+        run: |
+          set -euo pipefail
+          TODAY=$(date -u +%Y-%m-%d)
+          echo "today=$TODAY" >> "$GITHUB_OUTPUT"
+
+          P0="${{ steps.urgency.outputs.p0_count }}"
+          P1="${{ steps.urgency.outputs.p1_count }}"
+          FAILURES="${{ steps.ci_health.outputs.failure_count }}"
+          OLD_PRS="${{ steps.stale_prs.outputs.old_count }}"
+          NO_REVIEW="${{ steps.stale_prs.outputs.no_review_count }}"
+
+          cat > /tmp/review-body.md << REPORT_EOF
+          ## Repo Review – ${TODAY}
+
+          | Metrik | Anzahl |
+          |--------|--------|
+          | P0-critical offen | ${P0} |
+          | P1-high offen | ${P1} |
+          | CI-Failures (letzte 20 Runs) | ${FAILURES} |
+          | PRs ohne Aktivität (>7d) | ${OLD_PRS} |
+          | PRs ohne Review | ${NO_REVIEW} |
+
+          REPORT_EOF
+
+          cat /tmp/urgency.md >> /tmp/review-body.md
+          echo "" >> /tmp/review-body.md
+          cat /tmp/ci_health.md >> /tmp/review-body.md
+          echo "" >> /tmp/review-body.md
+          cat /tmp/stale_prs.md >> /tmp/review-body.md
+
+          # Empfehlungen
+          cat >> /tmp/review-body.md << ACTIONS_EOF
+
+          ### Empfohlene Aktionen
+          $(if [ "$P0" -gt 0 ]; then echo "- **P0-critical Issues offen** – sofortige Bearbeitung erforderlich"; fi)
+          $(if [ "$P1" -gt 0 ]; then echo "- **P1-high Issues offen** – zeitnah einplanen"; fi)
+          $(if [ "$FAILURES" -gt 0 ]; then echo "- **CI-Failures erkannt** – Workflow-Logs prüfen und beheben"; fi)
+          $(if [ "$OLD_PRS" -gt 0 ]; then echo "- **Inaktive PRs** – reviewen, mergen oder schließen"; fi)
+          $(if [ "$NO_REVIEW" -gt 0 ]; then echo "- **PRs ohne Review** – Review anfordern"; fi)
+          $(if [ "$P0" -eq 0 ] && [ "$P1" -eq 0 ] && [ "$FAILURES" -eq 0 ] && [ "$OLD_PRS" -eq 0 ] && [ "$NO_REVIEW" -eq 0 ]; then echo "- Alles sauber! Keine dringenden Aktionen nötig."; fi)
+
+          ---
+          _Generated by [repo-review workflow](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_
+          ACTIONS_EOF
+
+      - name: Create or update review issue
+        if: ${{ !inputs.dry_run }}
+        run: |
+          TODAY="${{ steps.report.outputs.today }}"
+          TITLE="[Repo Review] ${TODAY}"
+
+          EXISTING=$(gh issue list --repo "$REPO" --state open \
+            --label repo-review --json number --jq '.[0].number // empty')
+
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --repo "$REPO" \
+              --body-file /tmp/review-body.md
+            echo "Updated existing review issue #${EXISTING}"
+          else
+            gh issue create --repo "$REPO" \
+              --title "$TITLE" \
+              --body-file /tmp/review-body.md \
+              --label repo-review
+            echo "Created new review issue"
+          fi
+
+      - name: Dry run output
+        if: ${{ inputs.dry_run }}
+        run: |
+          echo "=== DRY RUN – Repo Review ==="
+          cat /tmp/review-body.md
+          echo "=== Kein Issue erstellt/aktualisiert ==="
