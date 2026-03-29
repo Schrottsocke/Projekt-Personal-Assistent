@@ -30,9 +30,13 @@ class BotMemoryService(BaseMemoryService):
         await self._setup_db()
 
     async def _setup_db(self):
-        from src.services.database import get_db
+        try:
+            from src.services.database import get_db
 
-        self._db = get_db()
+            self._db = get_db()
+        except Exception as e:
+            logger.error("DB-Setup-Fehler: %s", e)
+            self._db = None
 
     # ------------------------------------------------------------------
     # Conversation Turns
@@ -57,6 +61,9 @@ class BotMemoryService(BaseMemoryService):
         Speichert einen Fakt mit Bestaetigungs-Tracking.
         Wenn der Fakt bereits existiert, wird confirmation_count erhoeht.
         """
+        if self._db is None:
+            logger.warning("upsert_fact: DB nicht verfuegbar")
+            return
         try:
             from src.services.database import MemoryFact
             from datetime import datetime
@@ -73,6 +80,9 @@ class BotMemoryService(BaseMemoryService):
 
     async def get_top_facts(self, user_key: str, limit: int = 10) -> list[dict]:
         """Gibt die bestaetigtesten Fakten sortiert nach Konfidenz zurueck."""
+        if self._db is None:
+            logger.warning("get_top_facts: DB nicht verfuegbar")
+            return []
         try:
             from src.services.database import MemoryFact
 
@@ -102,6 +112,9 @@ class BotMemoryService(BaseMemoryService):
 
     async def mark_onboarded(self, user_key: str):
         """Markiert User als onboardet in der lokalen DB."""
+        if self._db is None:
+            logger.warning("mark_onboarded: DB nicht verfuegbar")
+            return
         try:
             from src.services.database import UserProfile
 
@@ -117,6 +130,9 @@ class BotMemoryService(BaseMemoryService):
 
     async def is_onboarded(self, user_key: str) -> bool:
         """Prueft ob User bereits onboardet wurde."""
+        if self._db is None:
+            logger.warning("is_onboarded: DB nicht verfuegbar")
+            return False
         try:
             from src.services.database import UserProfile
 
