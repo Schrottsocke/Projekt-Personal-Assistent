@@ -21,3 +21,9 @@
 /deploy/ @schrottsocke
 /Dockerfile @schrottsocke
 /docker-compose.yml @schrottsocke
+
+# Docs & Policy
+/docs/ @schrottsocke
+
+# Memory
+/memory/ @schrottsocke

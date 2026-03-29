@@ -17,6 +17,10 @@ permissions:
   pull-requests: read
   actions: read
 
+  concurrency:
+    group: repo-review
+      cancel-in-progress: false
+
 jobs:
   review:
     runs-on: ubuntu-latest

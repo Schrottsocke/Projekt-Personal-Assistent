@@ -17,6 +17,10 @@ permissions:
   pull-requests: read
   actions: read
 
+  concurrency:
+    group: autopilot-issue-sync
+      cancel-in-progress: false
+
 jobs:
   issue-sync:
     runs-on: ubuntu-latest

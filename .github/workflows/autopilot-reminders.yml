@@ -16,6 +16,10 @@ permissions:
   issues: write
   pull-requests: write
 
+  concurrency:
+    group: autopilot-reminders
+      cancel-in-progress: false
+
 jobs:
   reminders:
     runs-on: ubuntu-latest
