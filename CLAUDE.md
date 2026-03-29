@@ -124,6 +124,25 @@ Bei < 4 Issues oder auf User-Wunsch: Einzelmodus (ein Issue pro Durchlauf).
 
 Details: `docs/issue-handling-playbook.md`
 
+## Orchestrierung
+
+Bei groesseren oder mehrteiligen Auftraegen arbeitet Claude zuerst als Orchestrator:
+
+1. **Gesamtanalyse**: Umfang, betroffene Module, Abhaengigkeiten erfassen
+2. **Plan**: Einen einzigen, konkreten Umsetzungsplan formulieren
+3. **Zerlegung**: Arbeit in Tracks/Cluster aufteilen (z.B. Core, API, App, Infra, Docs)
+4. **Parallelisierung**: Nur bei sauber getrennten Dateien und ohne Abhaengigkeiten
+5. **Umsetzung**: Pro Track ein Agent in isoliertem Worktree
+6. **Verifikation**: Ergebnisse pruefen, Konflikte ausschliessen
+
+Regeln:
+- Kritische Zentraldateien (`main.py`, `config/settings.py`, `base_memory_service.py`) sequentiell behandeln
+- Dry-Run bei riskanten Automationen bevorzugen (z.B. Label-Sync, Workflow-Aenderungen)
+- Kein Track darf Dateien eines anderen Tracks aendern
+- Bei Unsicherheit ueber Abhaengigkeiten: sequentiell statt parallel
+
+Details: `docs/orchestration-playbook.md`
+
 ## Commit- und PR-Regeln
 
 - Commit-Format: `fix(scope): kurze beschreibung (#<issue>)`
