@@ -8,6 +8,8 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
+from openpyxl.utils import get_column_letter
+
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -76,7 +78,7 @@ class DocumentService:
         ws.title = sheet_name[:31]  # Excel max 31 Zeichen
 
         # Titelzeile
-        ws.merge_cells(f"A1:{chr(64 + len(headers))}1")
+        ws.merge_cells(f"A1:{get_column_letter(len(headers))}1")
         title_cell = ws["A1"]
         title_cell.value = title
         title_cell.font = Font(bold=True, size=14, color="FFFFFF")
@@ -113,7 +115,7 @@ class DocumentService:
 
         # Spaltenbreiten automatisch anpassen
         for col_idx, header in enumerate(headers, start=1):
-            col_letter = chr(64 + col_idx)
+            col_letter = get_column_letter(col_idx)
             max_len = len(str(header))
             for row_data in rows:
                 if col_idx - 1 < len(row_data):

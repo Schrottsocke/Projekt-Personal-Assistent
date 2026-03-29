@@ -5,6 +5,7 @@ Scopes: gmail.readonly + gmail.compose (kein Vollzugriff).
 Token-Dateien: data/gmail_token_{user_key}.json
 """
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Optional
@@ -164,22 +165,26 @@ class EmailService:
             if unread_only:
                 query += " is:unread"
 
-            result = service.users().messages().list(userId="me", q=query, maxResults=limit).execute()
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None, lambda: service.users().messages().list(userId="me", q=query, maxResults=limit).execute()
+            )
 
             messages = result.get("messages", [])
             emails = []
             for msg_ref in messages:
                 try:
-                    msg = (
-                        service.users()
+                    msg = await loop.run_in_executor(
+                        None,
+                        lambda mid=msg_ref["id"]: service.users()
                         .messages()
                         .get(
                             userId="me",
-                            id=msg_ref["id"],
+                            id=mid,
                             format="metadata",
                             metadataHeaders=["Subject", "From", "Date"],
                         )
-                        .execute()
+                        .execute(),
                     )
                     headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
                     emails.append(
@@ -216,7 +221,10 @@ class EmailService:
         """
         try:
             service = self._get_service(user_key)
-            msg = service.users().messages().get(userId="me", id=email_id, format="full").execute()
+            loop = asyncio.get_event_loop()
+            msg = await loop.run_in_executor(
+                None, lambda: service.users().messages().get(userId="me", id=email_id, format="full").execute()
+            )
 
             headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
 
@@ -271,7 +279,10 @@ class EmailService:
             return 0
         try:
             service = self._get_service(user_key)
-            result = service.users().messages().list(userId="me", q="in:inbox is:unread", maxResults=1).execute()
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None, lambda: service.users().messages().list(userId="me", q="in:inbox is:unread", maxResults=1).execute()
+            )
             return result.get("resultSizeEstimate", 0)
         except Exception as e:
             logger.error(f"Gmail unread_count Fehler für {user_key}: {e}")
@@ -287,11 +298,15 @@ class EmailService:
         """Markiert eine E-Mail als gelesen."""
         try:
             service = self._get_service(user_key)
-            service.users().messages().modify(
-                userId="me",
-                id=email_id,
-                body={"removeLabelIds": ["UNREAD"]},
-            ).execute()
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(
+                None,
+                lambda: service.users().messages().modify(
+                    userId="me",
+                    id=email_id,
+                    body={"removeLabelIds": ["UNREAD"]},
+                ).execute(),
+            )
             return True
         except Exception as e:
             logger.error(f"Gmail mark_read Fehler: {e}")
@@ -319,14 +334,16 @@ class EmailService:
             message["subject"] = subject
 
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
-            draft = (
-                service.users()
+            loop = asyncio.get_event_loop()
+            draft = await loop.run_in_executor(
+                None,
+                lambda: service.users()
                 .drafts()
                 .create(
                     userId="me",
                     body={"message": {"raw": raw}},
                 )
-                .execute()
+                .execute(),
             )
 
             draft_id = draft.get("id", "")

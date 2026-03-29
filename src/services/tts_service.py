@@ -11,6 +11,8 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
+from config.settings import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,7 +60,8 @@ class TTSService:
 
             tts = gTTS(text=text, lang=lang, slow=False)
 
-            tmp = tempfile.NamedTemporaryFile(suffix=".mp3", prefix="tts_", delete=False, dir=Path("data/documents"))
+            settings.DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
+            tmp = tempfile.NamedTemporaryFile(suffix=".mp3", prefix="tts_", delete=False, dir=settings.DOCUMENTS_DIR)
             tmp.close()
             tts.save(tmp.name)
             logger.debug(f"TTS generiert: {tmp.name} ({len(text)} Zeichen)")
