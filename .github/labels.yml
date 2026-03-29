@@ -96,3 +96,48 @@
 - name: repo-review
   color: "D4C5F9"
   description: "Auto-generierte Repo-Review Reports"
+
+# Track (Arbeitsbereich)
+- name: track:core
+  color: "1F4E79"
+  description: "Kernlogik, Startprozess, Konfiguration"
+- name: track:api
+  color: "2E75B6"
+  description: "REST API, Router, Auth"
+- name: track:app
+  color: "4BA3C7"
+  description: "Flutter App"
+- name: track:infra
+  color: "6C757D"
+  description: "Deployment, Docker, CI/CD"
+- name: track:docs
+  color: "0075CA"
+  description: "Dokumentation und Playbooks"
+- name: track:qa
+  color: "059669"
+  description: "Tests und Qualitaet"
+- name: track:security
+  color: "B60205"
+  description: "Auth, Secrets, Sicherheit"
+- name: track:workflow
+  color: "7C3AED"
+  description: "GitHub Automation, Templates, Labels"
+
+# Risk (Aenderungsrisiko)
+- name: risk:high
+  color: "B60205"
+  description: "Zentraldateien, Auth, Deploy, Migrationen"
+- name: risk:medium
+  color: "FBCA04"
+  description: "Mehrere Module, moderate Komplexitaet"
+- name: risk:low
+  color: "3CBF00"
+  description: "Isolierte Aenderung, ein Modul"
+
+# Execution Mode
+- name: exec:parallel
+  color: "0E8A16"
+  description: "Kann parallel bearbeitet werden"
+- name: exec:sequential
+  color: "D93F0B"
+  description: "Muss sequentiell bearbeitet werden"
