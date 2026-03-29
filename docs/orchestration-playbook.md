@@ -168,3 +168,51 @@ Bestimmen den Bearbeitungsmodus:
 - **Autopilot-Policy** (`docs/autopilot-policy.md`): Definiert was automatisiert werden darf und was nicht
 
 Dieses Playbook ergaenzt diese um die **uebergeordnete Orchestrierungslogik**: Wann und wie wird Arbeit in Tracks zerlegt, parallelisiert und koordiniert.
+
+## Referenzen
+
+- `config/project-fields.md` – Vollstaendiges Feldmodell fuer das GitHub Project Board (Single Source of Truth fuer Felder, Werte, Automationen)
+- `docs/AUTOMATION_SETUP.md` – Setup-Anleitung fuer Workflows, Project, Secrets
+- `.github/labels.yml` – Label-Definitionen (44 Labels, korrespondieren mit Project-Feldern)
+
+## Aktuelle Arbeitspakete (Stand 2026-03-29)
+
+Die folgenden Issues bilden die naechste Orchestrierungsrunde:
+
+### Batch 1 – Infrastruktur-Aktivierung (Sequential)
+
+| Issue | Titel | Track | Priority |
+|-------|-------|-------|----------|
+| #252 | Label-Sync ausfuehren und verifizieren | Workflow | P1-high |
+| #253 | GitHub Project Board erstellen und konfigurieren | Workflow | P1-high |
+| #254 | PROJECT_NUMBER und PROJECT_TOKEN setzen | Workflow | P1-high |
+
+Reihenfolge: #252 → #253 → #254 (Abhaengigkeitskette)
+
+### Batch 2 – Produkt-Verifikation (Parallel)
+
+| Issue | Titel | Track | Priority |
+|-------|-------|-------|----------|
+| #255 | Smoke-Test: Bot-Start verifizieren | Core | P2-medium |
+| #256 | Smoke-Test: API-Start verifizieren | API | P2-medium |
+| #257 | CI-Pipeline auf main validieren | QA | P2-medium |
+
+Alle drei ueberschneidungsfrei – gleichzeitig bearbeitbar.
+
+### Batch 3 – Bekannte Bugs (Parallel)
+
+| Issue | Titel | Track | Priority |
+|-------|-------|-------|----------|
+| #258 | Google OAuth offline_access fixen | Core | P1-high |
+| #259 | Webhook-Deployer Default-Branch korrigieren | Infra | P1-high |
+
+Dateien ueberschneidungsfrei – gleichzeitig bearbeitbar.
+
+### Batch 4 – Feature-Luecken (Parallel)
+
+| Issue | Titel | Track | Priority |
+|-------|-------|-------|----------|
+| #260 | Flutter App: API-Verbindung E2E testen | App | P2-medium |
+| #261 | Autopilot-Workflows Dry-Run validieren | Workflow | P2-medium |
+
+Ueberschneidungsfrei – gleichzeitig bearbeitbar. #261 wartet auf #252 (Labels).
