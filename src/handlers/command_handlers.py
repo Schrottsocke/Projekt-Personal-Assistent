@@ -1270,7 +1270,7 @@ async def cmd_email_aktionen(update: Update, context: ContextTypes.DEFAULT_TYPE)
             events = actions.get("events", [])
             reminders = actions.get("reminders", [])
 
-            block = [f"📧 *{mail_ref['subject'][:50]}*"]
+            block = [f"📧 *{mail_ref.get('subject', '(kein Betreff)')[:50]}*"]
             if summary:
                 block.append(f"_{summary}_")
             for t in tasks:
@@ -1352,7 +1352,7 @@ async def cmd_marketplace(update: Update, context: ContextTypes.DEFAULT_TYPE):
     from src.features.feature_service import get_feature_status_list
 
     bot = get_bot(context)
-    user_key = bot.get_user_key(update.effective_user.id) if bot else None
+    user_key = bot.name.lower() if bot else None
     if not user_key:
         await update.message.reply_text("❌ Benutzer nicht erkannt.")
         return
@@ -1399,7 +1399,7 @@ async def callback_marketplace_toggle(update: Update, context: ContextTypes.DEFA
     await query.answer()
 
     bot = get_bot(context)
-    user_key = bot.get_user_key(update.effective_user.id) if bot else None
+    user_key = bot.name.lower() if bot else None
     if not user_key:
         await query.edit_message_text("❌ Benutzer nicht erkannt.")
         return

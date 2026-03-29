@@ -49,6 +49,9 @@ async def handle_proposal_callback(update: Update, context: ContextTypes.DEFAULT
 
 
 async def _approve(query, proposal_id: int, bot):
+    if query.message is None:
+        await query.answer("Nachricht nicht mehr verfügbar.", show_alert=True)
+        return
     await query.edit_message_text(
         f"{query.message.text}\n\n⏳ _Wird ausgeführt..._",
         parse_mode="Markdown",
@@ -75,6 +78,9 @@ async def _approve(query, proposal_id: int, bot):
 
 
 async def _reject(query, proposal_id: int, bot):
+    if query.message is None:
+        await query.answer("Nachricht nicht mehr verfügbar.", show_alert=True)
+        return
     try:
         await bot.proposal_service.reject_proposal(proposal_id)
         await query.edit_message_text(
