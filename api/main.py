@@ -159,6 +159,9 @@ async def health():
         if svc is None:
             checks[name] = "not_initialized"
             overall_healthy = False
+        elif hasattr(svc, 'initialized') and not svc.initialized:
+            checks[name] = "init_failed"
+            overall_healthy = False
         else:
             checks[name] = "ok"
 

@@ -59,7 +59,7 @@ class AssistantScheduler:
         # Proaktive Mustererkennung (alle 2 Tage um 20:00)
         self.scheduler.add_job(
             self._run_pattern_analysis,
-            IntervalTrigger(days=2, hours=20, timezone=settings.TIMEZONE),
+            CronTrigger(hour=20, minute=0, day="*/2", timezone=settings.TIMEZONE),
             id="pattern_analysis",
             replace_existing=True,
             name="Proaktive Mustererkennung",
@@ -95,13 +95,13 @@ class AssistantScheduler:
         self.scheduler.start()
         logger.info(
             f"Scheduler gestartet: Briefing {settings.MORNING_BRIEFING_TIME}, "
-            f"Mustererkennung alle 2 Tage 20:00, Wochenrückblick So 18:00."
+            f"Mustererkennung alle 2 Tage um 20:00, Wochenrückblick So 18:00."
         )
 
     def stop(self):
         if self.scheduler.running:
-            logger.info("Scheduler wird heruntergefahren (warte auf laufende Jobs, max 10s)...")
-            self.scheduler.shutdown(wait=True)
+            logger.info("Scheduler wird heruntergefahren (laufende Jobs werden abgebrochen)...")
+            self.scheduler.shutdown(wait=False)
             logger.info("Scheduler gestoppt.")
 
     async def _send_morning_briefings(self):
