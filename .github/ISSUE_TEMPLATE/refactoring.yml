@@ -32,6 +32,8 @@ body:
         - Config
         - Tests
         - CI/CD
+        - Dokumentation
+        - Sonstiges
       default: 0
     validations:
       required: true

@@ -30,8 +30,9 @@ body:
         - Deploy/Infra
         - Config
         - Tests
-        - Dokumentation
         - CI/CD
+        - Dokumentation
+        - Sonstiges
       default: 0
     validations:
       required: true
