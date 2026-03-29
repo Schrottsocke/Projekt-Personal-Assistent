@@ -110,6 +110,20 @@ Regeln:
 - Wenn Auto-Close nicht greift, prüfen ob der PR wirklich den Default-Branch targetet.
 - Wenn das automatische Schließen deaktiviert ist oder nicht funktioniert, Issue manuell schließen und kurz begründen.
 
+## Batch-Modus (Parallel-Issues)
+
+Bei >= 4 offenen Issues standardmaessig die Parallel-Batch-Methode verwenden:
+1. Alle offenen Issues sichten
+2. In moeglichst unabhaengige Batches gruppieren (kein File in mehr als einem Batch)
+3. Jeden Batch in einem isolierten Worktree parallel bearbeiten
+4. Pro Batch ein Branch, ein Commit, ein PR mit allen `Fixes #...`
+5. PRs konfliktfrei in beliebiger Reihenfolge mergen
+
+Kriterien fuer Batch-Bildung: Datei-Ueberschneidungen minimieren, Modulzugehoerigkeit beachten.
+Bei < 4 Issues oder auf User-Wunsch: Einzelmodus (ein Issue pro Durchlauf).
+
+Details: `docs/issue-handling-playbook.md`
+
 ## Commit- und PR-Regeln
 
 - Commit-Format: `fix(scope): kurze beschreibung (#<issue>)`
