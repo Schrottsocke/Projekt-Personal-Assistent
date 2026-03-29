@@ -67,7 +67,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 until = profile.focus_mode_until
                 # tzinfo sicherstellen
                 if until.tzinfo is None:
-                    until = tz.localize(until)
+                    until = pytz.utc.localize(until).astimezone(tz)
                 if now < until:
                     time_str = until.strftime("%H:%M")
                     await update.message.reply_text(
@@ -364,11 +364,16 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
 
             actions = analysis.get("actions", [])
+            _type_map = {
+                "task": "task_create",
+                "reminder": "reminder_create",
+                "calendar": "calendar_create",
+            }
             for action in actions:
                 try:
                     await bot.proposal_service.create_proposal(
                         user_key=user_key,
-                        proposal_type=action["type"],
+                        proposal_type=_type_map.get(action["type"], "task_create"),
                         title=action.get("title", "Aktion"),
                         description=action.get("context", ""),
                         payload=action,

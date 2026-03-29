@@ -245,7 +245,7 @@ Klassifiziere und extrahiere Aktionen. Antworte NUR mit diesem JSON:
     # Aktions-Routing
     # ------------------------------------------------------------------
 
-    async def classify_and_route(self, scan_result: dict, user_key: str, bot) -> str:
+    async def classify_and_route(self, scan_result: dict, user_key: str, bot, chat_id=None) -> str:
         """
         Wertet das Scan-Ergebnis aus und erstellt Proposals für erkannte Aktionen.
 
@@ -308,6 +308,7 @@ Klassifiziere und extrahiere Aktionen. Antworte NUR mit diesem JSON:
                         payload=payload,
                         user_key=user_key,
                         created_by="scanner",
+                        chat_id=str(chat_id) if chat_id else None,
                         bot=bot,
                     )
                 type_icon = {"task": "📋", "reminder": "⏰", "calendar": "📅"}.get(action_type, "•")
