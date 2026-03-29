@@ -1,11 +1,46 @@
-/// API-Konfiguration
-/// baseUrl wird beim ersten Start vom User gesetzt oder ist hardcoded für Dev.
+/// API-Konfiguration fuer DualMind Personal Assistant.
+///
+/// Die [baseUrl] wird ueber `--dart-define` zur Build-Zeit gesetzt.
+/// Ohne explizite Angabe wird der lokale Entwicklungsserver verwendet.
+///
+/// ## Umgebungen
+///
+/// | Umgebung    | URL                                          | Hinweis                        |
+/// |-------------|----------------------------------------------|--------------------------------|
+/// | Development | `http://localhost:8000`                       | Default, kein Flag noetig      |
+/// | Production  | `https://your-domain.com` (eigene VPS-Domain) | Muss per `--dart-define` gesetzt werden |
+///
+/// ## Konfiguration per --dart-define
+///
+/// ```sh
+/// # Entwicklung (Standard – localhost:8000):
+/// flutter run
+///
+/// # Produktion:
+/// flutter run --dart-define=API_BASE_URL=https://your-domain.com
+///
+/// # APK fuer Produktion bauen:
+/// flutter build apk --dart-define=API_BASE_URL=https://your-domain.com
+/// ```
 class ApiConfig {
-  /// Basis-URL der FastAPI. Im Produktivbetrieb IP/Domain des VPS.
+  /// Basis-URL der FastAPI.
+  ///
+  /// Wird zur Compile-Zeit ueber `--dart-define=API_BASE_URL=...` injiziert.
+  /// Fallback: `http://localhost:8000` (lokaler Dev-Server).
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://localhost:8000',
   );
+
+  /// Produktions-URL-Muster. Beim Deployment die eigene Domain einsetzen.
+  /// Beispiel: `https://api.dualmind.example.com`
+  static const String prodBaseUrl = String.fromEnvironment(
+    'API_PROD_URL',
+    defaultValue: 'https://your-domain.com',
+  );
+
+  /// Gibt `true` zurueck, wenn die App gegen den Produktionsserver laeuft.
+  static bool get isProduction => baseUrl != 'http://localhost:8000';
 
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 30);

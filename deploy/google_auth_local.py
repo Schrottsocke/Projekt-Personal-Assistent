@@ -58,7 +58,7 @@ def authenticate(token_filename: str, user_label: str):
     input("Drücke Enter zum Starten...")
 
     flow = InstalledAppFlow.from_client_secrets_file(str(CREDENTIALS_PATH), SCOPES)
-    creds = flow.run_local_server(port=0)
+    creds = flow.run_local_server(port=0, access_type="offline", prompt="consent")
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     with open(token_path, "w") as f:
