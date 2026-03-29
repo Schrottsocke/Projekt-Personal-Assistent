@@ -115,7 +115,10 @@ class EmailService:
             scopes=SCOPES,
             redirect_uri="urn:ietf:wg:oauth:2.0:oob",
         )
-        auth_url, _ = flow.authorization_url(prompt="consent")
+        auth_url, _ = flow.authorization_url(
+            access_type="offline",
+            prompt="consent",
+        )
         if user_key in self._pending_flows:
             logger.warning("Bestehender OAuth-Flow für %s wird ersetzt.", user_key)
         self._pending_flows[user_key] = flow
