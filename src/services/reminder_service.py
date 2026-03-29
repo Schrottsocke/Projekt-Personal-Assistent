@@ -4,7 +4,7 @@ Erinnerungen werden in der DB gespeichert und vom Scheduler zugestellt.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 import pytz
 
 from config.settings import settings
@@ -62,7 +62,7 @@ class ReminderService:
     async def get_active_reminders(self, user_key: str) -> list[dict]:
         from src.services.database import Reminder
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         self._ensure_initialized()
         with self._db() as session:
             reminders = (
@@ -89,7 +89,7 @@ class ReminderService:
         """Gibt alle fälligen Erinnerungen zurück (für den Scheduler)."""
         from src.services.database import Reminder
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         self._ensure_initialized()
         with self._db() as session:
             reminders = (

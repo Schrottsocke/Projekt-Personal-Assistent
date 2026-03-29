@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel
 
 
@@ -26,4 +26,4 @@ class TaskOut(BaseModel):
 
 
 class TaskStatusUpdate(BaseModel):
-    status: str  # done|open|in_progress
+    status: Literal["open", "in_progress", "done"]

@@ -66,13 +66,13 @@ class BotMemoryService(BaseMemoryService):
             return
         try:
             from src.services.database import MemoryFact
-            from datetime import datetime
+            from datetime import datetime, timezone
 
             with self._db() as session:
                 existing = session.query(MemoryFact).filter_by(user_key=user_key, content=content).first()
                 if existing:
                     existing.confirmation_count += 1
-                    existing.last_used = datetime.utcnow()
+                    existing.last_used = datetime.now(timezone.utc)
                 else:
                     session.add(MemoryFact(user_key=user_key, content=content))
         except SQLAlchemyError as e:

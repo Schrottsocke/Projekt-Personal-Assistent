@@ -25,33 +25,28 @@ def _settings_satisfied(feature: Feature) -> bool:
 
 def _load_user_flags(user_key: str) -> dict[str, bool]:
     """Lädt den enabled_features JSON-Dict aus der DB."""
-    db = get_db()()
     try:
-        profile = db.query(UserProfile).filter_by(user_key=user_key).first()
-        if profile and profile.enabled_features:
-            return json.loads(profile.enabled_features)
+        with get_db()() as db:
+            profile = db.query(UserProfile).filter_by(user_key=user_key).first()
+            if profile and profile.enabled_features:
+                return json.loads(profile.enabled_features)
     except Exception as e:
         logger.warning(f"Feature-Flags laden fehlgeschlagen für {user_key}: {e}")
-    finally:
-        db.close()
     return {}
 
 
 def _save_user_flags(user_key: str, flags: dict[str, bool]) -> None:
     """Speichert enabled_features JSON in die DB."""
-    db = get_db()()
     try:
-        profile = db.query(UserProfile).filter_by(user_key=user_key).first()
-        if not profile:
-            profile = UserProfile(user_key=user_key)
-            db.add(profile)
-        profile.enabled_features = json.dumps(flags)
-        db.commit()
+        with get_db()() as db:
+            profile = db.query(UserProfile).filter_by(user_key=user_key).first()
+            if not profile:
+                profile = UserProfile(user_key=user_key)
+                db.add(profile)
+            profile.enabled_features = json.dumps(flags)
+            db.commit()
     except Exception as e:
         logger.error(f"Feature-Flags speichern fehlgeschlagen für {user_key}: {e}")
-        db.rollback()
-    finally:
-        db.close()
 
 
 def get_available_features() -> list[Feature]:

@@ -6,7 +6,7 @@ Speichert: Notizen, Erinnerungen, User-Profile, Konversations-History, Proposals
 import logging
 import threading
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     create_engine,
     event,
@@ -300,7 +300,7 @@ def prune_conversation_history(days: int = 30) -> int:
     if _engine is None:
         return 0
 
-    cutoff = datetime.utcnow() - timedelta(days=days)
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     with _engine.connect() as conn:
         result = conn.execute(
             sqlalchemy.text("DELETE FROM conversation_history WHERE created_at < :cutoff"),
