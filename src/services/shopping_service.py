@@ -280,18 +280,30 @@ class ShoppingService:
         logger.info(f"[{user_key}] {count} Einkaufsartikel bulk hinzugefügt")
         return count
 
-    async def add_items_from_recipe(self, user_key: str, recipe: dict) -> int:
+    async def add_items_from_recipe(self, user_key: str, recipe: dict, servings: int | None = None) -> int:
         """
         Extrahiert Zutaten aus einem Chefkoch-Rezept und fügt sie zur Liste hinzu.
 
         Args:
             recipe: Vollständiges Rezept-Dict von ChefkochService.get_recipe()
+            servings: Gewünschte Portionen. Mengen werden skaliert, wenn das
+                      Rezept eine Original-Portionszahl enthält.
 
         Returns:
             Anzahl der hinzugefügten Zutaten.
         """
         recipe_id = recipe.get("id", "")
         source = f"chefkoch:{recipe_id}" if recipe_id else "chefkoch"
+
+        # Skalierungsfaktor berechnen
+        original_servings = recipe.get("servings")
+        scale: float = 1.0
+        if servings and original_servings:
+            try:
+                scale = servings / float(original_servings)
+            except (ValueError, ZeroDivisionError):
+                scale = 1.0
+
         items = []
 
         for group in recipe.get("ingredientGroups", []):
@@ -301,10 +313,22 @@ class ShoppingService:
                     continue
                 amount = ing.get("amount", "")
                 unit = ing.get("unit", "")
+
+                # Menge skalieren wenn möglich
+                scaled_amount = amount
+                if amount and scale != 1.0:
+                    try:
+                        scaled_amount = round(float(amount) * scale, 2)
+                        # Ganzzahlen ohne Dezimalstelle darstellen
+                        if scaled_amount == int(scaled_amount):
+                            scaled_amount = int(scaled_amount)
+                    except (ValueError, TypeError):
+                        scaled_amount = amount
+
                 items.append(
                     {
                         "name": name,
-                        "quantity": str(amount) if amount else None,
+                        "quantity": str(scaled_amount) if scaled_amount else None,
                         "unit": unit or None,
                         "source": source,
                     }

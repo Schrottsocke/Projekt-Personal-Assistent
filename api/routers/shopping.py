@@ -102,5 +102,5 @@ async def add_from_recipe(
     recipe = await chefkoch_svc.get_recipe(chefkoch_id)
     if not recipe:
         raise HTTPException(status_code=404, detail="Rezept nicht gefunden.")
-    count = await shopping_svc.add_items_from_recipe(user_key, recipe)
+    count = await shopping_svc.add_items_from_recipe(user_key, recipe, servings=servings)
     return {"added": count, "recipe_title": recipe.get("title", "")}

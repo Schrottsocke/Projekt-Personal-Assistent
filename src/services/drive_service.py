@@ -257,7 +257,8 @@ class DriveService:
             }
 
             if query:
-                list_kwargs["q"] = f"name contains '{query}'"
+                safe_query = query.replace("\\", "\\\\").replace("'", "\\'")
+                list_kwargs["q"] = f"name contains '{safe_query}'"
 
             result = service.files().list(**list_kwargs).execute()
             files = result.get("files", [])
@@ -419,7 +420,8 @@ class DriveService:
         """
         try:
             service = self._get_service(user_key)
-            q_parts = [f"name contains '{query}'", "trashed = false"]
+            safe_query = query.replace("\\", "\\\\").replace("'", "\\'")
+            q_parts = [f"name contains '{safe_query}'", "trashed = false"]
             if mime_type:
                 q_parts.append(f"mimeType = '{mime_type}'")
             result = (

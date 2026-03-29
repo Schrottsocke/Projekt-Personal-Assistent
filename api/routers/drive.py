@@ -74,8 +74,10 @@ async def upload_file(
         with tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename or "upload").suffix) as tmp:
             tmp.write(content)
             tmp_path = Path(tmp.name)
-        result = await drive_svc.upload_file(user_key, tmp_path)
-        tmp_path.unlink(missing_ok=True)
+        try:
+            result = await drive_svc.upload_file(user_key, tmp_path)
+        finally:
+            tmp_path.unlink(missing_ok=True)
         if not result:
             raise HTTPException(status_code=500, detail="Upload fehlgeschlagen.")
         return DriveUploadResponse(
