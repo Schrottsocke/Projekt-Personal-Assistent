@@ -116,7 +116,7 @@ class Settings:
     # Webhook Deployer
     WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
     WEBHOOK_PORT: int = int(os.getenv("WEBHOOK_PORT", "9000"))
-    DEPLOY_BRANCH: str = os.getenv("DEPLOY_BRANCH", "claude/dual-personal-assistants-0Uqna")
+    DEPLOY_BRANCH: str = os.getenv("DEPLOY_BRANCH", "main")
 
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
