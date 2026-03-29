@@ -3,6 +3,7 @@ DualMind REST API – FastAPI App.
 Läuft auf Port 8000, getrennt vom Telegram-Bot.
 """
 
+import sys
 import uuid
 from contextlib import asynccontextmanager
 
@@ -67,7 +68,27 @@ async def lifespan(app: FastAPI):
     """Services beim Start initialisieren, beim Stop aufräumen."""
     logger.info("DualMind API startet…")
 
-    # JWT-Secret und andere kritische Settings validieren
+    # Frühzeitige API_SECRET_KEY-Validierung: Platzhalter und zu kurze Keys ablehnen
+    _placeholder_patterns = {
+        "change-me", "your-secret-key", "placeholder", "xxx", "test",
+        "change-me-in-production-please",
+        "change-me-generate-with-secrets-token-hex",
+        "CHANGE_ME_USE_python_c_import_secrets_print_secrets_token_hex_32",
+    }
+    secret = settings.API_SECRET_KEY.strip()
+    if not secret or secret.lower() in _placeholder_patterns or len(secret) < 32:
+        reason = "nicht gesetzt" if not secret else (
+            "Platzhalter-Wert" if secret.lower() in _placeholder_patterns
+            else f"zu kurz ({len(secret)} Zeichen, min. 32)"
+        )
+        logger.critical(
+            "API_SECRET_KEY ist ungueltig (%s). "
+            'Generiere ein Secret: python -c "import secrets; print(secrets.token_hex(32))"',
+            reason,
+        )
+        sys.exit(1)
+
+    # Weitere kritische Settings validieren
     config_errors = settings.validate()
     jwt_errors = [e for e in config_errors if "API_SECRET_KEY" in e]
     if jwt_errors:

@@ -16,9 +16,9 @@ permissions:
   issues: write
   pull-requests: write
 
-  concurrency:
-    group: autopilot-reminders
-      cancel-in-progress: false
+concurrency:
+  group: autopilot-reminders
+  cancel-in-progress: false
 
 jobs:
   reminders:
