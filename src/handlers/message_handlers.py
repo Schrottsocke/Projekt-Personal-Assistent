@@ -373,7 +373,7 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                     await bot.proposal_service.create_proposal(
                         user_key=user_key,
-                        proposal_type=_type_map.get(action["type"], "task_create"),
+                        proposal_type=_type_map.get(action.get("type", ""), "task_create"),
                         title=action.get("title", "Aktion"),
                         description=action.get("context", ""),
                         payload=action,
