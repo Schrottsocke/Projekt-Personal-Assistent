@@ -15,9 +15,9 @@ permissions:
   issues: write
   pull-requests: write
 
-  concurrency:
-    group: stale-issues
-      cancel-in-progress: false
+concurrency:
+  group: stale-issues
+  cancel-in-progress: false
 
 jobs:
   stale:

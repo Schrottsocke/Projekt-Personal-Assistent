@@ -16,9 +16,9 @@ permissions:
   pull-requests: read
   contents: read
 
-  concurrency:
-    group: triage-report
-      cancel-in-progress: false
+concurrency:
+  group: triage-report
+  cancel-in-progress: false
 
 jobs:
   triage:

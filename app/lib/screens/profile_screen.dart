@@ -34,6 +34,13 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 12),
                 Text(user.isEmpty ? '' : user[0].toUpperCase() + user.substring(1),
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+                if (user.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    '$user@dualmind.app',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                  ),
+                ],
               ],
             ),
           ),
