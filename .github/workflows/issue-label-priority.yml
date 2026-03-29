@@ -1,0 +1,56 @@
+name: Issue Label from Template
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue.body || '';
+            const labels = [];
+
+            // Priority
+            const prioMatch = body.match(/### Priorit[aä]t\s*\n\s*\n\s*(.+)/);
+            if (prioMatch) {
+              const val = prioMatch[1].trim();
+              if (val.includes('P0-critical')) labels.push('P0-critical');
+              else if (val.includes('P1-high')) labels.push('P1-high');
+              else if (val.includes('P2-medium')) labels.push('P2-medium');
+            }
+
+            // Area
+            const areaMap = {
+              'Bot (Telegram)': 'area/bot',
+              'API (REST/Auth)': 'area/api',
+              'App (Flutter)': 'area/app',
+              'Deploy/Infra': 'area/deploy',
+              'Config': 'area/config',
+              'Tests': 'area/tests',
+              'CI/CD': 'area/ci',
+              'Dokumentation': 'area/docs',
+            };
+            const areaMatch = body.match(/### (?:Bereich|Betroffener Bereich)\s*\n\s*\n\s*(.+)/);
+            if (areaMatch) {
+              const areaLabel = areaMap[areaMatch[1].trim()];
+              if (areaLabel) labels.push(areaLabel);
+            }
+
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: labels,
+              });
+              core.info(`Labels applied: ${labels.join(', ')}`);
+            } else {
+              core.info('No priority or area detected in issue body');
+            }

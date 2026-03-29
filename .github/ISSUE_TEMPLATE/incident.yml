@@ -32,6 +32,9 @@ body:
         - App (Flutter)
         - Deploy/Infra
         - Config
+        - Tests
+        - CI/CD
+        - Dokumentation
         - Sonstiges
       default: 0
     validations:
