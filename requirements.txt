@@ -5,7 +5,7 @@ python-telegram-bot[job-queue]==22.7
 openai==2.30.0
 
 # Memory
-mem0ai==0.1.29
+mem0ai==1.0.9
 
 # Google Calendar
 google-api-python-client==2.149.0
