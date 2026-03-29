@@ -206,3 +206,37 @@ Alle Autopilot-Issues tragen das Label `autopilot`.
 3. In Claude Code Session: `/autopilot-status` ausfuehren
 
 Details: siehe `docs/autopilot-policy.md`
+
+## 8. Aktueller Einrichtungsstatus (Stand 2026-03-29)
+
+### Erledigt
+
+- [x] `.github/labels.yml` mit 44 Labels definiert
+- [x] `label-sync.yml` Workflow erstellt
+- [x] `auto-add-to-project.yml` Workflow erstellt
+- [x] `issue-label-priority.yml` Workflow erstellt (Priority + Area aus Templates)
+- [x] `pr-labeler.yml` + `.github/labeler.yml` konfiguriert
+- [x] 7 Issue-Templates erstellt (Bug, Feature, Task, Incident, Refactoring, Quality + config)
+- [x] PR-Template erstellt
+- [x] `stale.yml` konfiguriert (60d stale, 150d close, P0/P1 ausgenommen)
+- [x] Autopilot-Workflows erstellt (review, issue-sync, reminders)
+- [x] `ci.yml` + `flutter.yml` konfiguriert
+- [x] `config/project-fields.md` – Feldmodell dokumentiert
+- [x] 10 Arbeitspakete als GitHub Issues angelegt (#252–#261)
+- [x] CODEOWNERS konfiguriert (@schrottsocke)
+
+### Noch offen (manuelle Schritte)
+
+- [ ] **Label-Sync Workflow ausfuehren** → Actions → Label Sync → Run workflow (Issue #252)
+- [ ] **GitHub Project Board erstellen** → github.com/users/Schrottsocke/projects (Issue #253)
+- [ ] **PROJECT_NUMBER als Repository Variable setzen** (Issue #254)
+- [ ] **PROJECT_TOKEN als Repository Secret erstellen** (Issue #254)
+- [ ] **Project Built-in Automations aktivieren** (Item added → Backlog, etc.)
+- [ ] **Autopilot-Workflows im Dry-Run testen** (Issue #261)
+
+### Naechste Schritte (empfohlene Reihenfolge)
+
+1. Label-Sync ausfuehren (#252) – Voraussetzung fuer alles andere
+2. Project Board erstellen + konfigurieren (#253)
+3. PROJECT_NUMBER/TOKEN setzen (#254) – danach funktioniert auto-add-to-project
+4. Autopilot-Workflows Dry-Run (#261) – validiert die gesamte Automation

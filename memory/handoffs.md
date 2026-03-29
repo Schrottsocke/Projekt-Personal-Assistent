@@ -5,12 +5,12 @@ Wird aggressiv bereinigt - nur die letzten Eintraege behalten.
 
 ## Eintraege
 
-- **Orchestrierungsplan aktiv**: 20 Issues (#219-#239) in 6 Tracks (A-F) erstellt. Reihenfolge: P1-Bugs zuerst (#238 YAML-Syntax, #239 Webhook-Branch, #223 OAuth), dann Verification (#219-#222), dann Infrastruktur. Parallelisierung: Tracks A/D/E ueberschneidungsfrei. Plan-Details in den Issue-Bodies. (2026-03-29)
-- **Naechste Session**: #238 + #239 als Batch fixen (6 Workflow-YAMLs + webhook_deployer.py), dann #223 (Google OAuth offline_access). PR #237 muss vorher gemergt werden. (2026-03-29)
-- **Bereits erledigt**: scripts/smoke_test.py, scripts/backup_db.sh, .pre-commit-config.yaml (in PR #237, Branch claude/analyze-project-architecture-BbZnd). (2026-03-29)
+- **Orchestrierungsstruktur umgesetzt**: config/project-fields.md erstellt, 10 Issues (#252-#261) in 4 Batches angelegt, orchestration-playbook.md und AUTOMATION_SETUP.md aktualisiert. Labels muessen noch via Label-Sync synchronisiert werden. GitHub Project Board muss manuell erstellt werden. (2026-03-29)
+- **Naechste Session**: Batch 1 (#252 Label-Sync → #253 Project Board → #254 Secrets) manuell abarbeiten, dann Batch 3 (#258 OAuth, #259 Webhook-Branch) als paralleler Code-Fix. (2026-03-29)
+- **Vorherige Runde abgeschlossen**: Issues #219-#239 alle geschlossen/gemergt. scripts/smoke_test.py, scripts/backup_db.sh, .pre-commit-config.yaml erledigt. (2026-03-29)
 
 ## Meta
 
-- Zuletzt geprueft: 2026-03-28
+- Zuletzt geprueft: 2026-03-29
 - Review bis: 2026-06-28
 - Max Eintraege: 5
