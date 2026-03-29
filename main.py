@@ -277,12 +277,44 @@ async def main():
         await shutdown_event.wait()
 
         logger.info("Fahre Services herunter...")
-        scheduler.stop()
-        await taake_app.updater.stop()
-        await nina_app.updater.stop()
-        await taake_app.stop()
-        await nina_app.stop()
-        logger.info("Sauber beendet.")
+
+        async def _shutdown_sequence():
+            logger.info("Shutdown: Scheduler stoppen...")
+            scheduler.stop()
+            logger.info("Shutdown: Scheduler gestoppt.")
+
+            logger.info("Shutdown: Updater stoppen...")
+            await taake_app.updater.stop()
+            await nina_app.updater.stop()
+            logger.info("Shutdown: Updater gestoppt.")
+
+            logger.info("Shutdown: Bots stoppen...")
+            await taake_app.stop()
+            await nina_app.stop()
+            logger.info("Shutdown: Bots gestoppt.")
+
+            # Datenbank-Sessions schliessen
+            logger.info("Shutdown: Datenbank-Engine schliessen...")
+            try:
+                from src.services.database import _engine
+                if _engine is not None:
+                    _engine.dispose()
+                    logger.info("Shutdown: Datenbank-Engine geschlossen.")
+                else:
+                    logger.info("Shutdown: Keine Datenbank-Engine aktiv.")
+            except Exception as exc:
+                logger.warning("Shutdown: Datenbank-Cleanup fehlgeschlagen: %s", exc)
+
+        shutdown_timeout = 10  # Sekunden
+        try:
+            await asyncio.wait_for(_shutdown_sequence(), timeout=shutdown_timeout)
+            logger.info("Sauber beendet.")
+        except asyncio.TimeoutError:
+            logger.error(
+                "Shutdown dauerte laenger als %d Sekunden – erzwinge Beendigung.",
+                shutdown_timeout,
+            )
+            sys.exit(1)
 
 
 if __name__ == "__main__":

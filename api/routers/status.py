@@ -80,6 +80,59 @@ async def status():
     }
 
 
+@router.get("/status/health")
+async def status_health():
+    """
+    Oeffentlicher Health-Check mit Service-Status.
+    Prueft Datenbank und Memory-Service einzeln und misst Antwortzeiten.
+    """
+    services = {}
+    overall_healthy = True
+
+    # 1. Datenbank-Check
+    try:
+        import sqlalchemy
+        from src.services.database import _engine
+
+        t0 = time.monotonic()
+        if _engine is None:
+            services["database"] = {"status": "down", "error": "not_initialized"}
+            overall_healthy = False
+        else:
+            with _engine.connect() as conn:
+                conn.execute(sqlalchemy.text("SELECT 1"))
+            elapsed = round((time.monotonic() - t0) * 1000, 1)
+            services["database"] = {"status": "healthy", "response_ms": elapsed}
+    except Exception as exc:
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        services["database"] = {"status": "down", "error": str(exc), "response_ms": elapsed}
+        overall_healthy = False
+
+    # 2. Memory-Service-Check
+    try:
+        from api import dependencies
+
+        t0 = time.monotonic()
+        mem_svc = dependencies._svc.get("memory")
+        if mem_svc is None:
+            services["memory"] = {"status": "down", "error": "not_initialized"}
+            overall_healthy = False
+        elif hasattr(mem_svc, "initialized") and not mem_svc.initialized:
+            elapsed = round((time.monotonic() - t0) * 1000, 1)
+            services["memory"] = {"status": "down", "error": "init_failed", "response_ms": elapsed}
+            overall_healthy = False
+        else:
+            elapsed = round((time.monotonic() - t0) * 1000, 1)
+            services["memory"] = {"status": "healthy", "response_ms": elapsed}
+    except Exception as exc:
+        elapsed = round((time.monotonic() - t0) * 1000, 1)
+        services["memory"] = {"status": "down", "error": str(exc), "response_ms": elapsed}
+        overall_healthy = False
+
+    overall = "healthy" if overall_healthy else "unhealthy"
+    return {"services": services, "overall": overall}
+
+
 @router.get("/status/detail")
 async def status_detail(
     _user: Annotated[str, Depends(get_current_user)],
