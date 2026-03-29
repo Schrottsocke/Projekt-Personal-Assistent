@@ -31,7 +31,7 @@ from pathlib import Path
 PROJ_DIR = Path(__file__).parent.parent
 ENV_FILE = PROJ_DIR / ".env"
 PORT = int(os.getenv("WEBHOOK_PORT", "9000"))
-BRANCH = os.getenv("DEPLOY_BRANCH", "claude/dual-personal-assistants-0Uqna")
+BRANCH = os.getenv("DEPLOY_BRANCH", "main")
 SERVICES = ["personal-assistant", "personal-assistant-api"]
 VENV_PIP = PROJ_DIR / "venv" / "bin" / "pip"
 BOT_USER = "assistant"
