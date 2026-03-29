@@ -1,5 +1,7 @@
 """POST /auth/login, POST /auth/refresh"""
 
+import secrets
+
 from fastapi import APIRouter, HTTPException, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -26,7 +28,7 @@ async def login(request: Request, body: LoginRequest):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unbekannter Nutzer.")
 
     expected = get_pw()
-    if not expected or body.password != expected:
+    if not expected or not secrets.compare_digest(body.password, expected):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Falsches Passwort.")
 
     return TokenResponse(
