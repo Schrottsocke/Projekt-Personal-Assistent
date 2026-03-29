@@ -119,7 +119,7 @@ class ChefkochService:
         difficulty = _DIFFICULTY_LABELS.get(difficulty_int, "Unbekannt")
 
         # Bewertung als Sterne
-        rating_value = recipe.get("rating", {}).get("rating", 0.0)
+        rating_value = (recipe.get("rating") or {}).get("rating", 0.0)
         stars = _rating_to_stars(rating_value)
 
         # Zeiten (Minuten)

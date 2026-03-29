@@ -116,6 +116,8 @@ class EmailService:
             redirect_uri="urn:ietf:wg:oauth:2.0:oob",
         )
         auth_url, _ = flow.authorization_url(prompt="consent")
+        if user_key in self._pending_flows:
+            logger.warning("Bestehender OAuth-Flow für %s wird ersetzt.", user_key)
         self._pending_flows[user_key] = flow
         logger.info(f"Gmail OAuth-Flow gestartet für: {user_key}")
         return auth_url
@@ -165,7 +167,7 @@ class EmailService:
             if unread_only:
                 query += " is:unread"
 
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(
                 None, lambda: service.users().messages().list(userId="me", q=query, maxResults=limit).execute()
             )
@@ -223,7 +225,7 @@ class EmailService:
         """
         try:
             service = self._get_service(user_key)
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             msg = await loop.run_in_executor(
                 None, lambda: service.users().messages().get(userId="me", id=email_id, format="full").execute()
             )
@@ -281,7 +283,7 @@ class EmailService:
             return 0
         try:
             service = self._get_service(user_key)
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             result = await loop.run_in_executor(
                 None,
                 lambda: service.users().messages().list(userId="me", q="in:inbox is:unread", maxResults=1).execute(),
@@ -301,7 +303,7 @@ class EmailService:
         """Markiert eine E-Mail als gelesen."""
         try:
             service = self._get_service(user_key)
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             await loop.run_in_executor(
                 None,
                 lambda: (
@@ -342,7 +344,7 @@ class EmailService:
             message["subject"] = subject
 
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode("utf-8")
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             draft = await loop.run_in_executor(
                 None,
                 lambda: (

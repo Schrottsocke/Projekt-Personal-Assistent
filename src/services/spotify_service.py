@@ -160,7 +160,7 @@ class SpotifyService:
         sp = self._get_client(user_key)
         if not sp:
             return None
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             if query:
                 results = await loop.run_in_executor(
@@ -194,7 +194,7 @@ class SpotifyService:
         sp = self._get_client(user_key)
         if not sp:
             return None
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(None, lambda: sp.pause_playback())
             return "⏸ Pause."
@@ -211,7 +211,7 @@ class SpotifyService:
         sp = self._get_client(user_key)
         if not sp:
             return None
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(None, lambda: sp.next_track())
             return "⏭ Nächster Titel."
@@ -228,7 +228,7 @@ class SpotifyService:
         sp = self._get_client(user_key)
         if not sp:
             return None
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             playback = await loop.run_in_executor(None, lambda: sp.current_playback())
             if not playback or not playback.get("is_playing"):
@@ -260,7 +260,7 @@ class SpotifyService:
         if not sp:
             return None
         level = max(0, min(100, level))
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             await loop.run_in_executor(None, lambda: sp.volume(level))
             return f"🔊 Lautstärke: {level}%"

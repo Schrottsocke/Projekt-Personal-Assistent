@@ -145,7 +145,10 @@ class PdfService:
             from PIL import Image as PILImage
 
             img = PILImage.open(io.BytesIO(image_bytes))
-            img_width, img_height = img.size
+            try:
+                img_width, img_height = img.size
+            finally:
+                img.close()
         except Exception:
             img_width, img_height = page_width, page_height
 
@@ -198,12 +201,15 @@ class PdfService:
             from PIL import Image as PILImage
 
             image = PILImage.open(io.BytesIO(image_bytes))
-            if image.mode not in ("RGB", "L"):
-                image = image.convert("RGB")
+            try:
+                if image.mode not in ("RGB", "L"):
+                    image = image.convert("RGB")
 
-            output = io.BytesIO()
-            image.save(output, format="PDF", resolution=150)
-            return output.getvalue()
+                output = io.BytesIO()
+                image.save(output, format="PDF", resolution=150)
+                return output.getvalue()
+            finally:
+                image.close()
         except Exception as e:
             logger.error(f"Pillow-PDF-Fallback fehlgeschlagen: {e}")
             raise

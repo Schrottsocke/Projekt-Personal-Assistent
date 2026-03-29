@@ -184,6 +184,8 @@ class DriveService:
             prompt="consent",
         )
 
+        if user_key in self._pending_flows:
+            logger.warning("Bestehender OAuth-Flow für %s wird ersetzt.", user_key)
         self._pending_flows[user_key] = flow
         logger.debug("Drive Auth-URL für '%s' erstellt.", user_key)
         return auth_url

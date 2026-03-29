@@ -60,7 +60,7 @@ class WebSearchService:
         try:
             import asyncio
 
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             response = await loop.run_in_executor(
                 None,
                 lambda: self._tavily.search(
@@ -98,7 +98,7 @@ class WebSearchService:
             import asyncio
             from duckduckgo_search import DDGS
 
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
 
             def _run():
                 with DDGS() as ddgs:
