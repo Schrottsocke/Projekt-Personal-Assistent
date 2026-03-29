@@ -16,7 +16,7 @@ google-auth-oauthlib==1.2.1
 APScheduler==3.11.2
 
 # Database
-SQLAlchemy==2.0.36
+SQLAlchemy==2.0.48
 
 # Web Search
 tavily-python==0.7.23
