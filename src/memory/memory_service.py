@@ -124,7 +124,6 @@ class BotMemoryService(BaseMemoryService):
                     profile = UserProfile(user_key=user_key)
                     session.add(profile)
                 profile.is_onboarded = True
-                session.commit()
         except SQLAlchemyError as e:
             logger.error("Mark-Onboarded-Fehler: %s", e)
 

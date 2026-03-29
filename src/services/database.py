@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from sqlalchemy import (
     create_engine,
     event,
+    text as sa_text,
     Column,
     String,
     Integer,
@@ -53,8 +54,8 @@ class UserProfile(Base):
     spotify_token_json = Column(Text, nullable=True)
     # Feature-Marketplace: aktivierte/deaktivierte Features als JSON {"calendar": true, ...}
     enabled_features = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Note(Base):
@@ -64,8 +65,8 @@ class Note(Base):
     user_key = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
     is_shared = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Reminder(Base):
@@ -78,7 +79,7 @@ class Reminder(Base):
     remind_at = Column(DateTime, nullable=False)
     is_sent = Column(Boolean, default=False)
     is_shared = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Proposal(Base):
@@ -99,7 +100,7 @@ class Proposal(Base):
     status = Column(String(20), default="pending")  # pending, approved, rejected
     telegram_message_id = Column(String(50), nullable=True)  # Für späteres Editieren
     telegram_chat_id = Column(String(50), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     decided_at = Column(DateTime, nullable=True)
 
 
@@ -116,8 +117,8 @@ class Task(Base):
     priority = Column(String(10), default="medium")  # high / medium / low
     due_date = Column(DateTime, nullable=True)
     status = Column(String(20), default="open")  # open / in_progress / done
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
 
 class MemoryFact(Base):
@@ -133,8 +134,8 @@ class MemoryFact(Base):
     user_key = Column(String(50), nullable=False)
     content = Column(Text, nullable=False)
     confirmation_count = Column(Integer, default=1)  # Wie oft wurde dieser Fakt extrahiert
-    last_used = Column(DateTime, default=datetime.utcnow)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    last_used = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class ConversationHistory(Base):
@@ -144,7 +145,7 @@ class ConversationHistory(Base):
     user_key = Column(String(50), nullable=False)
     role = Column(String(20), nullable=False)  # 'user' oder 'assistant'
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class ShoppingItem(Base):
@@ -160,7 +161,7 @@ class ShoppingItem(Base):
     category = Column(String(50), nullable=True)  # z.B. "Gemüse", "Milchprodukte"
     checked = Column(Boolean, default=False)
     source = Column(String(100), nullable=True)  # z.B. "chefkoch:12345" oder "manual"
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class ScannedDocument(Base):
@@ -177,7 +178,7 @@ class ScannedDocument(Base):
     summary = Column(Text, nullable=True)
     sender = Column(String(200), nullable=True)
     amount = Column(String(50), nullable=True)  # Betrag falls Rechnung
-    scanned_at = Column(DateTime, default=datetime.utcnow)
+    scanned_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class SavedRecipe(Base):
@@ -197,7 +198,7 @@ class SavedRecipe(Base):
     ingredients_json = Column(Text, nullable=True)  # JSON-Array
     is_favorite = Column(Boolean, default=False)
     source_url = Column(String(500), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class MealPlanEntry(Base):
@@ -214,7 +215,7 @@ class MealPlanEntry(Base):
     meal_type = Column(String(20), default="dinner")  # breakfast|lunch|dinner
     servings = Column(Integer, default=4)
     notes = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 # Engine & Session Setup
@@ -279,7 +280,7 @@ def init_db():
                     "ALTER TABLE user_profiles ADD COLUMN enabled_features TEXT",
                 ]:
                     try:
-                        conn.execute(__import__("sqlalchemy").text(col_sql))
+                        conn.execute(sa_text(col_sql))
                         conn.commit()
                     except OperationalError as e:
                         if "duplicate column name" in str(e).lower():
@@ -295,7 +296,6 @@ def prune_conversation_history(days: int = 30) -> int:
     """Löscht Conversation-History-Einträge älter als 'days' Tage.
     Returns: Anzahl gelöschter Zeilen."""
     from datetime import timedelta
-    import sqlalchemy
 
     if _engine is None:
         return 0
@@ -303,7 +303,7 @@ def prune_conversation_history(days: int = 30) -> int:
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     with _engine.connect() as conn:
         result = conn.execute(
-            sqlalchemy.text("DELETE FROM conversation_history WHERE created_at < :cutoff"),
+            sa_text("DELETE FROM conversation_history WHERE created_at < :cutoff"),
             {"cutoff": cutoff},
         )
         conn.commit()
