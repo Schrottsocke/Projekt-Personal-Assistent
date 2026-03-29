@@ -352,27 +352,27 @@ Mögliche Intents:
 {intent_lines}
 
 Antworte NUR mit JSON:
-{"intent": "...", "details": {...}}
+{{"intent": "...", "details": {{...}}}}
 
 Details je nach Intent:
-- calendar_create: {"title": "...", "date": "YYYY-MM-DD oder morgen/heute", "time": "HH:MM", "duration_minutes": 60, "description": "..."}
-- note_create: {"title": "...", "content": "..."}
-- reminder_create: {"text": "...", "datetime": "YYYY-MM-DD HH:MM oder relative Zeit"}
-- task_create: {"title": "...", "due_date": "YYYY-MM-DD oder null", "priority": "low/medium/high"}
-- task_complete: {"task_identifier": "..."}
-- timer_create: {"minutes": X, "label": "..."}
-- table_create: {"title": "...", "description": "Beschreibung was die Tabelle enthalten soll"}
-- presentation_create: {"title": "...", "topic": "...", "slides_count": 5}
-- spotify: {"action": "play/pause/next/prev/volume", "query": "...", "volume": 0-100}
-- smarthome: {"action": "on/off/set", "device": "...", "value": "..."}
-- recipe_search: {"query": "...", "dietary": "vegetarisch/vegan/null"}
-- drive: {"action": "list/search", "query": "..."}
-- shopping_add: {"items": ["item1", "item2"]}
-- shopping_recipe: {"recipe_name": "..."}
-- email_read: {"filter": "unread/all/from:name"}
-- email_compose: {"to": "...", "subject": "...", "body": "..."}
-- mobility: {"destination": "...", "origin": "aktueller Standort oder Adresse", "mode": "driving/transit/walking"}
-- weather: {"location": "Stadtname oder Adresse", "type": "current/forecast", "days": 3}
+- calendar_create: {{"title": "...", "date": "YYYY-MM-DD oder morgen/heute", "time": "HH:MM", "duration_minutes": 60, "description": "..."}}
+- note_create: {{"title": "...", "content": "..."}}
+- reminder_create: {{"text": "...", "datetime": "YYYY-MM-DD HH:MM oder relative Zeit"}}
+- task_create: {{"title": "...", "due_date": "YYYY-MM-DD oder null", "priority": "low/medium/high"}}
+- task_complete: {{"task_identifier": "..."}}
+- timer_create: {{"minutes": X, "label": "..."}}
+- table_create: {{"title": "...", "description": "Beschreibung was die Tabelle enthalten soll"}}
+- presentation_create: {{"title": "...", "topic": "...", "slides_count": 5}}
+- spotify: {{"action": "play/pause/next/prev/volume", "query": "...", "volume": 0-100}}
+- smarthome: {{"action": "on/off/set", "device": "...", "value": "..."}}
+- recipe_search: {{"query": "...", "dietary": "vegetarisch/vegan/null"}}
+- drive: {{"action": "list/search", "query": "..."}}
+- shopping_add: {{"items": ["item1", "item2"]}}
+- shopping_recipe: {{"recipe_name": "..."}}
+- email_read: {{"filter": "unread/all/from:name"}}
+- email_compose: {{"to": "...", "subject": "...", "body": "..."}}
+- mobility: {{"destination": "...", "origin": "aktueller Standort oder Adresse", "mode": "driving/transit/walking"}}
+- weather: {{"location": "Stadtname oder Adresse", "type": "current/forecast", "days": 3}}
 """
         now = datetime.now(self.tz)
         user_prompt = f"Datum: {now.strftime('%Y-%m-%d %H:%M')}\nNachricht: {message}"
