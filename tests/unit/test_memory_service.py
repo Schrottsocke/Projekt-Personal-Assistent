@@ -1,7 +1,7 @@
 """Unit-Tests für BaseMemoryService und BotMemoryService."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 
 @pytest.fixture
@@ -127,11 +127,9 @@ class TestUpsertFact:
 
         bot_memory_service._db = MagicMock(return_value=mock_session)
 
-        with patch("src.memory.memory_service.MemoryFact", MagicMock()) as MockFact:
+        with patch("src.services.database.MemoryFact", MagicMock()) as MockFact:
             MockFact.return_value = MagicMock()
-            # Patch the import inside the method
-            with patch.dict("sys.modules", {"src.services.database": MagicMock(MemoryFact=MockFact)}):
-                await bot_memory_service.upsert_fact("taake", "Neuer Fakt")
+            await bot_memory_service.upsert_fact("taake", "Neuer Fakt")
 
         mock_session.add.assert_called_once()
 

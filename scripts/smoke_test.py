@@ -147,7 +147,7 @@ def run_smoke_tests(quick: bool = False) -> int:
 
     # ── Zusammenfassung ──
     print(f"\n{'=' * 60}")
-    print(f"  ERGEBNIS")
+    print("  ERGEBNIS")
     print(f"{'=' * 60}")
     print(f"  Gesamt:    {total}")
     print(f"  Bestanden: {passed}")
@@ -155,15 +155,15 @@ def run_smoke_tests(quick: bool = False) -> int:
     print(f"  Fehler:    {failed}")
 
     if errors:
-        print(f"\n  Fehlerdetails:")
+        print("\n  Fehlerdetails:")
         for err in errors:
             print(f"    - {err}")
 
     if failed > 0:
-        print(f"\n  STATUS: FEHLGESCHLAGEN")
+        print("\n  STATUS: FEHLGESCHLAGEN")
         return 1
     else:
-        print(f"\n  STATUS: BESTANDEN")
+        print("\n  STATUS: BESTANDEN")
         return 0
 
 
