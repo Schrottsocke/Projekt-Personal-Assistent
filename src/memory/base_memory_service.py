@@ -181,11 +181,16 @@ class SimpleFallbackMemory:
         self._store: dict[str, list[str]] = {}
 
     def add(self, messages: list[dict], user_id: str):
+        import uuid
+
         if user_id not in self._store:
             self._store[user_id] = []
+        results = []
         for msg in messages:
             if msg.get("role") == "user":
                 self._store[user_id].append(msg["content"])
+                results.append({"id": str(uuid.uuid4()), "memory": msg["content"]})
+        return {"results": results}
 
     def search(self, query: str, user_id: str, limit: int = 5) -> list[dict]:
         memories = self._store.get(user_id, [])
