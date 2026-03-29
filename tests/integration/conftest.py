@@ -1,4 +1,10 @@
-"""Fixtures für Integration-Tests: TestClient mit echten DB-Services + Mock-External."""
+"""Fixtures für Integration-Tests: TestClient mit echten DB-Services + Mock-External.
+
+Shared external-API mocks (mock_telegram_bot_api, mock_google_calendar_api,
+mock_openrouter_api) are inherited from the root tests/conftest.py.
+The autouse _block_httpx_requests fixture from tests/conftest.py prevents any
+real network calls across all tests.
+"""
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
