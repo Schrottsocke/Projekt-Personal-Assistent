@@ -127,15 +127,15 @@ class AIService:
     def _get_intelligence_service(self):
         """Lazy-init des Intelligence Service."""
         if self._intelligence is None:
-            from services.intelligence import IntelligenceService
+            from src.services.intelligence import IntelligenceEngine
 
-            self._intelligence = IntelligenceService(self)
+            self._intelligence = IntelligenceEngine(self)
         return self._intelligence
 
     def _get_web_search_service(self):
         """Lazy-init des Web Search Service."""
         if self._web_search is None:
-            from services.web_search import WebSearchService
+            from src.services.web_search import WebSearchService
 
             self._web_search = WebSearchService(self)
         return self._web_search

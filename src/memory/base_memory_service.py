@@ -5,6 +5,7 @@ Kapselt die mem0-Initialisierung, Suche und Speicherung.
 Spezialisierungen (Bot/API) erben und erweitern diese Klasse.
 """
 
+import asyncio
 import logging
 from config.settings import settings
 
@@ -88,7 +89,8 @@ class BaseMemoryService:
         if not self._available or not self._memory:
             return
         try:
-            self._memory.add(
+            await asyncio.to_thread(
+                self._memory.add,
                 messages=[{"role": "user", "content": content}],
                 user_id=user_key,
             )
@@ -101,7 +103,7 @@ class BaseMemoryService:
         if not self._available or not self._memory:
             return []
         try:
-            result = self._memory.add(messages, user_id=user_key)
+            result = await asyncio.to_thread(self._memory.add, messages, user_id=user_key)
             if isinstance(result, dict) and "results" in result:
                 return [r.get("id", "") for r in result["results"]]
             return []
@@ -118,7 +120,7 @@ class BaseMemoryService:
         if not self._available or not self._memory:
             return []
         try:
-            results = self._memory.search(query=query, user_id=user_key, limit=limit)
+            results = await asyncio.to_thread(self._memory.search, query=query, user_id=user_key, limit=limit)
             if isinstance(results, dict) and "results" in results:
                 return results["results"]
             if isinstance(results, list):
@@ -133,7 +135,7 @@ class BaseMemoryService:
         if not self._available or not self._memory:
             return []
         try:
-            results = self._memory.get_all(user_id=user_key)
+            results = await asyncio.to_thread(self._memory.get_all, user_id=user_key)
             if isinstance(results, dict) and "results" in results:
                 return results["results"]
             if isinstance(results, list):
@@ -152,7 +154,7 @@ class BaseMemoryService:
         if not self._available or not self._memory:
             return False
         try:
-            self._memory.delete(memory_id)
+            await asyncio.to_thread(self._memory.delete, memory_id)
             return True
         except (OSError, ValueError, RuntimeError) as e:
             logger.warning("Memory-Delete-Fehler: %s", e)
@@ -163,7 +165,7 @@ class BaseMemoryService:
         if not self._available or not self._memory:
             return False
         try:
-            self._memory.delete_all(user_id=user_key)
+            await asyncio.to_thread(self._memory.delete_all, user_id=user_key)
             logger.info("Gedaechtnis fuer %s geloescht.", user_key)
             return True
         except (OSError, ValueError, RuntimeError) as e:
