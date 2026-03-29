@@ -458,7 +458,8 @@ Details je nach Intent:
             end_dt = start_dt + timedelta(minutes=duration)
 
             event = await bot.calendar_service.create_event(
-                title=title,
+                user_key=user_key,
+                summary=title,
                 start=start_dt,
                 end=end_dt,
                 description=description,
@@ -481,7 +482,7 @@ Details je nach Intent:
         content = details.get("content", message)
 
         try:
-            note = await bot.notes_service.create_note(title=title, content=content)
+            note = await bot.notes_service.create_note(user_key=user_key, content=content)
             if note:
                 return f"📝 Notiz erstellt: *{title}*"
             return "❌ Notiz konnte nicht erstellt werden."
@@ -512,9 +513,10 @@ Details je nach Intent:
                 remind_dt = now + timedelta(hours=1)
 
             reminder = await bot.reminder_service.create_reminder(
-                text=text,
+                user_key=user_key,
+                user_chat_id=chat_id,
+                content=text,
                 remind_at=remind_dt,
-                chat_id=chat_id,
             )
 
             if reminder:

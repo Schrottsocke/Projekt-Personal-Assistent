@@ -508,6 +508,7 @@ async def cmd_tabelle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             bot=bot,
             user_key=bot.name.lower(),
             message=description,
+            intent_data={"details": {"title": description}},
             chat_id=update.effective_chat.id,
         )
         if response:
@@ -543,6 +544,7 @@ async def cmd_praesentation(update: Update, context: ContextTypes.DEFAULT_TYPE):
             bot=bot,
             user_key=bot.name.lower(),
             message=topic,
+            intent_data={"details": {"title": topic}},
             chat_id=update.effective_chat.id,
         )
         if response:

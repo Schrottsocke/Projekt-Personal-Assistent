@@ -28,11 +28,12 @@ async def handle_proposal_callback(update: Update, context: ContextTypes.DEFAULT
     """Verarbeitet ✅ Ausführen / ❌ Ablehnen Button-Klicks."""
     bot = get_bot(context)
     query = update.callback_query
-    await query.answer()
 
     if not bot._is_authorized(update.effective_user.id):
         await query.answer("⛔ Keine Berechtigung.", show_alert=True)
         return
+
+    await query.answer()
 
     match = re.match(CALLBACK_PATTERN, query.data)
     if not match:
