@@ -176,15 +176,17 @@ class EmailService:
                 try:
                     msg = await loop.run_in_executor(
                         None,
-                        lambda mid=msg_ref["id"]: service.users()
-                        .messages()
-                        .get(
-                            userId="me",
-                            id=mid,
-                            format="metadata",
-                            metadataHeaders=["Subject", "From", "Date"],
-                        )
-                        .execute(),
+                        lambda mid=msg_ref["id"]: (
+                            service.users()
+                            .messages()
+                            .get(
+                                userId="me",
+                                id=mid,
+                                format="metadata",
+                                metadataHeaders=["Subject", "From", "Date"],
+                            )
+                            .execute()
+                        ),
                     )
                     headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
                     emails.append(
@@ -281,7 +283,8 @@ class EmailService:
             service = self._get_service(user_key)
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(
-                None, lambda: service.users().messages().list(userId="me", q="in:inbox is:unread", maxResults=1).execute()
+                None,
+                lambda: service.users().messages().list(userId="me", q="in:inbox is:unread", maxResults=1).execute(),
             )
             return result.get("resultSizeEstimate", 0)
         except Exception as e:
@@ -301,11 +304,16 @@ class EmailService:
             loop = asyncio.get_event_loop()
             await loop.run_in_executor(
                 None,
-                lambda: service.users().messages().modify(
-                    userId="me",
-                    id=email_id,
-                    body={"removeLabelIds": ["UNREAD"]},
-                ).execute(),
+                lambda: (
+                    service.users()
+                    .messages()
+                    .modify(
+                        userId="me",
+                        id=email_id,
+                        body={"removeLabelIds": ["UNREAD"]},
+                    )
+                    .execute()
+                ),
             )
             return True
         except Exception as e:
@@ -337,13 +345,15 @@ class EmailService:
             loop = asyncio.get_event_loop()
             draft = await loop.run_in_executor(
                 None,
-                lambda: service.users()
-                .drafts()
-                .create(
-                    userId="me",
-                    body={"message": {"raw": raw}},
-                )
-                .execute(),
+                lambda: (
+                    service.users()
+                    .drafts()
+                    .create(
+                        userId="me",
+                        body={"message": {"raw": raw}},
+                    )
+                    .execute()
+                ),
             )
 
             draft_id = draft.get("id", "")
