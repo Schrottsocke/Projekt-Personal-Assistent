@@ -9,7 +9,7 @@ mem0ai==1.0.9
 
 # Google Calendar
 google-api-python-client==2.193.0
-google-auth-httplib2==0.2.0
+google-auth-httplib2==0.3.0
 google-auth-oauthlib==1.3.0
 
 # Scheduler
