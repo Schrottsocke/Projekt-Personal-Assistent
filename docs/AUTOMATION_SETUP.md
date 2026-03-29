@@ -12,6 +12,7 @@ Anleitung zur Einrichtung der GitHub-Automation für dieses Repository.
 | `triage.yml` | Montags 08:00 UTC + manuell | Wöchentlicher Triage-Report als Issue |
 | `repo-review.yml` | Mittwochs 08:00 UTC + manuell | Urgency-Check: P0/P1, CI-Health, stale PRs |
 | `pr-labeler.yml` | PR opened/synchronize | Automatische Area- und Size-Labels für PRs |
+| `issue-label-priority.yml` | Issue opened | Priority- und Area-Labels aus Template-Dropdown setzen |
 | `label-sync.yml` | Manuell + Push auf `labels.yml` | Standard-Labels synchronisieren |
 
 ## 1. GitHub Project einrichten
@@ -27,12 +28,21 @@ Anleitung zur Einrichtung der GitHub-Automation für dieses Repository.
 
 Die Nummer steht in der URL: `https://github.com/users/Schrottsocke/projects/X` → `X` ist die Nummer.
 
-### Empfohlene Project-Felder
+### Empfohlene Project-Felder (7 Felder)
 
 | Feld | Typ | Werte |
 |------|-----|-------|
-| Status | Single Select | Todo, In Progress, Done |
+| Status | Single Select | Backlog, Todo, In Progress, In Review, Done |
 | Priority | Single Select | P0-critical, P1-high, P2-medium |
+| Type | Single Select | Bug, Enhancement, Task, Incident, Refactoring, Quality, Documentation |
+| Area | Single Select | Bot, API, App, Deploy, CI, Config, Tests, Docs |
+| Size | Single Select | XS, S, M, L, XL |
+| Source | Single Select | Manual, Autopilot, Dependabot, Triage |
+| Sprint | Iteration | 2-Wochen-Zyklen |
+
+> **Hinweis:** Type, Area und Size spiegeln die gleichnamigen Labels wider.
+> Source hilft beim Filtern nach Herkunft (manuell erstellte vs. automatisch generierte Items).
+> Sprint ist ein Iterations-Feld fuer zeitbasierte Planung.
 
 ### Project Built-in Automations
 
@@ -40,13 +50,13 @@ Im Project unter **Settings → Workflows** aktivieren:
 
 | Workflow | Trigger | Status-Feld setzen auf |
 |----------|---------|----------------------|
-| Item added to project | Item hinzugefügt | Todo |
+| Item added to project | Item hinzugefuegt | Backlog |
 | Item closed | Issue/PR geschlossen | Done |
 | Pull request merged | PR gemergt | Done |
-| Code review approved | Review approved | Done |
+| Code review approved | Review approved | In Review |
 
-> **Hinweis:** Für "In Progress" gibt es keine automatische Built-in-Regel.
-> Empfehlung: Status manuell auf "In Progress" setzen, wenn die Arbeit beginnt.
+> **Hinweis:** Status manuell auf "Todo" setzen, wenn ein Item fuer den naechsten Sprint eingeplant wird.
+> "In Progress" setzen, wenn die Arbeit beginnt.
 > Die `/work-next` Claude Skill setzt den Branch-Namen als Indikator.
 
 ### Erweiterte Status-Automation (GraphQL API)
