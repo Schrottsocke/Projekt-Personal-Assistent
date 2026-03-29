@@ -11,6 +11,7 @@ OAuth2-Flow für Telegram:
 Intents: spotify_play, spotify_pause, spotify_skip, spotify_info
 """
 
+import asyncio
 import json
 import logging
 from typing import Optional
@@ -159,21 +160,24 @@ class SpotifyService:
         sp = self._get_client(user_key)
         if not sp:
             return None
+        loop = asyncio.get_event_loop()
         try:
             if query:
-                results = sp.search(q=query, type="track,playlist,artist", limit=1)
+                results = await loop.run_in_executor(
+                    None, lambda: sp.search(q=query, type="track,playlist,artist", limit=1)
+                )
                 # Track bevorzugen
                 tracks = results.get("tracks", {}).get("items", [])
                 playlists = results.get("playlists", {}).get("items", [])
                 if tracks:
-                    sp.start_playback(uris=[tracks[0]["uri"]])
+                    await loop.run_in_executor(None, lambda: sp.start_playback(uris=[tracks[0]["uri"]]))
                     return f"▶️ Spiele: *{tracks[0]['name']}* – {tracks[0]['artists'][0]['name']}"
                 elif playlists:
-                    sp.start_playback(context_uri=playlists[0]["uri"])
+                    await loop.run_in_executor(None, lambda: sp.start_playback(context_uri=playlists[0]["uri"]))
                     return f"▶️ Spiele Playlist: *{playlists[0]['name']}*"
                 return f"❓ Nichts gefunden für: _{query}_"
             else:
-                sp.start_playback()
+                await loop.run_in_executor(None, lambda: sp.start_playback())
                 current = self._get_current(sp)
                 return f"▶️ Wiedergabe gestartet{f': {current}' if current else ''}."
         except Exception as e:
@@ -190,8 +194,9 @@ class SpotifyService:
         sp = self._get_client(user_key)
         if not sp:
             return None
+        loop = asyncio.get_event_loop()
         try:
-            sp.pause_playback()
+            await loop.run_in_executor(None, lambda: sp.pause_playback())
             return "⏸ Pause."
         except Exception as e:
             return f"❌ Fehler: {e}"
@@ -206,8 +211,9 @@ class SpotifyService:
         sp = self._get_client(user_key)
         if not sp:
             return None
+        loop = asyncio.get_event_loop()
         try:
-            sp.next_track()
+            await loop.run_in_executor(None, lambda: sp.next_track())
             return "⏭ Nächster Titel."
         except Exception as e:
             return f"❌ Fehler: {e}"
@@ -222,8 +228,9 @@ class SpotifyService:
         sp = self._get_client(user_key)
         if not sp:
             return None
+        loop = asyncio.get_event_loop()
         try:
-            playback = sp.current_playback()
+            playback = await loop.run_in_executor(None, lambda: sp.current_playback())
             if not playback or not playback.get("is_playing"):
                 return "⏹ Aktuell wird nichts gespielt."
             track = playback.get("item", {})
@@ -253,8 +260,9 @@ class SpotifyService:
         if not sp:
             return None
         level = max(0, min(100, level))
+        loop = asyncio.get_event_loop()
         try:
-            sp.volume(level)
+            await loop.run_in_executor(None, lambda: sp.volume(level))
             return f"🔊 Lautstärke: {level}%"
         except Exception as e:
             return f"❌ Fehler: {e}"
@@ -281,6 +289,14 @@ class SpotifyService:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 if profile:
                     profile.spotify_token_json = json.dumps(token_info)
+                    logger.info(f"Spotify-Token gespeichert für: {user_key}")
+                else:
+                    new_profile = UserProfile(
+                        user_key=user_key,
+                        spotify_token_json=json.dumps(token_info),
+                    )
+                    session.add(new_profile)
+                    logger.info(f"Spotify-Token gespeichert (neues Profil) für: {user_key}")
         except Exception as e:
             logger.error(f"Spotify-Token-Speicher-Fehler: {e}")
 

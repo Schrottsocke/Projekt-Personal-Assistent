@@ -61,6 +61,9 @@ class WeatherService:
                     return None
 
                 data = response.json()
+                if not data.get("current_condition") or not data.get("weather"):
+                    logger.warning(f"wttr.in: Unvollständige API-Antwort für {location}")
+                    return None
                 current = data["current_condition"][0]
                 weather = data["weather"][0]
 
@@ -88,7 +91,11 @@ class WeatherService:
                     if i < len(data["weather"]):
                         w = data["weather"][i]
                         hourly = w.get("hourly", [])
-                        desc_day = hourly[4]["lang_de"][0]["value"] if hourly and "lang_de" in hourly[4] else ""
+                        desc_day = ""
+                        if len(hourly) > 4 and "lang_de" in hourly[4]:
+                            desc_day = hourly[4]["lang_de"][0]["value"]
+                        elif len(hourly) > 4:
+                            desc_day = hourly[4].get("weatherDesc", [{}])[0].get("value", "")
                         result += (
                             f"\n\U0001f4c5 {label}: {w['mintempC']}\u00b0C \u2013 {w['maxtempC']}\u00b0C {desc_day}"
                         )
