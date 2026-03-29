@@ -87,7 +87,12 @@ jobs:
             --cov-report=term-missing \
             --cov-report=html:coverage-html \
             --cov-fail-under=50 \
-            -v
+            -v 2>&1 | tee coverage-output.txt
+      - name: Print coverage summary
+        if: always()
+        run: |
+          echo "## Coverage Summary" >> "$GITHUB_STEP_SUMMARY"
+          grep -E '^(TOTAL|Name|src/|api/|----)' coverage-output.txt >> "$GITHUB_STEP_SUMMARY" || true
       - uses: actions/upload-artifact@v7
         if: always()
         with:

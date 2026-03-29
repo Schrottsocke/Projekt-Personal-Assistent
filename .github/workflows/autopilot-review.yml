@@ -17,9 +17,9 @@ permissions:
   pull-requests: read
   actions: read
 
-  concurrency:
-    group: autopilot-review
-      cancel-in-progress: false
+concurrency:
+  group: autopilot-review
+  cancel-in-progress: false
 
 jobs:
   autopilot-review:
