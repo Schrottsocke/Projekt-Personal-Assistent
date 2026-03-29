@@ -282,7 +282,11 @@ def init_db():
                         conn.execute(__import__("sqlalchemy").text(col_sql))
                         conn.commit()
                     except OperationalError as e:
-                        logger.debug("Migration übersprungen (Spalte existiert bereits): %s", e)
+                        if "duplicate column name" in str(e).lower():
+                            logger.debug("Migration übersprungen (Spalte existiert bereits): %s", e)
+                        else:
+                            logger.warning("Migration fehlgeschlagen: %s", e)
+                            raise
 
         logger.info(f"Datenbank initialisiert: {settings.DATABASE_URL}")
 
