@@ -132,14 +132,21 @@ Details: `docs/issue-handling-playbook.md`
 - Ohne `Fixes #<issue>` ist das Issue nicht automatisch abschließbar
 - Keine PR gegen Neben- oder Arbeits-Branches erstellen, wenn das Ziel automatisches Issue-Closing ist
 
-## Debug-Reihenfolge
+## Debugging
 
+Vorgehen: Reproduzieren → Hypothese → Experiment → Fix.
+Kein Fix ohne plausible Root-Cause. Bei unklarer Ursache parallele Explore-Agents nutzen.
+Bei >= 4 Bugs: Batch-Modus (siehe Batch-Modus Abschnitt).
+
+Priorisierung nach Schicht:
 1. Start-/Importfehler
 2. Konfiguration
 3. Backend-Runtime
 4. API/Auth
 5. App/API-Integration
 6. Deployment
+
+Details: `docs/debug-playbook.md`
 
 ## Stop
 
