@@ -150,6 +150,8 @@ class CalendarService:
         # Flow für späteren Code-Exchange speichern
         if not hasattr(self, "_pending_flows"):
             self._pending_flows = {}
+        if user_key in self._pending_flows:
+            logger.warning("Bestehender OAuth-Flow für %s wird ersetzt.", user_key)
         self._pending_flows[user_key] = flow
 
         return auth_url

@@ -70,34 +70,36 @@ class OcrService:
             import pandas as pd
 
             image = Image.open(io.BytesIO(image_bytes))
+            try:
+                # Vorverarbeitung: Graustufenbild verbessert OCR-Qualität
+                if image.mode not in ("L", "RGB"):
+                    image = image.convert("RGB")
 
-            # Vorverarbeitung: Graustufenbild verbessert OCR-Qualität
-            if image.mode not in ("L", "RGB"):
-                image = image.convert("RGB")
+                # Volltext
+                text = pytesseract.image_to_string(image, lang="deu+eng", config="--oem 3 --psm 3")
 
-            # Volltext
-            text = pytesseract.image_to_string(image, lang="deu+eng", config="--oem 3 --psm 3")
+                # Wortdaten für PDF-Text-Layer
+                words_data = pytesseract.image_to_data(
+                    image,
+                    lang="deu+eng",
+                    config="--oem 3 --psm 3",
+                    output_type=pytesseract.Output.DICT,
+                )
 
-            # Wortdaten für PDF-Text-Layer
-            words_data = pytesseract.image_to_data(
-                image,
-                lang="deu+eng",
-                config="--oem 3 --psm 3",
-                output_type=pytesseract.Output.DICT,
-            )
+                # Konfidenz berechnen (Durchschnitt aller Wörter mit conf > 0)
+                confs = [c for c in words_data["conf"] if isinstance(c, (int, float)) and c > 0]
+                confidence = sum(confs) / len(confs) if confs else 0.0
 
-            # Konfidenz berechnen (Durchschnitt aller Wörter mit conf > 0)
-            confs = [c for c in words_data["conf"] if isinstance(c, (int, float)) and c > 0]
-            confidence = sum(confs) / len(confs) if confs else 0.0
-
-            logger.info(f"Tesseract OCR: {len(text.split())} Wörter, Konfidenz {confidence:.0f}%")
-            return {
-                "text": text,
-                "confidence": confidence,
-                "method": "tesseract",
-                "words_data": words_data,
-                "image_size": image.size,  # (width, height) für PDF-Koordinaten
-            }
+                logger.info(f"Tesseract OCR: {len(text.split())} Wörter, Konfidenz {confidence:.0f}%")
+                return {
+                    "text": text,
+                    "confidence": confidence,
+                    "method": "tesseract",
+                    "words_data": words_data,
+                    "image_size": image.size,  # (width, height) für PDF-Koordinaten
+                }
+            finally:
+                image.close()
         except ImportError:
             self._tesseract_available = False
             return None
