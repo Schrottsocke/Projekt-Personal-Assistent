@@ -49,7 +49,7 @@ app/.flutter-plugins
 app/.flutter-plugins-dependencies
 app/build/
 app/.metadata
-app/pubspec.lock
+# app/pubspec.lock  # Committed for reproducible builds
 *.dart.js
 
 # OS
