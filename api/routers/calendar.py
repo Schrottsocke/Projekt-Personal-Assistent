@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -40,7 +40,7 @@ async def calendar_today(
 async def calendar_week(
     user_key: Annotated[str, Depends(get_current_user)],
     cal_svc=Depends(get_calendar_service),
-    days: int = 7,
+    days: int = Query(7, ge=1, le=90),
 ):
     if not cal_svc.is_connected(user_key):
         return {"connected": False, "events": []}

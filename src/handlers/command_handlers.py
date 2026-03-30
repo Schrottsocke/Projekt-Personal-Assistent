@@ -7,6 +7,7 @@ from telegram import Update
 from telegram.ext import CommandHandler, CallbackQueryHandler, ContextTypes, Application
 
 from config.settings import settings
+from src.utils.telegram import escape_md
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +99,7 @@ async def cmd_kalender(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 dt = datetime.fromisoformat(dt_str)
                 date_fmt = dt.strftime("%a, %d.%m. (ganztägig)")
 
-            lines.append(f"• {date_fmt}\n  *{summary}*")
+            lines.append(f"• {date_fmt}\n  *{escape_md(summary)}*")
 
         await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
@@ -143,7 +144,7 @@ async def cmd_notiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
     content = " ".join(args)
     try:
         _note = await bot.notes_service.create_note(user_key=bot.name.lower(), content=content, is_shared=False)
-        await update.message.reply_text(f"✅ Notiz gespeichert!\n📝 _{content}_", parse_mode="Markdown")
+        await update.message.reply_text(f"✅ Notiz gespeichert!\n📝 _{escape_md(content)}_", parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Notiz-Fehler: {e}")
         await update.message.reply_text("❌ Notiz konnte nicht gespeichert werden.")
@@ -162,7 +163,7 @@ async def cmd_notizen(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         lines = ["📝 *Deine Notizen:*\n"]
         for i, note in enumerate(notes[-10:], 1):  # Letzte 10
-            lines.append(f"{i}. {note['content']}")
+            lines.append(f"{i}. {escape_md(note['content'])}")
 
         await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
     except Exception as e:
@@ -189,7 +190,7 @@ async def cmd_erinnerung(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Freier Text → KI parst Datum/Uhrzeit
     raw = " ".join(args)
-    await update.message.reply_text(f"⏰ Verarbeite: _{raw}_...", parse_mode="Markdown")
+    await update.message.reply_text(f"⏰ Verarbeite: _{escape_md(raw)}_...", parse_mode="Markdown")
 
     try:
         result = await bot.ai_service.parse_reminder(text=raw, user_key=bot.name.lower())
@@ -304,12 +305,15 @@ async def cmd_done(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     try:
         task_id = int(args[0].strip("#"))
+        if task_id <= 0 or task_id >= 2**31:
+            await update.message.reply_text("❓ Ungültige Aufgaben-Nummer. Beispiel: `/done 3`")
+            return
         task = await bot.task_service.complete_task(task_id=task_id, user_key=bot.name.lower())
         if task:
-            await update.message.reply_text(f"✅ Erledigt: _{task['title']}_", parse_mode="Markdown")
+            await update.message.reply_text(f"✅ Erledigt: _{escape_md(task['title'])}_", parse_mode="Markdown")
         else:
             await update.message.reply_text(f"❓ Aufgabe #{task_id} nicht gefunden. (/tasks)")
-    except (ValueError, IndexError):
+    except (ValueError, IndexError, OverflowError):
         await update.message.reply_text("❓ Bitte Aufgaben-Nummer angeben. Beispiel: `/done 3`")
     except Exception as e:
         logger.error(f"Done-Fehler: {e}")
@@ -474,7 +478,7 @@ async def cmd_vorschlaege(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines = ["📋 *Offene Vorschläge:*\n"]
         for p in proposals:
             created = p["created_at"].strftime("%d.%m. %H:%M") if p.get("created_at") else ""
-            lines.append(f"• #{p['id']} – {p['title']} _{created}_")
+            lines.append(f"• #{p['id']} – {escape_md(p['title'])} _{created}_")
 
         await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
     except Exception as e:
@@ -537,7 +541,7 @@ async def cmd_praesentation(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     topic = " ".join(args)
-    await update.message.reply_text(f"📊 Erstelle Präsentation zu _{topic}_...", parse_mode="Markdown")
+    await update.message.reply_text(f"📊 Erstelle Präsentation zu _{escape_md(topic)}_...", parse_mode="Markdown")
 
     try:
         response = await bot.ai_service._handle_presentation_create(
@@ -621,14 +625,14 @@ async def cmd_gemeinsam(update: Update, context: ContextTypes.DEFAULT_TYPE):
         lines.append("⚠️ *Terminüberschneidungen:*")
         for m_e, p_e, dt in conflicts[:3]:
             lines.append(
-                f"• {dt.strftime('%a %d.%m. %H:%M')} – _{m_e.get('summary', '?')}_ vs _{p_e.get('summary', '?')}_"
+                f"• {dt.strftime('%a %d.%m. %H:%M')} – _{escape_md(m_e.get('summary', '?'))}_ vs _{escape_md(p_e.get('summary', '?'))}_"
             )
         lines.append("")
 
     lines.append("*Alle Termine:*")
     for who, dt, event in all_events[:15]:
         icon = "👤" if who == "me" else f"👥 {partner_name}"
-        lines.append(f"• {dt.strftime('%a %d.%m. %H:%M')} {icon} – {event.get('summary', '?')}")
+        lines.append(f"• {dt.strftime('%a %d.%m. %H:%M')} {icon} – {escape_md(event.get('summary', '?'))}")
 
     await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
 
@@ -738,7 +742,7 @@ async def cmd_spotify(update: Update, context: ContextTypes.DEFAULT_TYPE):
         query = " ".join(args[1:])
         result = await sp.play(user_key, query)
     else:
-        result = f"❓ Unbekannt: `{cmd}`. Nutze: play, pause, skip"
+        result = f"❓ Unbekannt: `{escape_md(cmd)}`. Nutze: play, pause, skip"
     await update.message.reply_text(result or "❌ Spotify-Fehler", parse_mode="Markdown")
 
 
@@ -876,7 +880,7 @@ async def cmd_rezept(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     query = " ".join(args)
-    await update.message.reply_text(f"🍳 Suche Rezepte für _{query}_...", parse_mode="Markdown")
+    await update.message.reply_text(f"🍳 Suche Rezepte für _{escape_md(query)}_...", parse_mode="Markdown")
 
     ck = getattr(bot, "chefkoch_service", None)
     if not ck:
@@ -944,7 +948,7 @@ async def cmd_drive(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Suche
     if args and args[0].lower() == "suche" and len(args) > 1:
         query = " ".join(args[1:])
-        await update.message.reply_text(f"🔍 Suche in Drive: _{query}_...", parse_mode="Markdown")
+        await update.message.reply_text(f"🔍 Suche in Drive: _{escape_md(query)}_...", parse_mode="Markdown")
         try:
             files = await drive.list_files(user_key=user_key, query=query, limit=10)
             await update.message.reply_text(drive.format_file_list(files), parse_mode="Markdown")
@@ -1087,7 +1091,7 @@ async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     raw = " ".join(args)
-    await update.message.reply_text(f"📅 Erstelle Termin: _{raw}_...", parse_mode="Markdown")
+    await update.message.reply_text(f"📅 Erstelle Termin: _{escape_md(raw)}_...", parse_mode="Markdown")
 
     try:
         result = await bot.ai_service.parse_calendar_event(text=raw, user_key=bot.name.lower())
@@ -1100,7 +1104,7 @@ async def cmd_neu_termin(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 description=result.get("description", ""),
             )
             await update.message.reply_text(
-                f"✅ Termin erstellt!\n📅 *{result['summary']}*\n🕐 {result['start'].strftime('%d.%m.%Y %H:%M')}",
+                f"✅ Termin erstellt!\n📅 *{escape_md(result['summary'])}*\n🕐 {result['start'].strftime('%d.%m.%Y %H:%M')}",
                 parse_mode="Markdown",
             )
         else:
