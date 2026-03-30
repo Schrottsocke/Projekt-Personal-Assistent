@@ -5,12 +5,12 @@ Wird aggressiv bereinigt - nur die letzten Eintraege behalten.
 
 ## Eintraege
 
-- **Orchestrierungsstruktur umgesetzt**: config/project-fields.md erstellt, 10 Issues (#252-#261) in 4 Batches angelegt, orchestration-playbook.md und AUTOMATION_SETUP.md aktualisiert. Labels muessen noch via Label-Sync synchronisiert werden. GitHub Project Board muss manuell erstellt werden. (2026-03-29)
-- **Naechste Session**: Batch 1 (#252 Label-Sync → #253 Project Board → #254 Secrets) manuell abarbeiten, dann Batch 3 (#258 OAuth, #259 Webhook-Branch) als paralleler Code-Fix. (2026-03-29)
-- **Vorherige Runde abgeschlossen**: Issues #219-#239 alle geschlossen/gemergt. scripts/smoke_test.py, scripts/backup_db.sh, .pre-commit-config.yaml erledigt. (2026-03-29)
+- **8 Code-Issues gefixt (Parallel-Batch)**: #267-#274 erstellt, in 3 Batches (A: DB/Memory, B: API-Security, C: Infra) parallel bearbeitet, PRs #275-#277 gemergt. Alle auto-closed. (2026-03-30)
+- **Naechste Session**: 4 manuelle Issues offen: #253 Project Board → #254 Secrets → #261 Autopilot Dry-Run → #260 Flutter E2E. Reihenfolge einhalten (#254 blocked by #253). (2026-03-30)
+- **Restrisiko**: Docker-Build mit neuen OCR-Deps (#274) noch nicht getestet. Auth-Test `test_login_empty_password` sollte nach Batch-B-Fix jetzt passen – verifizieren. (2026-03-30)
 
 ## Meta
 
-- Zuletzt geprueft: 2026-03-29
+- Zuletzt geprueft: 2026-03-30
 - Review bis: 2026-06-28
 - Max Eintraege: 5
