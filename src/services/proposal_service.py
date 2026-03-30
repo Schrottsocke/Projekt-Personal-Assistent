@@ -8,7 +8,7 @@ Ablauf:
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
@@ -105,8 +105,10 @@ class ProposalService:
         # Auto-Approve prüfen
         auto_types = self._get_auto_approve_types(user_key)
         if proposal_type in auto_types and bot is not None:
+            _auto_executed = False
             try:
                 await self._execute(proposal_type, payload, user_key, str(chat_id), bot)
+                _auto_executed = True
                 confirm = self._format_auto_confirm(proposal_type, title, payload)
                 app = self._apps.get(user_key)
                 if app:
@@ -120,7 +122,11 @@ class ProposalService:
                 }
             except Exception as e:
                 logger.error(f"Auto-Approve Ausführungsfehler: {e}")
-                # Fallback: normaler Proposal-Flow
+                if _auto_executed:
+                    # Action already ran – do NOT fall through to manual proposal
+                    # to avoid double execution (#295)
+                    raise
+                # Fallback: normaler Proposal-Flow (action was not yet executed)
 
         payload_json = json.dumps(payload, default=str, ensure_ascii=False)
         icon = TYPE_ICONS.get(proposal_type, "📋")
@@ -276,22 +282,22 @@ class ProposalService:
             p_user_key = proposal.user_key
             p_chat_id = proposal.telegram_chat_id
             proposal.status = STATUS_APPROVED
-            proposal.decided_at = datetime.utcnow()
+            proposal.decided_at = datetime.now(timezone.utc)
 
-        try:
-            await self._execute(p_type, p_payload, p_user_key, p_chat_id, bot)
-            logger.info(f"Proposal #{proposal_id} ausgeführt.")
-            return True
-        except Exception as e:
-            logger.error(f"Proposal #{proposal_id} Ausführungsfehler: {e}")
-            # Status zurücksetzen auf pending bei Fehler
-            self._ensure_initialized()
-            with self._db() as session:
-                p = session.query(Proposal).filter_by(id=proposal_id).first()
-                if p:
-                    p.status = STATUS_PENDING
-                    p.decided_at = None
-            raise
+            try:
+                await self._execute(p_type, p_payload, p_user_key, p_chat_id, bot)
+                logger.info(f"Proposal #{proposal_id} ausgeführt.")
+                # Commit happens automatically when 'with' block exits
+                return True
+            except Exception as e:
+                logger.error(f"Proposal #{proposal_id} Ausführungsfehler: {e}")
+                # Rollback within the same session/transaction (#291)
+                session.rollback()
+                proposal = session.query(Proposal).filter_by(id=proposal_id).first()
+                if proposal:
+                    proposal.status = STATUS_PENDING
+                    proposal.decided_at = None
+                raise
 
     async def reject_proposal(self, proposal_id: int) -> bool:
         """Lehnt einen Vorschlag ab."""
@@ -303,7 +309,7 @@ class ProposalService:
             if not proposal:
                 return False
             proposal.status = STATUS_REJECTED
-            proposal.decided_at = datetime.utcnow()
+            proposal.decided_at = datetime.now(timezone.utc)
 
         logger.info(f"Proposal #{proposal_id} abgelehnt.")
         return True
@@ -335,74 +341,95 @@ class ProposalService:
     async def _execute(self, proposal_type: str, payload: dict, user_key: str, chat_id: str, bot):
         """Führt die eigentliche Aktion basierend auf dem Proposal-Typ aus."""
 
-        if proposal_type == TYPE_CALENDAR_CREATE:
-            start = datetime.fromisoformat(str(payload["start"]))
-            end = datetime.fromisoformat(str(payload["end"]))
-            await bot.calendar_service.create_event(
-                user_key=user_key,
-                summary=payload["summary"],
-                start=start,
-                end=end,
-                description=payload.get("description", ""),
-            )
+        try:
+            if proposal_type == TYPE_CALENDAR_CREATE:
+                start_raw = payload.get("start")
+                end_raw = payload.get("end")
+                summary = payload.get("summary")
+                if not start_raw or not end_raw or not summary:
+                    raise KeyError("calendar_create erfordert 'start', 'end' und 'summary'")
+                start = datetime.fromisoformat(str(start_raw))
+                end = datetime.fromisoformat(str(end_raw))
+                await bot.calendar_service.create_event(
+                    user_key=user_key,
+                    summary=summary,
+                    start=start,
+                    end=end,
+                    description=payload.get("description", ""),
+                )
 
-        elif proposal_type == TYPE_REMINDER_CREATE:
-            remind_at = datetime.fromisoformat(str(payload["remind_at"]))
-            await bot.reminder_service.create_reminder(
-                user_key=user_key,
-                user_chat_id=chat_id,
-                content=payload["content"],
-                remind_at=remind_at,
-            )
+            elif proposal_type == TYPE_REMINDER_CREATE:
+                remind_at_raw = payload.get("remind_at")
+                content = payload.get("content")
+                if not remind_at_raw or not content:
+                    raise KeyError("reminder_create erfordert 'remind_at' und 'content'")
+                remind_at = datetime.fromisoformat(str(remind_at_raw))
+                await bot.reminder_service.create_reminder(
+                    user_key=user_key,
+                    user_chat_id=chat_id,
+                    content=content,
+                    remind_at=remind_at,
+                )
 
-        elif proposal_type == TYPE_NOTE_CREATE:
-            await bot.notes_service.create_note(
-                user_key=user_key,
-                content=payload["content"],
-                is_shared=payload.get("is_shared", False),
-            )
+            elif proposal_type == TYPE_NOTE_CREATE:
+                content = payload.get("content")
+                if not content:
+                    raise KeyError("note_create erfordert 'content'")
+                await bot.notes_service.create_note(
+                    user_key=user_key,
+                    content=content,
+                    is_shared=payload.get("is_shared", False),
+                )
 
-        elif proposal_type == TYPE_TASK_CREATE:
-            await bot.task_service.create_task(
-                user_key=user_key,
-                title=payload["title"],
-                priority=payload.get("priority", "medium"),
-                description=payload.get("description", ""),
-                assigned_by=payload.get("assigned_by"),
-            )
+            elif proposal_type == TYPE_TASK_CREATE:
+                title = payload.get("title")
+                if not title:
+                    raise KeyError("task_create erfordert 'title'")
+                await bot.task_service.create_task(
+                    user_key=user_key,
+                    title=title,
+                    priority=payload.get("priority", "medium"),
+                    description=payload.get("description", ""),
+                    assigned_by=payload.get("assigned_by"),
+                )
 
-        elif proposal_type == TYPE_DOCUMENT_PREVIEW:
-            # Präsentation erstellen und senden (nach Outline-Bestätigung)
-            title = payload["title"]
-            slides = payload["slides"]
-            target_chat_id = payload.get("chat_id", chat_id)
-            path = bot.document_service.create_presentation(title=title, slides=slides)
-            try:
-                with open(path, "rb") as f:
-                    await bot.app.bot.send_document(
-                        chat_id=target_chat_id,
-                        document=f,
-                        filename=f"{title}.pptx",
-                        caption=f"📊 *{title}* – {len(slides)} Folien",
-                        parse_mode="Markdown",
-                    )
-            finally:
-                path.unlink(missing_ok=True)
+            elif proposal_type == TYPE_DOCUMENT_PREVIEW:
+                # Präsentation erstellen und senden (nach Outline-Bestätigung)
+                title = payload.get("title")
+                slides = payload.get("slides")
+                if not title or not slides:
+                    raise KeyError("document_preview erfordert 'title' und 'slides'")
+                target_chat_id = payload.get("chat_id", chat_id)
+                path = bot.document_service.create_presentation(title=title, slides=slides)
+                try:
+                    with open(path, "rb") as f:
+                        await bot.app.bot.send_document(
+                            chat_id=target_chat_id,
+                            document=f,
+                            filename=f"{title}.pptx",
+                            caption=f"📊 *{title}* – {len(slides)} Folien",
+                            parse_mode="Markdown",
+                        )
+                finally:
+                    path.unlink(missing_ok=True)
 
-        elif proposal_type == TYPE_EMAIL_COMPOSE:
-            to = payload.get("email_to", "")
-            subject = payload.get("email_subject", "")
-            body = payload.get("email_body", "")
-            if bot and hasattr(bot, "email_service") and bot.email_service:
-                draft = await bot.email_service.send_draft(user_key, to, subject, body)
-                if not draft:
-                    raise ValueError("E-Mail-Entwurf konnte nicht erstellt werden.")
+            elif proposal_type == TYPE_EMAIL_COMPOSE:
+                to = payload.get("email_to", "")
+                subject = payload.get("email_subject", "")
+                body = payload.get("email_body", "")
+                if bot and hasattr(bot, "email_service") and bot.email_service:
+                    draft = await bot.email_service.send_draft(user_key, to, subject, body)
+                    if not draft:
+                        raise ValueError("E-Mail-Entwurf konnte nicht erstellt werden.")
+                else:
+                    raise ValueError("E-Mail-Service nicht verbunden.")
+
+            elif proposal_type in (TYPE_AI_SUGGESTION, TYPE_SHARED_ACTION):
+                # Freie Vorschläge: Nur bestätigen, keine weitere Aktion nötig
+                pass
+
             else:
-                raise ValueError("E-Mail-Service nicht verbunden.")
+                raise ValueError(f"Unbekannter Proposal-Typ: {proposal_type}")
 
-        elif proposal_type in (TYPE_AI_SUGGESTION, TYPE_SHARED_ACTION):
-            # Freie Vorschläge: Nur bestätigen, keine weitere Aktion nötig
-            pass
-
-        else:
-            raise ValueError(f"Unbekannter Proposal-Typ: {proposal_type}")
+        except KeyError as e:
+            raise ValueError(f"Fehlende Payload-Daten: {e}") from e
