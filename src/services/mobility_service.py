@@ -154,7 +154,11 @@ class MobilityService:
                 resp.raise_for_status()
                 data = resp.json()
 
-            summary = data["routes"][0]["summary"]
+            routes = data.get("routes", [])
+            if not routes:
+                logger.warning(f"ORS: Keine Route gefunden für {origin} → {destination}")
+                return None
+            summary = routes[0]["summary"]
             duration_sec = summary.get("duration", 0)
             distance_m = summary.get("distance", 0)
 

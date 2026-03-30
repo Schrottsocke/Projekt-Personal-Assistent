@@ -64,6 +64,9 @@ class WeatherService:
                 if not data.get("current_condition") or not data.get("weather"):
                     logger.warning(f"wttr.in: Unvollständige API-Antwort für {location}")
                     return None
+                if not data["current_condition"] or not data["weather"]:
+                    logger.warning(f"wttr.in: Leere Listen in API-Antwort für {location}")
+                    return None
                 current = data["current_condition"][0]
                 weather = data["weather"][0]
 
