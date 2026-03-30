@@ -14,6 +14,7 @@ from telegram.ext import (
 )
 
 from config.settings import settings
+from src.utils.telegram import escape_md
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +128,7 @@ async def cmd_vorschlaege(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "shared_action": "🔗",
         }.get(p["type"], "📋")
         lines.append(
-            f"{icon} *{p['title']}*\n   von: {p['created_by']} · {dt.strftime('%d.%m. %H:%M')}\n   ID: #{p['id']}"
+            f"{icon} *{escape_md(p['title'])}*\n   von: {escape_md(p['created_by'])} · {dt.strftime('%d.%m. %H:%M')}\n   ID: #{p['id']}"
         )
 
     lines.append("\n_Scroll hoch um die Buttons zu finden, oder schreib erneut._")

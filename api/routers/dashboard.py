@@ -4,7 +4,9 @@ import asyncio
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from api.dependencies import (
     get_current_user,
@@ -14,13 +16,17 @@ from api.dependencies import (
     get_reminder_service,
     get_email_service,
 )
+from config.settings import settings
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/today")
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def dashboard_today(
+    request: Request,
     user_key: Annotated[str, Depends(get_current_user)],
     calendar_svc=Depends(get_calendar_service),
     task_svc=Depends(get_task_service),

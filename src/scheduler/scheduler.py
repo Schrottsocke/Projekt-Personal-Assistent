@@ -4,7 +4,8 @@ Mustererkennung (alle 2 Tage), Wochenrückblick (Sonntags).
 """
 
 import logging
-from datetime import datetime
+import asyncio
+from datetime import datetime, timezone
 import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -100,15 +101,15 @@ class AssistantScheduler:
 
     def stop(self):
         if self.scheduler.running:
-            logger.info("Scheduler wird heruntergefahren (laufende Jobs werden abgebrochen)...")
-            self.scheduler.shutdown(wait=False)
+            logger.info("Scheduler wird heruntergefahren (warte auf laufende Jobs)...")
+            self.scheduler.shutdown(wait=True)
             logger.info("Scheduler gestoppt.")
 
     async def _send_morning_briefings(self):
         """Sendet Morgen-Briefings an alle registrierten Bots."""
         logger.info("Sende Morgen-Briefings...")
         for user_key, bot in self._bots.items():
-            if self._is_focus_mode(user_key):
+            if await asyncio.to_thread(self._is_focus_mode, user_key):
                 logger.info(f"Briefing für '{user_key}' übersprungen (Fokus-Modus).")
                 continue
             try:
@@ -152,24 +153,25 @@ class AssistantScheduler:
             content = reminder.get("content", "")
             reminder_id = reminder.get("id")
 
-            if not chat_id:
+            if not chat_id or not reminder_id:
                 continue
 
             # Fokus-Modus: nur dringende Erinnerungen sofort senden
             is_urgent = "dringend" in content.lower()
-            if self._is_focus_mode(user_key) and not is_urgent:
+            if await asyncio.to_thread(self._is_focus_mode, user_key) and not is_urgent:
                 logger.info(f"Erinnerung #{reminder_id} für '{user_key}' zurückgehalten (Fokus-Modus).")
                 continue
 
             app = self._applications.get(user_key)
             if app:
                 try:
+                    # Mark sent BEFORE sending to prevent double delivery
+                    await first_bot.reminder_service.mark_sent(reminder_id)
                     await app.bot.send_message(
                         chat_id=chat_id,
                         text=f"⏰ *Erinnerung!*\n\n{content}",
                         parse_mode="Markdown",
                     )
-                    await first_bot.reminder_service.mark_sent(reminder_id)
                     logger.info(f"Erinnerung #{reminder_id} gesendet an '{user_key}'.")
                 except Exception as e:
                     logger.error(f"Erinnerungs-Send-Fehler für '{user_key}': {e}")
@@ -180,7 +182,7 @@ class AssistantScheduler:
 
         for user_key, bot in self._bots.items():
             try:
-                if self._is_quiet_hours(user_key):
+                if await asyncio.to_thread(self._is_quiet_hours, user_key):
                     logger.info(f"Mustererkennung für '{user_key}' übersprungen (Ruhezeit).")
                     continue
 
@@ -218,7 +220,7 @@ class AssistantScheduler:
 
         for user_key, bot in self._bots.items():
             try:
-                if self._is_quiet_hours(user_key):
+                if await asyncio.to_thread(self._is_quiet_hours, user_key):
                     logger.info(f"Wochenrückblick für '{user_key}' übersprungen (Ruhezeit).")
                     continue
 
@@ -245,16 +247,24 @@ class AssistantScheduler:
                 logger.error(f"Wochenrückblick-Fehler für '{user_key}': {e}")
 
     async def _get_chat_id(self, user_key: str) -> str | None:
-        """Holt Chat-ID aus DB."""
+        """Holt Chat-ID aus DB (via thread um Event-Loop nicht zu blockieren)."""
         try:
-            from src.services.database import UserProfile, get_db
-
-            with get_db()() as session:
-                profile = session.query(UserProfile).filter_by(user_key=user_key).first()
-                return profile.chat_id if profile else None
+            return await asyncio.to_thread(self._get_chat_id_sync, user_key)
         except Exception as e:
             logger.warning(f"Chat-ID-Abruf-Fehler: {e}")
             return None
+
+    def _get_chat_id_sync(self, user_key: str) -> str | None:
+        """Synchroner DB-Zugriff für Chat-ID."""
+        from src.services.database import UserProfile, get_db
+
+        with get_db()() as session:
+            profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+            return profile.chat_id if profile else None
+
+    async def _is_quiet_hours_async(self, user_key: str) -> bool:
+        """Async wrapper für _is_quiet_hours."""
+        return await asyncio.to_thread(self._is_quiet_hours, user_key)
 
     def _is_quiet_hours(self, user_key: str) -> bool:
         """
@@ -313,7 +323,7 @@ class AssistantScheduler:
             from src.services.database import prune_conversation_history
 
             days = settings.CONVERSATION_HISTORY_DAYS
-            deleted = prune_conversation_history(days=days)
+            deleted = await asyncio.to_thread(prune_conversation_history, days)
             logger.info(f"Conversation-Pruning: {deleted} Einträge gelöscht (> {days} Tage).")
         except Exception as e:
             logger.error(f"Conversation-Pruning-Fehler: {e}")
@@ -326,7 +336,7 @@ class AssistantScheduler:
                     continue
                 if not bot.email_service.is_connected(user_key):
                     continue
-                if self._is_quiet_hours(user_key) or self._is_focus_mode(user_key):
+                if await asyncio.to_thread(self._is_quiet_hours, user_key) or await asyncio.to_thread(self._is_focus_mode, user_key):
                     continue
 
                 count = await bot.email_service.get_unread_count(user_key)
@@ -357,8 +367,12 @@ class AssistantScheduler:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 if not profile or not profile.focus_mode_until:
                     return False
-                now_utc = datetime.utcnow()
-                return now_utc < profile.focus_mode_until
+                now_utc = datetime.now(timezone.utc)
+                focus_until = profile.focus_mode_until
+                # Ensure both sides are timezone-aware for comparison
+                if focus_until.tzinfo is None:
+                    focus_until = focus_until.replace(tzinfo=timezone.utc)
+                return now_utc < focus_until
         except Exception as e:
             logger.warning(f"Fokus-Modus-Check-Fehler: {e}")
             return False

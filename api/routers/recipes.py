@@ -3,7 +3,7 @@
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -58,7 +58,7 @@ def _extract_ingredients(recipe: dict) -> list[dict]:
 async def search_recipes(
     user_key: Annotated[str, Depends(get_current_user)],
     q: str = "",
-    limit: int = 10,
+    limit: int = Query(10, ge=1, le=50),
     chefkoch_svc=Depends(get_chefkoch_service),
 ):
     if not q:

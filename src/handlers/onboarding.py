@@ -169,6 +169,8 @@ async def calendar_setup_callback(update: Update, context: ContextTypes.DEFAULT_
             await query.edit_message_text(
                 "❌ Google Calendar konnte nicht gestartet werden.\nDu kannst es später mit /kalender erneut versuchen."
             )
+            await _finish_onboarding(bot, update.effective_chat.id, context)
+            return ConversationHandler.END
     else:
         await query.edit_message_text("⏭ Kein Problem! Du kannst Google Calendar jederzeit über /kalender verbinden.")
 
