@@ -27,8 +27,9 @@ async def login(request: Request, body: LoginRequest):
     if not get_pw:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unbekannter Nutzer.")
 
-    expected = get_pw()
-    if not expected or not secrets.compare_digest(body.password, expected):
+    expected = get_pw() or ""
+    pw_match = secrets.compare_digest(body.password, expected)
+    if not pw_match or not expected:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Falsches Passwort.")
 
     return TokenResponse(
@@ -39,7 +40,8 @@ async def login(request: Request, body: LoginRequest):
 
 
 @router.post("/refresh", response_model=TokenResponse)
-async def refresh(body: RefreshRequest):
+@limiter.limit(settings.RATE_LIMIT_LOGIN)
+async def refresh(request: Request, body: RefreshRequest):
     user_key = verify_token(body.refresh_token, token_type="refresh")
     return TokenResponse(
         access_token=create_access_token(user_key),

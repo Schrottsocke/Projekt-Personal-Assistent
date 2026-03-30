@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class TaskCreate(BaseModel):
     title: str
     description: str = ""
-    priority: str = "medium"  # high|medium|low
+    priority: Literal["high", "medium", "low"] = "medium"
     due_date: Optional[datetime] = None
 
 
