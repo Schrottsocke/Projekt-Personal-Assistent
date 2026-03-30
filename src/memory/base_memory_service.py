@@ -7,6 +7,7 @@ Spezialisierungen (Bot/API) erben und erweitern diese Klasse.
 
 import asyncio
 import logging
+import threading
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -181,32 +182,37 @@ class SimpleFallbackMemory:
 
     def __init__(self):
         self._store: dict[str, list[str]] = {}
+        self._lock = threading.Lock()
 
     def add(self, messages: list[dict], user_id: str):
         import uuid
 
-        if user_id not in self._store:
-            self._store[user_id] = []
-        results = []
-        for msg in messages:
-            if msg.get("role") == "user":
-                self._store[user_id].append(msg["content"])
-                results.append({"id": str(uuid.uuid4()), "memory": msg["content"]})
+        with self._lock:
+            if user_id not in self._store:
+                self._store[user_id] = []
+            results = []
+            for msg in messages:
+                if msg.get("role") == "user":
+                    self._store[user_id].append(msg["content"])
+                    results.append({"id": str(uuid.uuid4()), "memory": msg["content"]})
         return {"results": results}
 
     def search(self, query: str, user_id: str, limit: int = 5) -> list[dict]:
-        memories = self._store.get(user_id, [])
+        with self._lock:
+            memories = list(self._store.get(user_id, []))
         query_lower = query.lower()
         matches = [m for m in memories if any(w in m.lower() for w in query_lower.split())]
         return [{"memory": m} for m in matches[:limit]]
 
     def get_all(self, user_id: str) -> list[dict]:
-        memories = self._store.get(user_id, [])
+        with self._lock:
+            memories = list(self._store.get(user_id, []))
         return [{"memory": m} for m in memories]
 
     def delete(self, memory_id: str):
         pass
 
     def delete_all(self, user_id: str):
-        if user_id in self._store:
-            del self._store[user_id]
+        with self._lock:
+            if user_id in self._store:
+                del self._store[user_id]

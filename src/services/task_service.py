@@ -3,7 +3,7 @@ Task Service: Aufgabenverwaltung mit Status-Tracking und Cross-Bot-Zuweisung.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import pytz
 
@@ -103,7 +103,7 @@ class TaskService:
             if not task:
                 return None
             task.status = STATUS_DONE
-            task.updated_at = datetime.utcnow()
+            task.updated_at = datetime.now(timezone.utc)
             return self._task_to_dict(task)
 
     async def delete_task(self, task_id: int, user_key: str) -> bool:

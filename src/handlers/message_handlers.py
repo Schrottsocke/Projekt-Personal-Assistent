@@ -10,6 +10,7 @@ from telegram import Update
 from telegram.ext import MessageHandler, filters, ContextTypes, Application
 
 from src.services.rate_limiter import rate_limiter
+from src.utils.telegram import escape_md, split_message
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -105,22 +106,24 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=chat_id,
             bot=bot,
         )
-        # Leere Antwort = Proposal wurde bereits als eigene Nachricht gesendet
-        if response:
-            await update.message.reply_text(response, parse_mode="Markdown")
+        # Leere Antwort: entweder Proposal wurde gesendet, oder AI hat nichts geliefert
+        if response is None or (isinstance(response, str) and response.strip() == ""):
+            response = "Ich konnte leider keine Antwort generieren. Versuche es bitte nochmal oder nutze /hilfe."
+        for chunk in split_message(response):
+            await update.message.reply_text(chunk, parse_mode="Markdown")
 
-            # TTS: Wenn aktiviert → Antwort auch als Sprachnachricht senden
-            tts_svc = getattr(bot, "tts_service", None)
-            if tts_svc and tts_svc.available:
-                try:
-                    from src.services.database import UserProfile, get_db
+        # TTS: Wenn aktiviert → Antwort auch als Sprachnachricht senden
+        tts_svc = getattr(bot, "tts_service", None)
+        if tts_svc and tts_svc.available:
+            try:
+                from src.services.database import UserProfile, get_db
 
-                    with get_db()() as session:
-                        profile = session.query(UserProfile).filter_by(user_key=user_key).first()
-                        if profile and profile.tts_enabled:
-                            await tts_svc.send_voice(bot.app, chat_id, response)
-                except Exception as tts_err:
-                    logger.warning(f"TTS-Send-Fehler: {tts_err}")
+                with get_db()() as session:
+                    profile = session.query(UserProfile).filter_by(user_key=user_key).first()
+                    if profile and profile.tts_enabled:
+                        await tts_svc.send_voice(bot.app, chat_id, response)
+            except Exception as tts_err:
+                logger.warning(f"TTS-Send-Fehler: {tts_err}")
 
     except Exception as e:
         logger.error(f"Message-Handler-Fehler für {bot.name}: {e}", exc_info=True)
@@ -161,7 +164,7 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Transkript anzeigen, dann normal verarbeiten
         await update.message.reply_text(
-            f"🎤 _Verstanden: {transcript}_",
+            f"🎤 _Verstanden: {escape_md(transcript)}_",
             parse_mode="Markdown",
         )
 
@@ -173,7 +176,8 @@ async def handle_voice(update: Update, context: ContextTypes.DEFAULT_TYPE):
             bot=bot,
         )
         if response:
-            await update.message.reply_text(response, parse_mode="Markdown")
+            for chunk in split_message(response):
+                await update.message.reply_text(chunk, parse_mode="Markdown")
 
     except Exception as e:
         logger.error(f"Voice-Handler-Fehler für {bot.name}: {e}", exc_info=True)
