@@ -140,7 +140,7 @@ class DriveService:
         # Access-Token erneuern falls abgelaufen
         if creds.expired and creds.refresh_token:
             logger.debug("Drive-Token für '%s' abgelaufen – erneuere.", user_key)
-            creds.refresh(Request())
+            creds.refresh(Request(timeout=30))
             self._save_token(user_key, creds)
 
         return build("drive", "v3", credentials=creds, cache_discovery=False)

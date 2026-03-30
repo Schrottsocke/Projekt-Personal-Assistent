@@ -5,7 +5,7 @@ Jeder User hat eigene OAuth-Credentials.
 
 import logging
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import pytz
 from google.auth.exceptions import RefreshError, TransportError
@@ -37,13 +37,13 @@ class CalendarService:
 
     def _get_cached(self, key: str) -> list | None:
         entry = self._cache.get(key)
-        if entry and datetime.utcnow() < entry[1]:
+        if entry and datetime.now(timezone.utc) < entry[1]:
             return entry[0]
         return None
 
     def _set_cached(self, key: str, data: list):
         ttl = settings.CALENDAR_CACHE_TTL_MINUTES
-        self._cache[key] = (data, datetime.utcnow() + timedelta(minutes=ttl))
+        self._cache[key] = (data, datetime.now(timezone.utc) + timedelta(minutes=ttl))
 
     def _invalidate_cache(self, user_key: str):
         """Löscht alle Cache-Einträge für einen User (nach create/delete)."""
@@ -113,7 +113,7 @@ class CalendarService:
 
         # Token erneuern falls abgelaufen
         if creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            creds.refresh(Request(timeout=30))
             # Erneuerten Token speichern
             self._save_token(user_key, creds)
 
