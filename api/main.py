@@ -6,11 +6,14 @@ Läuft auf Port 8000, getrennt vom Telegram-Bot.
 import sys
 import uuid
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 import structlog
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from starlette.responses import FileResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -102,6 +105,40 @@ async def lifespan(app: FastAPI):
     logger.info("DualMind API wird beendet.")
 
 
+_LANDING_PAGE_HTML = """\
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>DualMind – Dein persoenlicher KI-Assistent</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+background:#121212;color:#e0e0e0;min-height:100vh;display:flex;flex-direction:column;
+align-items:center;justify-content:center;text-align:center;padding:20px}
+h1{font-size:3rem;font-weight:800;color:#7c4dff;margin-bottom:12px;letter-spacing:-1px}
+p{font-size:1.15rem;color:#a0a0a0;max-width:460px;margin-bottom:32px;line-height:1.6}
+.cta{display:inline-block;padding:14px 40px;background:#7c4dff;color:#fff;
+text-decoration:none;border-radius:10px;font-size:1rem;font-weight:600;
+transition:background .2s}
+.cta:hover{background:#651fff}
+footer{position:fixed;bottom:20px;font-size:.8rem;color:#666}
+footer a{color:#7c4dff;text-decoration:none}
+footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+<h1>DualMind</h1>
+<p>Dein persoenlicher KI-Assistent fuer Alltag und Organisation.
+Termine, Aufgaben, Einkaufslisten, Rezepte und Chat – alles an einem Ort.</p>
+<a href="/app" class="cta">Zur App &rarr;</a>
+<footer><a href="/docs">API-Dokumentation</a></footer>
+</body>
+</html>
+"""
+
 limiter = Limiter(key_func=get_remote_address, default_limits=[settings.RATE_LIMIT_DEFAULT])
 
 app = FastAPI(
@@ -147,9 +184,27 @@ app.include_router(features.router)
 app.include_router(status.router)
 
 
-@app.get("/", tags=["Status"])
-async def root():
-    return {"status": "ok", "service": "DualMind API", "version": "1.0.0"}
+# Static files (CSS, JS for web app)
+_static_dir = Path(__file__).parent / "static"
+app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def homepage():
+    """Oeffentliche Landing Page."""
+    return _LANDING_PAGE_HTML
+
+
+@app.get("/app", include_in_schema=False)
+async def web_app_root():
+    """SPA-Shell fuer die Web-App."""
+    return FileResponse(str(_static_dir / "app.html"))
+
+
+@app.get("/app/{path:path}", include_in_schema=False)
+async def web_app_catchall(path: str):
+    """SPA Catch-All fuer Deep-Links."""
+    return FileResponse(str(_static_dir / "app.html"))
 
 
 @app.get("/health", tags=["Status"])
