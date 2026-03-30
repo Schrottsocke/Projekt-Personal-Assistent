@@ -25,6 +25,7 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 # --- Konfiguration ---
@@ -35,6 +36,9 @@ BRANCH = os.getenv("DEPLOY_BRANCH", "main")
 SERVICES = ["personal-assistant", "personal-assistant-api"]
 VENV_PIP = PROJ_DIR / "venv" / "bin" / "pip"
 BOT_USER = "assistant"
+
+# Lock gegen parallele Deployments
+_deploy_lock = threading.Lock()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -70,6 +74,18 @@ def _run(cmd: list[str], cwd: Path = PROJ_DIR) -> tuple[int, str]:
 
 def deploy() -> tuple[bool, str]:
     """Führt den Deploy-Prozess aus. Gibt (success, log) zurück."""
+    if not _deploy_lock.acquire(blocking=False):
+        logger.warning("Deploy übersprungen – ein anderes Deployment läuft bereits.")
+        return False, "Deploy skipped: another deployment is already running."
+
+    try:
+        return _deploy_inner()
+    finally:
+        _deploy_lock.release()
+
+
+def _deploy_inner() -> tuple[bool, str]:
+    """Eigentliche Deploy-Logik (wird unter Lock aufgerufen)."""
     lines = []
 
     # 1. Git pull
@@ -188,8 +204,6 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(b'{"status": "deploying"}')
 
         # Deploy asynchron starten (Handler darf nicht blockieren)
-        import threading
-
         threading.Thread(target=deploy, daemon=True).start()
 
 

@@ -258,13 +258,17 @@ class EmailService:
         body_data = payload.get("body", {}).get("data", "")
 
         if body_data and "text/plain" in mime_type:
-            return base64.urlsafe_b64decode(body_data + "==").decode("utf-8", errors="replace")
+            missing = (4 - len(body_data) % 4) % 4
+            body_data += "=" * missing
+            return base64.urlsafe_b64decode(body_data).decode("utf-8", errors="replace")
 
         for part in payload.get("parts", []):
             if part.get("mimeType") == "text/plain":
                 data = part.get("body", {}).get("data", "")
                 if data:
-                    return base64.urlsafe_b64decode(data + "==").decode("utf-8", errors="replace")
+                    missing = (4 - len(data) % 4) % 4
+                    data += "=" * missing
+                    return base64.urlsafe_b64decode(data).decode("utf-8", errors="replace")
 
         # Fallback: HTML-Parts durchsuchen
         for part in payload.get("parts", []):

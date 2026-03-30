@@ -182,7 +182,7 @@ class SpotifyService:
                 return f"▶️ Wiedergabe gestartet{f': {current}' if current else ''}."
         except Exception as e:
             logger.error(f"Spotify-Play-Fehler: {e}")
-            return f"❌ Spotify-Fehler: {e}"
+            return "❌ Spotify-Fehler aufgetreten. Bitte versuche es erneut."
 
     @retry(
         stop=stop_after_attempt(3),
