@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ShoppingItemCreate(BaseModel):
-    name: str
-    quantity: Optional[str] = None
-    unit: Optional[str] = None
-    category: Optional[str] = None
+    name: str = Field(..., min_length=1, max_length=200)
+    quantity: Optional[str] = Field(None, max_length=50)
+    unit: Optional[str] = Field(None, max_length=50)
+    category: Optional[str] = Field(None, max_length=100)
 
 
 class ShoppingItemOut(BaseModel):
@@ -26,4 +26,4 @@ class ShoppingItemOut(BaseModel):
 
 class ShoppingItemUpdate(BaseModel):
     checked: Optional[bool] = None
-    quantity: Optional[str] = None
+    quantity: Optional[str] = Field(None, max_length=50)

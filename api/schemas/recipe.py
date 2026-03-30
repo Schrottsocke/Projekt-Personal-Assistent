@@ -1,35 +1,35 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class RecipeSearchResult(BaseModel):
-    chefkoch_id: str
-    title: str
-    image_url: Optional[str] = None
-    prep_time: int = 0
-    cook_time: int = 0
-    difficulty: Optional[str] = None
-    rating: float = 0.0
-    url: str
+    chefkoch_id: str = Field(..., min_length=1, max_length=200)
+    title: str = Field(..., min_length=1, max_length=200)
+    image_url: Optional[str] = Field(None, max_length=500)
+    prep_time: int = Field(0, ge=0)
+    cook_time: int = Field(0, ge=0)
+    difficulty: Optional[str] = Field(None, max_length=50)
+    rating: float = Field(0.0, ge=0.0, le=5.0)
+    url: str = Field(..., max_length=500)
 
 
 class RecipeFull(RecipeSearchResult):
-    servings: int = 4
+    servings: int = Field(4, ge=1)
     ingredients: list[dict] = []
-    instructions: Optional[str] = None
+    instructions: Optional[str] = Field(None, max_length=10000)
 
 
 class SavedRecipeCreate(BaseModel):
-    chefkoch_id: str
-    title: str
-    image_url: Optional[str] = None
-    servings: int = 4
-    prep_time: int = 0
-    cook_time: int = 0
-    difficulty: Optional[str] = None
-    ingredients_json: Optional[str] = None
-    source_url: Optional[str] = None
+    chefkoch_id: str = Field(..., min_length=1, max_length=200)
+    title: str = Field(..., min_length=1, max_length=200)
+    image_url: Optional[str] = Field(None, max_length=500)
+    servings: int = Field(4, ge=1)
+    prep_time: int = Field(0, ge=0)
+    cook_time: int = Field(0, ge=0)
+    difficulty: Optional[str] = Field(None, max_length=50)
+    ingredients_json: Optional[str] = Field(None, max_length=20000)
+    source_url: Optional[str] = Field(None, max_length=500)
 
 
 class SavedRecipeOut(SavedRecipeCreate):
@@ -43,4 +43,4 @@ class SavedRecipeOut(SavedRecipeCreate):
 
 
 class ToShoppingRequest(BaseModel):
-    servings: int = 4  # Für Portionskalkulation
+    servings: int = Field(4, ge=1, le=100)  # Für Portionskalkulation

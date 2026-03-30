@@ -5,7 +5,7 @@ import tempfile
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -23,7 +23,7 @@ async def list_files(
     user_key: Annotated[str, Depends(get_current_user)],
     drive_svc=Depends(get_drive_service),
     q: str = "",
-    limit: int = 20,
+    limit: int = Query(20, ge=1, le=100),
 ):
     if not drive_svc.is_connected(user_key):
         return {"connected": False, "files": []}
