@@ -5,9 +5,9 @@ Wird aggressiv bereinigt - nur die letzten Eintraege behalten.
 
 ## Eintraege
 
-- **8 Code-Issues gefixt (Parallel-Batch)**: #267-#274 erstellt, in 3 Batches (A: DB/Memory, B: API-Security, C: Infra) parallel bearbeitet, PRs #275-#277 gemergt. Alle auto-closed. (2026-03-30)
-- **Naechste Session**: 4 manuelle Issues offen: #253 Project Board → #254 Secrets → #261 Autopilot Dry-Run → #260 Flutter E2E. Reihenfolge einhalten (#254 blocked by #253). (2026-03-30)
-- **Restrisiko**: Docker-Build mit neuen OCR-Deps (#274) noch nicht getestet. Auth-Test `test_login_empty_password` sollte nach Batch-B-Fix jetzt passen – verifizieren. (2026-03-30)
+- **Session 5 – Manuelle Issues**: #253 (Project Board), #254 (Secrets), #261 (Dry-Runs 6/6 gruen) alle geschlossen. Nur #260 (Flutter E2E) offen – erfordert lokalen Test. (2026-03-30)
+- **Restrisiko**: Docker-Build mit OCR-Deps (#274) ungetestet. Auth-Test `test_login_empty_password` verifizieren. aware/naive Datetimes bei DB-Migration beachten. (2026-03-30)
+- **Node.js 20 Deprecation**: Alle 6 Autopilot-Workflows zeigen Warning. Kein Blocker, mittelfristig Actions auf Node.js 22 aktualisieren. (2026-03-30)
 
 ## Meta
 
