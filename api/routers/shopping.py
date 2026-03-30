@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -54,15 +54,18 @@ async def update_item(
     user_key: Annotated[str, Depends(get_current_user)],
     shopping_svc=Depends(get_shopping_service),
 ):
-    if body.checked is not None:
-        ok = await shopping_svc.check_item(user_key, item_id)
-        if not ok:
+    from src.services.database import ShoppingItem, get_db
+
+    with get_db()() as session:
+        db_item = session.query(ShoppingItem).filter_by(id=item_id, user_key=user_key).first()
+        if not db_item:
             raise HTTPException(status_code=404, detail="Item nicht gefunden.")
-    items = await shopping_svc.get_items(user_key, include_checked=True)
-    item = next((i for i in items if i["id"] == item_id), None)
-    if not item:
-        raise HTTPException(status_code=404, detail="Item nicht gefunden.")
-    return item
+        if body.quantity is not None:
+            db_item.quantity = body.quantity
+        if body.checked is not None:
+            db_item.checked = not db_item.checked
+        result = {c.name: getattr(db_item, c.name) for c in db_item.__table__.columns}
+    return result
 
 
 @router.delete("/items/checked", status_code=status.HTTP_204_NO_CONTENT)
@@ -96,7 +99,7 @@ async def add_from_recipe(
     user_key: Annotated[str, Depends(get_current_user)],
     shopping_svc=Depends(get_shopping_service),
     chefkoch_svc=Depends(get_chefkoch_service),
-    servings: int = 4,
+    servings: int = Query(4, ge=1, le=100),
 ):
     """Lädt Rezept von Chefkoch und fügt Zutaten zur Einkaufsliste hinzu."""
     recipe = await chefkoch_svc.get_recipe(chefkoch_id)

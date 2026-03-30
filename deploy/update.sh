@@ -5,7 +5,7 @@
 # =============================================================================
 
 PROJ_DIR="/home/assistant/projekt-personal-assistent"
-BRANCH="claude/dual-personal-assistants-0Uqna"
+BRANCH="main"
 
 echo ">>> Code aktualisieren..."
 sudo -u assistant git -C "$PROJ_DIR" pull origin "$BRANCH"

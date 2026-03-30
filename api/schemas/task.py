@@ -1,11 +1,11 @@
 from datetime import datetime
 from typing import Literal, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TaskCreate(BaseModel):
-    title: str
-    description: str = ""
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field("", max_length=2000)
     priority: Literal["high", "medium", "low"] = "medium"
     due_date: Optional[datetime] = None
 
