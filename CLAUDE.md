@@ -34,12 +34,10 @@ Wichtig:
 - Siehe `MEMORY.md` fuer Speicher-Kriterien und Wachstumsschutz
 - `/closeout` fuehrt Memory-Check automatisch inline aus (kein Zusatzprompt noetig)
 - `/save-memory` nur fuer explizite Speicherung ausserhalb von Closeout
-- **Sessionstart**: Immer zuerst `memory/handoffs.md` lesen (offene Faeden, naechste Schritte)
 
 ## Default
 
 Wenn die Session startet und kein klarer User-Auftrag vorliegt:
-0. `memory/handoffs.md` lesen – offene Faeden und Kontext aus vorherigen Sessions laden
 1. offene GitHub Issues prüfen
 2. nach `P0-critical` → `P1-high` → `P2-medium` sortieren
 3. genau ein Issue auswählen
