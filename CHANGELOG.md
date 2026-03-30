@@ -1,5 +1,47 @@
 # Changelog
 
+## [Unreleased] - Session 4 Batch-Fixes (2026-03-30)
+
+### Bug Fixes (Batch A – Database & Memory, PR #275)
+
+- **fix(core): Double session commit in memory_service.py (#267)**
+  `mark_onboarded()` rief `session.commit()` explizit auf, obwohl der Context-Manager bereits committet. Entfernt.
+
+- **fix(core): datetime.utcnow() deprecated ersetzen (#269)**
+  15 Stellen in `database.py` von `datetime.utcnow` auf `lambda: datetime.now(timezone.utc)` umgestellt (deprecated seit Python 3.12).
+
+- **fix(core): Unsafe __import__() in DB-Migration (#270)**
+  `__import__("sqlalchemy").text()` durch Top-Level-Import `sa_text` ersetzt.
+
+### Bug Fixes (Batch B – API Security, PR #277)
+
+- **fix(api): ChatMessageIn akzeptiert leere Strings (#268)**
+  `Field(min_length=1, max_length=10000)` und Whitespace-Validator ergaenzt.
+
+- **fix(api): Timing-Attack in Auth-Login (#271)**
+  `secrets.compare_digest()` wird jetzt immer ausgefuehrt, auch bei leerem Passwort.
+
+- **fix(api): Rate Limit fehlt auf /refresh (#272)**
+  `@limiter.limit(settings.RATE_LIMIT_LOGIN)` auf `/refresh` Endpoint ergaenzt.
+
+- **fix(api): Task-Priority ohne Validierung (#273)**
+  `priority: str` durch `Literal["high", "medium", "low"]` ersetzt.
+
+### Bug Fixes (Batch C – Infrastructure, PR #276)
+
+- **fix(infra): Dockerfile fehlen OCR-Dependencies (#274)**
+  `tesseract-ocr`, `libmagic1`, `poppler-utils` zu `apt-get install` hinzugefuegt.
+
+### Betroffene Dateien
+
+- `src/services/database.py` (utcnow, __import__)
+- `src/memory/memory_service.py` (double commit)
+- `api/schemas/chat.py` (input validation)
+- `api/routers/auth.py` (timing attack, rate limit)
+- `api/schemas/task.py` (priority validation)
+- `Dockerfile` (OCR deps)
+
+
 ## [Unreleased] - Session 3 Bugfix (2026-03-27)
 
 ### Bug Fixes
