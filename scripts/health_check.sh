@@ -6,14 +6,14 @@
 # Cron:  */5 * * * * /path/to/scripts/health_check.sh
 #
 # Required env vars:
-#   HEALTH_CHECK_URL    - API status endpoint (default: http://localhost:8000/status)
+#   HEALTH_CHECK_URL    - API health endpoint (default: http://localhost:8000/health)
 #   TELEGRAM_BOT_TOKEN  - Telegram bot token for alerts
 #   TELEGRAM_CHAT_ID    - Chat ID to send alerts to
 #   STATE_FILE          - Path to state file (default: /tmp/dualmind-health-state)
 
 set -euo pipefail
 
-URL="${HEALTH_CHECK_URL:-http://localhost:8000/status}"
+URL="${HEALTH_CHECK_URL:-http://localhost:8000/health}"
 STATE_FILE="${STATE_FILE:-/tmp/dualmind-health-state}"
 PREV_STATE="up"
 
