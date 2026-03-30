@@ -38,39 +38,52 @@ async def startup():
 
     init_db()
 
-    _svc["ai"] = AIService()
-    _svc["memory"] = MemoryService()
-    _svc["calendar"] = CalendarService()
-    _svc["notes"] = NotesService()
-    _svc["reminder"] = ReminderService()
-    _svc["task"] = TaskService()
-    _svc["shopping"] = ShoppingService()
-    _svc["chefkoch"] = ChefkochService()
-    _svc["email"] = EmailService()
-    _svc["drive"] = DriveService()
+    # Services erst in lokaler Map aufbauen, dann nach erfolgreicher Init uebernehmen
+    pending: dict = {}
+    pending["ai"] = AIService()
+    pending["memory"] = MemoryService()
+    pending["calendar"] = CalendarService()
+    pending["notes"] = NotesService()
+    pending["reminder"] = ReminderService()
+    pending["task"] = TaskService()
+    pending["shopping"] = ShoppingService()
+    pending["chefkoch"] = ChefkochService()
+    pending["email"] = EmailService()
+    pending["drive"] = DriveService()
 
-    # Async-Initialisierung
+    # Async-Initialisierung – nur erfolgreich initialisierte Services uebernehmen
+    # Services ohne async init (ai, shopping, chefkoch) werden direkt uebernommen
+    for name in ("ai", "shopping", "chefkoch"):
+        _svc[name] = pending[name]
+        logger.info("API Service '%s' registriert (sync).", name)
+
     for name in ("memory", "calendar", "notes", "reminder", "task", "email", "drive"):
         try:
-            await _svc[name].initialize()
+            await pending[name].initialize()
+            _svc[name] = pending[name]
             logger.info("API Service '%s' initialisiert.", name)
         except Exception as e:
-            logger.warning("API Service '%s' Init-Fehler (wird übersprungen): %s", name, e)
+            logger.warning("API Service '%s' Init-Fehler (nicht registriert): %s", name, e)
 
-    # Bot-Shim für AIService-Aufrufe
-    _svc["bot_shim"] = ApiBotShim(
-        ai_service=_svc["ai"],
-        memory_service=_svc["memory"],
-        calendar_service=_svc["calendar"],
-        notes_service=_svc["notes"],
-        reminder_service=_svc["reminder"],
-        task_service=_svc["task"],
-        shopping_service=_svc["shopping"],
-        chefkoch_service=_svc["chefkoch"],
-        email_service=_svc["email"],
-        drive_service=_svc["drive"],
-    )
-    logger.info("API vollständig initialisiert.")
+    # Bot-Shim nur erstellen, wenn alle benoetigten Services verfuegbar sind
+    required_for_shim = ("ai", "memory", "calendar", "notes", "reminder", "task", "shopping", "chefkoch", "email", "drive")
+    missing = [n for n in required_for_shim if n not in _svc]
+    if missing:
+        logger.warning("Bot-Shim nicht erstellt – fehlende Services: %s", missing)
+    else:
+        _svc["bot_shim"] = ApiBotShim(
+            ai_service=_svc["ai"],
+            memory_service=_svc["memory"],
+            calendar_service=_svc["calendar"],
+            notes_service=_svc["notes"],
+            reminder_service=_svc["reminder"],
+            task_service=_svc["task"],
+            shopping_service=_svc["shopping"],
+            chefkoch_service=_svc["chefkoch"],
+            email_service=_svc["email"],
+            drive_service=_svc["drive"],
+        )
+    logger.info("API Initialisierung abgeschlossen.")
 
 
 # ------------------------------------------------------------------

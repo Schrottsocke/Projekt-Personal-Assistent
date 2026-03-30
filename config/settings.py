@@ -1,5 +1,6 @@
 """Zentrale Konfiguration - lädt alle Einstellungen aus .env"""
 
+import logging
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -7,6 +8,20 @@ from dotenv import load_dotenv
 # Lade .env Datei
 BASE_DIR = Path(__file__).parent.parent
 load_dotenv(BASE_DIR / ".env")
+
+
+def _safe_int(value: str | None, default: int, name: str) -> int:
+    """Konvertiert einen String sicher zu int mit Fehlerbehandlung."""
+    if value is None or value.strip() == "":
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        logging.getLogger(__name__).warning(
+            "Umgebungsvariable '%s' hat ungültigen Wert '%s' – verwende Default %d.",
+            name, value, default,
+        )
+        return default
 
 
 class BotConfig:
@@ -25,8 +40,8 @@ class Settings:
     # Telegram Bots
     BOT_TOKEN_TAAKE: str = os.getenv("BOT_TOKEN_TAAKE", "")
     BOT_TOKEN_NINA: str = os.getenv("BOT_TOKEN_NINA", "")
-    TELEGRAM_USER_ID_TAAKE: int = int(os.getenv("TELEGRAM_USER_ID_TAAKE") or "-1")
-    TELEGRAM_USER_ID_NINA: int = int(os.getenv("TELEGRAM_USER_ID_NINA") or "-1")
+    TELEGRAM_USER_ID_TAAKE: int = _safe_int(os.getenv("TELEGRAM_USER_ID_TAAKE"), -1, "TELEGRAM_USER_ID_TAAKE")
+    TELEGRAM_USER_ID_NINA: int = _safe_int(os.getenv("TELEGRAM_USER_ID_NINA"), -1, "TELEGRAM_USER_ID_NINA")
 
     # AI
     OPENROUTER_API_KEY: str = os.getenv("OPENROUTER_API_KEY", "")
