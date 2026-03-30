@@ -85,6 +85,26 @@ class AIService:
         )
         self._nvidia_model = settings.NVIDIA_MODEL
 
+    async def close(self):
+        """Schließt alle HTTP-Clients sauber."""
+        try:
+            await self._client.close()
+        except Exception:
+            pass
+        if self._groq_client:
+            try:
+                await self._groq_client.close()
+            except Exception:
+                pass
+        if self._nvidia_client:
+            try:
+                http_client = self._nvidia_client._client  # underlying httpx client
+                if http_client and hasattr(http_client, "aclose"):
+                    await http_client.aclose()
+                await self._nvidia_client.close()
+            except Exception:
+                pass
+
     async def transcribe_voice(self, audio_bytes: bytes, filename: str = "voice.ogg") -> Optional[str]:
         """
         Transkribiert eine Sprachnachricht via Groq Whisper Large v3.
@@ -533,7 +553,7 @@ Details je nach Intent:
 
     async def _handle_task_create(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
         """Erstellt eine Aufgabe."""
-        if not bot.tasks_service:
+        if not bot.task_service:
             return "❌ Aufgaben-Service nicht verfügbar."
 
         details = intent_data.get("details", {})
@@ -542,7 +562,8 @@ Details je nach Intent:
         priority = details.get("priority", "medium")
 
         try:
-            task = await bot.tasks_service.create_task(
+            task = await bot.task_service.create_task(
+                user_key=user_key,
                 title=title,
                 due_date=due_date,
                 priority=priority,
@@ -557,11 +578,11 @@ Details je nach Intent:
 
     async def _handle_task_read(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
         """Zeigt offene Aufgaben an."""
-        if not bot.tasks_service:
+        if not bot.task_service:
             return "❌ Aufgaben-Service nicht verfügbar."
 
         try:
-            tasks = await bot.tasks_service.get_tasks()
+            tasks = await bot.task_service.get_open_tasks(user_key=user_key)
 
             if not tasks:
                 return "✅ Keine offenen Aufgaben!"
@@ -582,14 +603,14 @@ Details je nach Intent:
 
     async def _handle_task_complete(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
         """Schließt eine Aufgabe ab."""
-        if not bot.tasks_service:
+        if not bot.task_service:
             return "❌ Aufgaben-Service nicht verfügbar."
 
         details = intent_data.get("details", {})
         task_id = details.get("task_identifier", "")
 
         try:
-            success = await bot.tasks_service.complete_task(task_id)
+            success = await bot.task_service.complete_task(task_id, user_key=user_key)
             if success:
                 return "✅ Aufgabe als erledigt markiert!"
             return "❌ Aufgabe konnte nicht abgeschlossen werden."

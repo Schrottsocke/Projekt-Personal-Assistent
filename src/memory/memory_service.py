@@ -75,7 +75,7 @@ class BotMemoryService(BaseMemoryService):
                     existing.last_used = datetime.now(timezone.utc)
                 else:
                     session.add(MemoryFact(user_key=user_key, content=content))
-        except SQLAlchemyError as e:
+        except (OSError, ValueError, RuntimeError, SQLAlchemyError) as e:
             logger.error("Upsert-Fact-Fehler: %s", e)
 
     async def get_top_facts(self, user_key: str, limit: int = 10) -> list[dict]:
@@ -102,7 +102,7 @@ class BotMemoryService(BaseMemoryService):
                     }
                     for f in facts
                 ]
-        except SQLAlchemyError as e:
+        except (OSError, ValueError, RuntimeError, SQLAlchemyError) as e:
             logger.error("Get-Top-Facts-Fehler: %s", e)
             return []
 
@@ -124,7 +124,7 @@ class BotMemoryService(BaseMemoryService):
                     profile = UserProfile(user_key=user_key)
                     session.add(profile)
                 profile.is_onboarded = True
-        except SQLAlchemyError as e:
+        except (OSError, ValueError, RuntimeError, SQLAlchemyError) as e:
             logger.error("Mark-Onboarded-Fehler: %s", e)
 
     async def is_onboarded(self, user_key: str) -> bool:
@@ -138,7 +138,7 @@ class BotMemoryService(BaseMemoryService):
             with self._db() as session:
                 profile = session.query(UserProfile).filter_by(user_key=user_key).first()
                 return bool(profile and profile.is_onboarded)
-        except SQLAlchemyError as e:
+        except (OSError, ValueError, RuntimeError, SQLAlchemyError) as e:
             logger.error("Is-Onboarded-Fehler: %s", e)
             return False
 
