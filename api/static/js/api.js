@@ -8,20 +8,20 @@ const Api = (() => {
 
   let _refreshing = null;
 
-  function getToken() { return sessionStorage.getItem(TOKEN_KEY); }
-  function getRefreshToken() { return sessionStorage.getItem(REFRESH_KEY); }
-  function getUserKey() { return sessionStorage.getItem(USER_KEY); }
+  function getToken() { return localStorage.getItem(TOKEN_KEY); }
+  function getRefreshToken() { return localStorage.getItem(REFRESH_KEY); }
+  function getUserKey() { return localStorage.getItem(USER_KEY); }
 
   function saveAuth(data) {
-    sessionStorage.setItem(TOKEN_KEY, data.access_token);
-    sessionStorage.setItem(REFRESH_KEY, data.refresh_token);
-    sessionStorage.setItem(USER_KEY, data.user_key);
+    localStorage.setItem(TOKEN_KEY, data.access_token);
+    localStorage.setItem(REFRESH_KEY, data.refresh_token);
+    localStorage.setItem(USER_KEY, data.user_key);
   }
 
   function clearAuth() {
-    sessionStorage.removeItem(TOKEN_KEY);
-    sessionStorage.removeItem(REFRESH_KEY);
-    sessionStorage.removeItem(USER_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(USER_KEY);
   }
 
   function isLoggedIn() {
