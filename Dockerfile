@@ -5,6 +5,9 @@ WORKDIR /app
 # System-Dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
+    tesseract-ocr \
+    libmagic1 \
+    poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Python Dependencies
