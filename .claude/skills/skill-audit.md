@@ -54,28 +54,35 @@ Fuer jeden MCP-Server pruefen:
 
 Melde unabgedeckte MCP-Server.
 
-### 4. Workflow-Liste pruefen
+### 4. Env-Var-Abdeckung pruefen
+
+Fuer jeden MCP-Server in `.mcp.json` der eine `env`-Variable referenziert:
+- Ist die Variable in `.env.example` dokumentiert?
+- Ist sie auskommentiert mit Beispielwert?
+- Melde fehlende Eintraege.
+
+### 5. Workflow-Liste pruefen
 
 Lies `.github/workflows/` (Dateiliste).
 Vergleiche mit der erwarteten Liste in `.claude/skills/automation-check.md`.
 
 Melde Workflows die in der Skill-Liste fehlen.
 
-### 5. Stop-Regeln pruefen
+### 6. Stop-Regeln pruefen
 
 Lies den "## Stop"-Abschnitt in CLAUDE.md.
 Fuer jeden Guardrail-Trigger pruefen ob eine passende Stop-Regel existiert.
 
 Melde Guardrails ohne korrespondierende Stop-Regel.
 
-### 6. Memory-Status pruefen
+### 7. Memory-Status pruefen
 
 Lies alle memory-Dateien. Pruefe:
 - Eintragsanzahl vs. Maximum
 - `Review bis`-Datum ueberschritten?
 - Handoffs aelter als 14 Tage?
 
-### 7. Bericht
+### 8. Bericht
 
 ```
 ## Skill Audit

@@ -186,6 +186,8 @@ Sofort stoppen und Rückfrage stellen bei:
 - unklarer Zuständigkeit zwischen Bot, API und App
 - VPS-Restart, DNS-Mutationen, Firewall-Aenderungen (Hostinger MCP)
 - applicationId-Aenderung in Flutter App
+- Externe Service-Integrationen (AI-Modelle, Google APIs, Spotify, Home Assistant)
+- Web-App-Architektur (api/static/, Script-Reihenfolge, API-Kontrakt-Aenderungen)
 
 ## Post-Change Review Pflicht
 
