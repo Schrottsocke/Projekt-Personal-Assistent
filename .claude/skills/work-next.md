@@ -9,6 +9,18 @@ Waehle das naechste sinnvolle offene Issue und arbeite es vollstaendig nach dem 
 
 ## Ablauf
 
+### 0. Pre-flight
+
+Bevor ein Issue ausgewaehlt wird, kurz pruefen:
+
+1. **Branch**: Auf `main`? Wenn nicht: `git checkout main && git pull origin main`
+2. **Working Directory**: Sauber? Wenn nicht: uncommitted Changes melden und stoppen
+3. **Handoffs**: `memory/handoffs.md` lesen – gibt es offene Faeden die zuerst erledigt werden muessen?
+4. **Memory-Review**: Ist ein `Review bis`-Datum in einer memory-Datei ueberschritten? Wenn ja: kurz erwaehnen
+
+Wenn alle Checks bestanden: weiter zu Schritt 1.
+Wenn ein Check fehlschlaegt: dem User melden und Entscheidung abwarten.
+
 ### 1. Issue auswaehlen
 
 Lade offene Issues fuer `schrottsocke/projekt-personal-assistent`.
