@@ -1,0 +1,113 @@
+name: Deploy to Hostinger VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Prevent concurrent deploys
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    # Only deploy if CI passes (on push to main, CI runs in parallel)
+    timeout-minutes: 10
+
+    env:
+      SSH_PORT: ${{ secrets.HOSTINGER_PORT != '' && secrets.HOSTINGER_PORT || '22' }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH != '' && secrets.DEPLOY_PATH || '/home/assistant/projekt-personal-assistent' }}
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Use known_hosts if provided, otherwise fetch from host
+          if [ -n "${{ secrets.HOSTINGER_KNOWN_HOSTS }}" ]; then
+            echo "${{ secrets.HOSTINGER_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          else
+            ssh-keyscan -p "$SSH_PORT" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Deploy via SSH
+        env:
+          SSH_HOST: ${{ secrets.HOSTINGER_HOST }}
+          SSH_USER: ${{ secrets.HOSTINGER_USER }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" "${SSH_USER}@${SSH_HOST}" bash -s -- "$DEPLOY_PATH" << 'DEPLOY_SCRIPT'
+          set -euo pipefail
+          PROJ_DIR="${1:-/home/assistant/projekt-personal-assistent}"
+
+          echo "=== Pull latest code ==="
+          sudo -u assistant git -C "$PROJ_DIR" fetch origin main
+          sudo -u assistant git -C "$PROJ_DIR" checkout main
+          sudo -u assistant git -C "$PROJ_DIR" pull origin main
+
+          echo "=== Update dependencies ==="
+          sudo -u assistant bash -c "
+            cd $PROJ_DIR
+            source venv/bin/activate
+            pip install -r requirements.txt -q
+          "
+
+          echo "=== Restart services ==="
+          systemctl restart personal-assistant
+          systemctl restart personal-assistant-api
+          systemctl restart personal-assistant-webhook
+
+          echo "=== Wait for services to stabilize ==="
+          sleep 5
+
+          echo "=== Service status ==="
+          FAILED=0
+          for svc in personal-assistant personal-assistant-api personal-assistant-webhook; do
+            STATUS=$(systemctl is-active "$svc" 2>/dev/null || true)
+            echo "$svc: $STATUS"
+            if [ "$STATUS" != "active" ]; then
+              echo "::error::Service $svc is $STATUS"
+              journalctl -u "$svc" --no-pager -n 15
+              FAILED=1
+            fi
+          done
+
+          echo "=== Health check ==="
+          HEALTH=$(curl -sf --max-time 10 http://127.0.0.1:8000/health 2>&1) || {
+            echo "::error::Health check failed"
+            echo "$HEALTH"
+            FAILED=1
+          }
+          echo "$HEALTH"
+
+          echo "=== Web app check ==="
+          APP_STATUS=$(curl -so /dev/null -w "%{http_code}" --max-time 10 http://127.0.0.1:8000/app 2>/dev/null) || APP_STATUS="failed"
+          echo "/app returned HTTP $APP_STATUS"
+          if [ "$APP_STATUS" != "200" ]; then
+            echo "::warning::Web app /app returned $APP_STATUS"
+          fi
+
+          echo "=== Deploy info ==="
+          echo "Commit: $(sudo -u assistant git -C "$PROJ_DIR" rev-parse --short HEAD)"
+          echo "Branch: $(sudo -u assistant git -C "$PROJ_DIR" branch --show-current)"
+          echo "Time:   $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "::error::Deploy completed with errors"
+            exit 1
+          fi
+
+          echo "=== Deploy successful ==="
+          DEPLOY_SCRIPT
+
+      - name: Cleanup SSH
+        if: always()
+        run: rm -rf ~/.ssh/deploy_key
