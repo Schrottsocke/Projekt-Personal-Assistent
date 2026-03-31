@@ -149,9 +149,7 @@ class TestCheckReminders:
         """Fällige Erinnerungen werden gesendet."""
         mock_bot = MagicMock()
         mock_bot.reminder_service.get_due_reminders = AsyncMock(
-            return_value=[
-                {"user_key": "taake", "chat_id": 12345, "content": "Test-Erinnerung", "id": 1}
-            ]
+            return_value=[{"user_key": "taake", "chat_id": 12345, "content": "Test-Erinnerung", "id": 1}]
         )
         mock_bot.reminder_service.mark_sent = AsyncMock()
         scheduler._bots = {"taake": mock_bot}

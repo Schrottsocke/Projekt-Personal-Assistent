@@ -336,7 +336,9 @@ class AssistantScheduler:
                     continue
                 if not bot.email_service.is_connected(user_key):
                     continue
-                if await asyncio.to_thread(self._is_quiet_hours, user_key) or await asyncio.to_thread(self._is_focus_mode, user_key):
+                if await asyncio.to_thread(self._is_quiet_hours, user_key) or await asyncio.to_thread(
+                    self._is_focus_mode, user_key
+                ):
                     continue
 
                 count = await bot.email_service.get_unread_count(user_key)

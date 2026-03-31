@@ -19,7 +19,9 @@ def _safe_int(value: str | None, default: int, name: str) -> int:
     except ValueError:
         logging.getLogger(__name__).warning(
             "Umgebungsvariable '%s' hat ungültigen Wert '%s' – verwende Default %d.",
-            name, value, default,
+            name,
+            value,
+            default,
         )
         return default
 

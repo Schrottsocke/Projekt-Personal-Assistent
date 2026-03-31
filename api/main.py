@@ -73,16 +73,25 @@ async def lifespan(app: FastAPI):
 
     # Frühzeitige API_SECRET_KEY-Validierung: Platzhalter und zu kurze Keys ablehnen
     _placeholder_patterns = {
-        "change-me", "your-secret-key", "placeholder", "xxx", "test",
+        "change-me",
+        "your-secret-key",
+        "placeholder",
+        "xxx",
+        "test",
         "change-me-in-production-please",
         "change-me-generate-with-secrets-token-hex",
         "CHANGE_ME_USE_python_c_import_secrets_print_secrets_token_hex_32",
     }
     secret = settings.API_SECRET_KEY.strip()
     if not secret or secret.lower() in _placeholder_patterns or len(secret) < 32:
-        reason = "nicht gesetzt" if not secret else (
-            "Platzhalter-Wert" if secret.lower() in _placeholder_patterns
-            else f"zu kurz ({len(secret)} Zeichen, min. 32)"
+        reason = (
+            "nicht gesetzt"
+            if not secret
+            else (
+                "Platzhalter-Wert"
+                if secret.lower() in _placeholder_patterns
+                else f"zu kurz ({len(secret)} Zeichen, min. 32)"
+            )
         )
         logger.critical(
             "API_SECRET_KEY ist ungueltig (%s). "
@@ -235,7 +244,7 @@ async def health():
         if svc is None:
             checks[name] = "not_initialized"
             overall_healthy = False
-        elif hasattr(svc, 'initialized') and not svc.initialized:
+        elif hasattr(svc, "initialized") and not svc.initialized:
             checks[name] = "init_failed"
             overall_healthy = False
         else:
