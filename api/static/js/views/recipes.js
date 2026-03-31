@@ -119,6 +119,8 @@ const RecipesView = (() => {
 
     const overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
+    overlay.dataset.recipeIdx = idx;
+    overlay.dataset.isSaved = isSaved;
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
     const ingredients = r.ingredients || [];
@@ -176,16 +178,17 @@ const RecipesView = (() => {
 
   function updateServings(val, baseServings) {
     currentServings = parseInt(val);
-    document.getElementById('servings-display').textContent = currentServings;
+    const display = document.getElementById('servings-display');
+    if (display) display.textContent = currentServings;
     const list = document.getElementById('ingredient-list');
-    // Re-read ingredients from current modal context
     const overlay = document.querySelector('.modal-overlay');
-    if (!overlay) return;
-    // Find the recipe from the current data
-    const recipes = activeTab === 'saved' ? savedRecipes : searchResults;
-    const title = overlay.querySelector('h2').textContent;
-    const recipe = recipes.find(r => r.title === title);
-    if (recipe && list) {
+    if (!overlay || !list) return;
+    // Find recipe via stored data attributes instead of DOM text matching
+    const idx = parseInt(overlay.dataset.recipeIdx);
+    const isSaved = overlay.dataset.isSaved === 'true';
+    const recipes = isSaved ? savedRecipes : searchResults;
+    const recipe = recipes[idx];
+    if (recipe) {
       list.innerHTML = renderIngredients(recipe.ingredients || [], currentServings, baseServings);
     }
   }
