@@ -63,7 +63,7 @@ async def update_item(
         if body.quantity is not None:
             db_item.quantity = body.quantity
         if body.checked is not None:
-            db_item.checked = not db_item.checked
+            db_item.checked = body.checked
         result = {c.name: getattr(db_item, c.name) for c in db_item.__table__.columns}
     return result
 
