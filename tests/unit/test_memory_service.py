@@ -65,9 +65,7 @@ class TestSearchMemories:
     @pytest.mark.asyncio
     async def test_search_returns_results(self, base_memory_service):
         """search_memories gibt eine Liste von Ergebnissen zurück."""
-        base_memory_service._memory.search = MagicMock(
-            return_value={"results": [{"memory": "User mag Kaffee"}]}
-        )
+        base_memory_service._memory.search = MagicMock(return_value={"results": [{"memory": "User mag Kaffee"}]})
 
         results = await base_memory_service.search_memories("taake", "Kaffee")
 

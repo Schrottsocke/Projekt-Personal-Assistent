@@ -67,16 +67,12 @@ class RateLimiter:
                 )
                 """
             )
-            self._conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_rate_limits_ts ON rate_limits (timestamp)"
-            )
+            self._conn.execute("CREATE INDEX IF NOT EXISTS idx_rate_limits_ts ON rate_limits (timestamp)")
             self._conn.commit()
             self._use_sqlite = True
             logger.info("RateLimiter: SQLite-Persistenz aktiv (%s)", _DB_PATH)
         except Exception as exc:
-            logger.warning(
-                "RateLimiter: SQLite nicht verfuegbar (%s) – Fallback auf In-Memory.", exc
-            )
+            logger.warning("RateLimiter: SQLite nicht verfuegbar (%s) – Fallback auf In-Memory.", exc)
             self._use_sqlite = False
 
     def _cleanup_old_entries(self) -> None:
@@ -144,9 +140,7 @@ class RateLimiter:
             return True, ""
 
         except Exception as exc:
-            logger.warning(
-                "RateLimiter: SQLite-Fehler bei check() – Fallback auf erlaubt: %s", exc
-            )
+            logger.warning("RateLimiter: SQLite-Fehler bei check() – Fallback auf erlaubt: %s", exc)
             return True, ""
 
     def _check_memory(self, user_key: str) -> tuple[bool, str]:

@@ -297,6 +297,7 @@ async def main():
             logger.info("Shutdown: Datenbank-Engine schliessen...")
             try:
                 from src.services.database import _engine
+
                 if _engine is not None:
                     _engine.dispose()
                     logger.info("Shutdown: Datenbank-Engine geschlossen.")

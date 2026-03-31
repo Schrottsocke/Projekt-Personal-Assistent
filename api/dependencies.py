@@ -66,7 +66,18 @@ async def startup():
             logger.warning("API Service '%s' Init-Fehler (nicht registriert): %s", name, e)
 
     # Bot-Shim nur erstellen, wenn alle benoetigten Services verfuegbar sind
-    required_for_shim = ("ai", "memory", "calendar", "notes", "reminder", "task", "shopping", "chefkoch", "email", "drive")
+    required_for_shim = (
+        "ai",
+        "memory",
+        "calendar",
+        "notes",
+        "reminder",
+        "task",
+        "shopping",
+        "chefkoch",
+        "email",
+        "drive",
+    )
     missing = [n for n in required_for_shim if n not in _svc]
     if missing:
         logger.warning("Bot-Shim nicht erstellt – fehlende Services: %s", missing)

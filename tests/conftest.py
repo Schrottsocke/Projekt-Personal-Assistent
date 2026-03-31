@@ -87,9 +87,7 @@ def mock_telegram_bot_api():
     bot.send_photo = AsyncMock(return_value=MagicMock(message_id=2))
     bot.send_document = AsyncMock(return_value=MagicMock(message_id=3))
     bot.delete_message = AsyncMock(return_value=True)
-    bot.get_me = AsyncMock(
-        return_value=MagicMock(id=123456, is_bot=True, first_name="TestBot", username="test_bot")
-    )
+    bot.get_me = AsyncMock(return_value=MagicMock(id=123456, is_bot=True, first_name="TestBot", username="test_bot"))
     return bot
 
 

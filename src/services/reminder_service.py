@@ -79,7 +79,9 @@ class ReminderService:
                 {
                     "id": r.id,
                     "content": r.content,
-                    "remind_at": pytz.utc.localize(r.remind_at).astimezone(self.tz) if r.remind_at.tzinfo is None else r.remind_at.astimezone(self.tz),
+                    "remind_at": pytz.utc.localize(r.remind_at).astimezone(self.tz)
+                    if r.remind_at.tzinfo is None
+                    else r.remind_at.astimezone(self.tz),
                     "chat_id": r.chat_id,
                 }
                 for r in reminders
