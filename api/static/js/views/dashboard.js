@@ -128,50 +128,59 @@ const DashboardView = (() => {
   async function loadExtraPreviews(container) {
     let extraHtml = '';
 
-    // MealPlan preview
-    try {
-      const meals = await Api.getMealPlanWeek();
-      const today = new Date().toISOString().slice(0, 10);
-      const todayMeals = meals.filter(m => m.planned_date === today);
+    const [mealsResult, driveResult] = await Promise.allSettled([
+      Api.getMealPlanWeek(),
+      Api.getDriveFiles(null, 2),
+    ]);
 
-      extraHtml += `<a class="section-header section-link" href="#/mealplan"><span class="section-icon">&#127869;</span> Wochenplan <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
-      if (todayMeals.length === 0) {
-        extraHtml += `<div class="empty-state">Keine Mahlzeiten heute geplant</div>`;
-      } else {
-        todayMeals.forEach(m => {
-          const typeLabels = { breakfast: 'Fruehstueck', lunch: 'Mittagessen', dinner: 'Abendessen' };
-          extraHtml += `
-            <div class="card" style="cursor:pointer" onclick="Router.navigate('#/mealplan')">
-              <div class="card-subtitle">${typeLabels[m.meal_type] || m.meal_type}</div>
-              <div class="card-title">${escapeHtml(m.recipe_title)}</div>
-            </div>
-          `;
-        });
+    // MealPlan preview
+    if (mealsResult.status === 'fulfilled') {
+      try {
+        const meals = mealsResult.value;
+        const today = new Date().toISOString().slice(0, 10);
+        const todayMeals = meals.filter(m => m.planned_date === today);
+
+        extraHtml += `<a class="section-header section-link" href="#/mealplan"><span class="section-icon">&#127869;</span> Wochenplan <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+        if (todayMeals.length === 0) {
+          extraHtml += `<div class="empty-state">Keine Mahlzeiten heute geplant</div>`;
+        } else {
+          todayMeals.forEach(m => {
+            const typeLabels = { breakfast: 'Fruehstueck', lunch: 'Mittagessen', dinner: 'Abendessen' };
+            extraHtml += `
+              <div class="card" style="cursor:pointer" onclick="Router.navigate('#/mealplan')">
+                <div class="card-subtitle">${typeLabels[m.meal_type] || m.meal_type}</div>
+                <div class="card-title">${escapeHtml(m.recipe_title)}</div>
+              </div>
+            `;
+          });
+        }
+      } catch {
+        // Render error – skip silently
       }
-    } catch {
-      // MealPlan not available – skip silently
     }
 
     // Drive preview
-    try {
-      const driveData = await Api.getDriveFiles(undefined, 2);
-      extraHtml += `<a class="section-header section-link" href="#/drive"><span class="section-icon">&#128193;</span> Drive <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
-      if (driveData.connected === false) {
-        extraHtml += `<div class="empty-state">Drive nicht verbunden</div>`;
-      } else if ((driveData.files || []).length === 0) {
-        extraHtml += `<div class="empty-state">Keine Dateien</div>`;
-      } else {
-        driveData.files.forEach(f => {
-          extraHtml += `
-            <div class="card" style="cursor:pointer" onclick="Router.navigate('#/drive')">
-              <div class="card-title">${escapeHtml(f.name)}</div>
-              ${f.modified_time ? `<div class="card-subtitle">${new Date(f.modified_time).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</div>` : ''}
-            </div>
-          `;
-        });
+    if (driveResult.status === 'fulfilled') {
+      try {
+        const driveData = driveResult.value;
+        extraHtml += `<a class="section-header section-link" href="#/drive"><span class="section-icon">&#128193;</span> Drive <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+        if (driveData.connected === false) {
+          extraHtml += `<div class="empty-state">Drive nicht verbunden</div>`;
+        } else if ((driveData.files || []).length === 0) {
+          extraHtml += `<div class="empty-state">Keine Dateien</div>`;
+        } else {
+          driveData.files.forEach(f => {
+            extraHtml += `
+              <div class="card" style="cursor:pointer" onclick="Router.navigate('#/drive')">
+                <div class="card-title">${escapeHtml(f.name)}</div>
+                ${f.modified_time ? `<div class="card-subtitle">${new Date(f.modified_time).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</div>` : ''}
+              </div>
+            `;
+          });
+        }
+      } catch {
+        // Render error – skip silently
       }
-    } catch {
-      // Drive not available – skip silently
     }
 
     if (extraHtml) {
