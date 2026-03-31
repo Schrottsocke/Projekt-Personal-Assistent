@@ -264,6 +264,8 @@ Verfuegbare Claude Code Skills:
 - `/save-memory` – Erkenntnisse aus der Session in memory/ speichern
 - `/memory-review` – Memory-Dateien reviewen, kuerzen, archivieren
 - `/infra-check` – Hostinger VPS/DNS/Firewall Status pruefen (read-only)
+- `/deploy` – Gefuehrtes Deployment auf Hostinger VPS mit Pre-/Post-Checks
+- `/skill-audit` – Pruefe ob Skills, Guardrails und Regeln noch zum Projekt passen
 
 ## MCP-Integrationen
 
