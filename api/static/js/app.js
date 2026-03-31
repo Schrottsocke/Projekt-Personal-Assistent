@@ -9,6 +9,10 @@
   Router.register('#/recipes', (c) => RecipesView.render(c));
   Router.register('#/chat', (c) => ChatView.render(c));
   Router.register('#/profile', (c) => ProfileView.render(c));
+  Router.register('#/calendar', (c) => CalendarView.render(c));
+  Router.register('#/tasks', (c) => TasksView.render(c));
+  Router.register('#/mealplan', (c) => MealPlanView.render(c));
+  Router.register('#/drive', (c) => DriveView.render(c));
 
   // Init router on DOM ready
   if (document.readyState === 'loading') {
