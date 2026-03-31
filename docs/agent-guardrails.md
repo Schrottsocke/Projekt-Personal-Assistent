@@ -124,3 +124,37 @@ Haeufige Fehlerquellen und Pruefpunkte fuer Claude Code bei der Arbeit an diesem
 **Anti-Pattern:**
 - Spalten umbenennen ohne Datenmigration
 - `drop_all()` in Produktionscode
+
+## D10: Transiente API-/Upstream-Fehler (500 / 529)
+
+**Trigger:** `500 api_error`, `529 overloaded_error` oder vergleichbare serverseitige Fehler externer AI-/API-Dienste.
+
+**Zweck:** Schuetzt vor falscher Fehlersuche im Repo, wenn der Fehler tatsaechlich von einem externen Upstream-Dienst verursacht wird.
+
+**Regel:** Solche Fehler werden zunaechst als transiente Upstream-Fehler behandelt, nicht als Repo-, Prompt-, Skill- oder lokaler Config-Fehler.
+
+**Pflichtverhalten:**
+1. Nicht sofort Code, Prompt, Skill oder Guardrails umbauen.
+2. Request-ID sichern und im Report notieren.
+3. Begrenzte Retries mit Backoff durchfuehren (max 3 Retries, kurze Pause dazwischen).
+4. Keine Endlosschleifen und keine aggressiven Sofort-Retries.
+5. Erst bei wiederholtem Auftreten als Incident oder externer Servicefehler behandeln.
+
+**Stop-Regel:** Stoppe die inhaltliche Fehlersuche im Projekt, wenn:
+- derselbe Schritt mit `500` oder `529` scheitert,
+- kein lokaler Syntax-, Rechte-, Config- oder Pfadfehler sichtbar ist,
+- und der Fehler klar auf API-/Upstream-Ebene liegt.
+
+Dann: Kein Repo-Fix auf Verdacht, keine Guardrail-Aenderung, keine Skill-Anpassung. Session optional beenden oder Vorgang vertagen.
+
+**Escalation Trigger:** Weitergehende Pruefung erst bei:
+- Persistenz ueber mehrere Versuche/Sessions,
+- mehrere Nutzer/Workflows gleichzeitig betroffen,
+- oder klarer Zusammenhang mit einer lokalen Aenderung.
+
+**Report-Pflicht:** Fehlercode, Fehlertyp, betroffener Schritt, Request-ID, Anzahl Retries, Ergebnis (behoben/vertagt/Incident-Verdacht).
+
+**Anti-Pattern:**
+- Vorschneller Refactor wegen eines einzelnen transienten API-Fehlers
+- Prompt-Umbau oder Config-Aenderung ohne konkreten Beleg
+- Deploy-Rollback nur wegen eines einzelnen 500/529
