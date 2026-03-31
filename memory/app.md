@@ -9,6 +9,7 @@ Flutter-App, API-Integration, plattformspezifische Erkenntnisse.
 - **Deploy-Roadmap Flutter**: Phase 1 (lokaler Test) erledigt. Phase 2: Prod-URL + CORS + Secrets auf Server. Phase 3: App-Identifier aendern (`com.example.dualmind` → eigener), Keystore, Icons, CI-Fix, optional Firebase/Store. User muss liefern: Domain, Identifier, Signing-Keys, Firebase-Entscheidung. (2026-03-30)
 - **applicationId**: Aktuell `com.example.dualmind` – muss vor Store-Release geaendert werden (Einmal-Aktion, nicht nachtraeglich aenderbar). (2026-03-30)
 - **CI flutter.yml**: APK-Build laeuft nur bei Push auf main mit app/**-Aenderungen. Braucht android/ im Repo (jetzt vorhanden). Release-Signing noch nicht konfiguriert – baut mit Debug-Keys. (2026-03-30)
+- **Web-App Architektur**: Lebt in `api/static/`, getrennt von Flutter-App. Hash-Router (`router.js`), IIFE-View-Module (`js/views/`), API-Client mit JWT (`api.js`). Dashboard ist Navigation-Hub fuer Views ohne Bottom-Nav-Eintrag (Calendar, Tasks, MealPlan, Drive). Inline-onclick-Handler muessen `this` weitergeben statt `window.event` zu nutzen (Firefox-Bug). (2026-03-31)
 
 ## Meta
 

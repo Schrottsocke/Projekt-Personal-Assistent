@@ -17,6 +17,14 @@ Wichtige Dateien:
 - `CHANGELOG.md`
 - `.env.example`
 
+Web-App (api/static/):
+- `api/static/app.html` – HTML-Einstiegspunkt, Script-Tags, Bottom-Nav
+- `api/static/js/app.js` – Router-Registrierung
+- `api/static/js/router.js` – Hash-Router
+- `api/static/js/api.js` – API-Client (JWT, Auto-Refresh)
+- `api/static/js/views/` – IIFE-View-Module (dashboard, shopping, recipes, chat, profile, calendar, tasks, mealplan, drive)
+- `api/static/css/app.css` – Alle Styles (Dark Theme, CSS Custom Properties)
+
 Wichtig:
 - Memory-Architektur: BaseMemoryService + zwei Spezialisierungen:
   - `src/memory/base_memory_service.py` – gemeinsame mem0-Logik (Basis)
@@ -176,6 +184,19 @@ Sofort stoppen und Rückfrage stellen bei:
 - produktionsrelevanten Deploy-Änderungen
 - größeren Refactorings
 - unklarer Zuständigkeit zwischen Bot, API und App
+
+## Post-Change Review Pflicht
+
+Nach jedem abgeschlossenen Change, Bugfix, Feature-Batch oder Merge ist verpflichtend ein kurzer Post-Change-Review durchzufuehren.
+
+Pflichtschritte:
+1. Regressionen und neu eingefuehrte Bugs in angrenzenden Bereichen pruefen.
+2. Pruefen, ob durch die Aenderung neue Guardrails, Architekturgrenzen oder Pflicht-Checks noetig wurden.
+3. CLAUDE.md und projektbezogene Memory nur dann aktualisieren, wenn neue dauerhafte Erkenntnisse entstanden sind.
+4. Anpassungen minimal, konkret und repo-spezifisch halten.
+5. Wenn keine neuen Regeln notwendig sind, dies explizit festhalten statt kuenstlich Doku zu erweitern.
+
+Trigger: Bugfix, PR-Merge, neues Feature/Modul, Routing/Auth/Storage-Aenderung, mehrere Dateien in einem Bereich geaendert.
 
 ## Definition of Done bei Issue-Arbeit
 

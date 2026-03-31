@@ -36,15 +36,15 @@ const TasksView = (() => {
       <div id="task-form-area"></div>
       <div class="task-filters mb-8">
         <div class="filter-group">
-          <button class="filter-btn ${filterStatus === 'all' ? 'active' : ''}" onclick="TasksView.setFilter('status','all')">Alle</button>
-          <button class="filter-btn ${filterStatus === 'open' ? 'active' : ''}" onclick="TasksView.setFilter('status','open')">Offen</button>
-          <button class="filter-btn ${filterStatus === 'done' ? 'active' : ''}" onclick="TasksView.setFilter('status','done')">Erledigt</button>
+          <button class="filter-btn ${filterStatus === 'all' ? 'active' : ''}" onclick="TasksView.setFilter('status','all',this)">Alle</button>
+          <button class="filter-btn ${filterStatus === 'open' ? 'active' : ''}" onclick="TasksView.setFilter('status','open',this)">Offen</button>
+          <button class="filter-btn ${filterStatus === 'done' ? 'active' : ''}" onclick="TasksView.setFilter('status','done',this)">Erledigt</button>
         </div>
         <div class="filter-group">
-          <button class="filter-btn ${filterPriority === 'all' ? 'active' : ''}" onclick="TasksView.setFilter('priority','all')">Alle</button>
-          <button class="filter-btn ${filterPriority === 'high' ? 'active' : ''}" onclick="TasksView.setFilter('priority','high')">Hoch</button>
-          <button class="filter-btn ${filterPriority === 'medium' ? 'active' : ''}" onclick="TasksView.setFilter('priority','medium')">Mittel</button>
-          <button class="filter-btn ${filterPriority === 'low' ? 'active' : ''}" onclick="TasksView.setFilter('priority','low')">Niedrig</button>
+          <button class="filter-btn ${filterPriority === 'all' ? 'active' : ''}" onclick="TasksView.setFilter('priority','all',this)">Alle</button>
+          <button class="filter-btn ${filterPriority === 'high' ? 'active' : ''}" onclick="TasksView.setFilter('priority','high',this)">Hoch</button>
+          <button class="filter-btn ${filterPriority === 'medium' ? 'active' : ''}" onclick="TasksView.setFilter('priority','medium',this)">Mittel</button>
+          <button class="filter-btn ${filterPriority === 'low' ? 'active' : ''}" onclick="TasksView.setFilter('priority','low',this)">Niedrig</button>
         </div>
       </div>
       <div id="task-list"><div class="loading"><div class="spinner"></div> Laden…</div></div>
@@ -65,7 +65,7 @@ const TasksView = (() => {
     }
   }
 
-  function setFilter(type, value) {
+  function setFilter(type, value, el) {
     if (type === 'status') filterStatus = value;
     else filterPriority = value;
 
@@ -77,7 +77,7 @@ const TasksView = (() => {
         });
       }
     });
-    event.target.classList.add('active');
+    if (el) el.classList.add('active');
 
     renderList();
   }
