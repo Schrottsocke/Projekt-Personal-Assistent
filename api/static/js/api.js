@@ -159,6 +159,84 @@ const Api = (() => {
     return request(`/features/${featureId}/toggle`, { method: 'POST' });
   }
 
+  // Calendar
+  function getCalendarToday() { return request('/calendar/today'); }
+  function getCalendarWeek(days = 7) {
+    return request(`/calendar/week?days=${days}`);
+  }
+  function createCalendarEvent(data) {
+    return request('/calendar/events', { method: 'POST', body: data });
+  }
+
+  // Tasks
+  function getTasks(all = false) {
+    return request(`/tasks${all ? '?all=true' : ''}`);
+  }
+  function createTask(data) {
+    return request('/tasks', { method: 'POST', body: data });
+  }
+  function updateTaskStatus(id, status) {
+    return request(`/tasks/${id}`, { method: 'PATCH', body: { status } });
+  }
+  function deleteTask(id) {
+    return request(`/tasks/${id}`, { method: 'DELETE' });
+  }
+
+  // MealPlan
+  function getMealPlanWeek(start) {
+    const qs = start ? `?start=${start}` : '';
+    return request(`/meal-plan/week${qs}`);
+  }
+  function createMealPlan(data) {
+    return request('/meal-plan', { method: 'POST', body: data });
+  }
+  function deleteMealPlan(id) {
+    return request(`/meal-plan/${id}`, { method: 'DELETE' });
+  }
+
+  // Drive
+  function getDriveFiles(q, limit = 20) {
+    const params = [];
+    if (q) params.push(`q=${encodeURIComponent(q)}`);
+    if (limit !== 20) params.push(`limit=${limit}`);
+    const qs = params.length ? '?' + params.join('&') : '';
+    return request(`/drive/files${qs}`);
+  }
+
+  async function uploadFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers = {};
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    let res = await fetch('/drive/upload', { method: 'POST', headers, body: formData });
+
+    // Auto-refresh on 401
+    if (res.status === 401 && getRefreshToken()) {
+      if (!_refreshing) {
+        _refreshing = refreshToken().finally(() => { _refreshing = null; });
+      }
+      try {
+        const newToken = await _refreshing;
+        headers['Authorization'] = `Bearer ${newToken}`;
+        res = await fetch('/drive/upload', { method: 'POST', headers, body: formData });
+      } catch {
+        clearAuth();
+        window.location.hash = '#/login';
+        throw new Error('Session abgelaufen');
+      }
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+
+    return res.json();
+  }
+
   return {
     getToken, getUserKey, isLoggedIn, login, logout, clearAuth,
     getDashboard,
@@ -166,5 +244,9 @@ const Api = (() => {
     searchRecipes, getSavedRecipes, saveRecipe, deleteRecipe, toggleFavorite, addRecipeToShopping,
     getChatHistory, sendMessage,
     getFeatures, toggleFeature,
+    getCalendarToday, getCalendarWeek, createCalendarEvent,
+    getTasks, createTask, updateTaskStatus, deleteTask,
+    getMealPlanWeek, createMealPlan, deleteMealPlan,
+    getDriveFiles, uploadFile,
   };
 })();
