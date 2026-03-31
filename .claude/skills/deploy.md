@@ -88,6 +88,19 @@ Nach dem Deployment pruefen:
 - **Aktion bei Fehler**: ...
 ```
 
+### 6.1. Nuetzliche Scripts
+
+Im Verzeichnis `scripts/` liegen operative Helferskripte:
+- `scripts/smoke_test.py` – Service-Import-Pruefung (kann vor Deploy ausgefuehrt werden)
+- `scripts/backup_db.sh` – SQLite-Backup (vor riskanten Updates empfohlen)
+- `scripts/health_check.sh` – /status Endpoint + Telegram-Alert (Post-Deploy-Check)
+
+### 6.2. Webhook-Service-Verhalten
+
+Der Webhook-Deployer (`deploy/webhook_deployer.py`) startet sich selbst mit neu (`personal-assistant-webhook` in SERVICES-Liste).
+Das bedeutet: nach einem Webhook-Deploy laeuft der neue Deployer-Code.
+Wenn der Deployer-Code selbst fehlerhaft ist, muss manuell eingegriffen werden.
+
 ## Rollback
 
 Wenn das Deployment fehlschlaegt:

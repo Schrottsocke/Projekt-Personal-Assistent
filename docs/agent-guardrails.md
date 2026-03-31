@@ -11,6 +11,7 @@ Haeufige Fehlerquellen und Pruefpunkte fuer Claude Code bei der Arbeit an diesem
 - Globale Funktionen (`escapeHtml`, etc.) muessen in `utils.js` definiert sein, nicht in einzelnen Views
 - Hash-Routing (`#/route`) nicht mit Server-Routing (`/route`) verwechseln
 - `Router.navigate()` verwendet Hash-Pfade, nicht Server-Pfade
+- Bei Aenderungen an api/static/: Cache-Name in sw.js inkrementieren wenn sich gecachte Assets aendern
 
 **Anti-Pattern:**
 - Globale Helfer in View-Dateien definieren (funktioniert nur wenn View zuerst geladen)
