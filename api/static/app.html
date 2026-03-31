@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>DualMind</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#7c4dff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DualMind">
+  <link rel="apple-touch-icon" href="/static/favicon.svg">
   <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
@@ -54,5 +60,11 @@
   <script src="/static/js/views/profile.js"></script>
   <!-- App Init -->
   <script src="/static/js/app.js"></script>
+  <!-- Service Worker -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/static/sw.js', { scope: '/app' });
+    }
+  </script>
 </body>
 </html>
