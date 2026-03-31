@@ -81,3 +81,45 @@ Haeufige Fehlerquellen und Pruefpunkte fuer Claude Code bei der Arbeit an diesem
 **Anti-Pattern:**
 - Unbehandelte Exceptions bei externen API-Aufrufen
 - Offene DB-Sessions nach Fehler
+
+## D7: Hostinger / VPS Operations
+
+**Trigger:** Nutzung von mcp__hostinger__* Tools, Aenderungen in deploy/.
+
+**Checks:**
+- Niemals `stop_vps`, `restart_vps`, `reset_vps_root_password` ohne explizite User-Bestaetigung
+- DNS-Record-Aenderungen (create/delete) immer erst als Dry-Run beschreiben
+- Firewall-Regeln: aktuelle Regeln zuerst lesen, dann Aenderung vorschlagen
+- Snapshots: vor destruktiven Ops (restore, delete) Snapshot-Liste zeigen
+
+**Anti-Pattern:**
+- VPS-Restart als Quick-Fix fuer Deployment-Probleme
+- DNS-Records loeschen ohne Backup der aktuellen Zone
+
+## D8: Flutter / Dart
+
+**Trigger:** Aenderungen in app/, pubspec.yaml, android/, ios/.
+
+**Checks:**
+- `applicationId` (`com.example.dualmind`) darf nur bewusst geaendert werden (Einmal-Aktion)
+- Nach pubspec.yaml-Aenderung: `flutter pub get` verifizieren
+- Platform-spezifische Configs (AndroidManifest, Info.plist) nur mit Begruendung aendern
+- network_security_config: Cleartext nur fuer Entwicklung (localhost, 10.0.2.2)
+
+**Anti-Pattern:**
+- Release-Signing-Konfiguration ohne User-Rueckfrage
+- Cleartext-Traffic fuer Produktions-URLs erlauben
+
+## D9: Database / Schema
+
+**Trigger:** Aenderungen an src/services/database.py, neue ORM-Modelle.
+
+**Checks:**
+- Kein Alembic vorhanden → Schema-Aenderungen erfordern manuelle Migration
+- Neue Spalten/Tabellen: pruefen ob CREATE TABLE beim naechsten Start automatisch greift
+- Bestehende Spalten aendern/loeschen: STOP – erfordert Datenmigration
+- aware/naive Datetime-Mixing vermeiden (bekanntes Restrisiko, siehe handoffs.md)
+
+**Anti-Pattern:**
+- Spalten umbenennen ohne Datenmigration
+- `drop_all()` in Produktionscode

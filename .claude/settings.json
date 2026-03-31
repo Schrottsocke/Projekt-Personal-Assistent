@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/claude-code-settings.json",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '=== Handoffs ===' && cat memory/handoffs.md 2>/dev/null | grep '^- ' | head -5; echo '=== Branch ===' && git branch --show-current; echo '=== Status ===' && git status --short | head -10"
+          }
+        ]
+      }
+    ]
+  }
+}
