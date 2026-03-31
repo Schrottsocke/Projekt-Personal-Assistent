@@ -1,6 +1,5 @@
 # Sensible Daten - NIEMALS committen!
 .env
-.mcp.json
 config/google_credentials.json
 data/google_token_*.json
 
