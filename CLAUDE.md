@@ -184,6 +184,8 @@ Sofort stoppen und Rückfrage stellen bei:
 - produktionsrelevanten Deploy-Änderungen
 - größeren Refactorings
 - unklarer Zuständigkeit zwischen Bot, API und App
+- VPS-Restart, DNS-Mutationen, Firewall-Aenderungen (Hostinger MCP)
+- applicationId-Aenderung in Flutter App
 
 ## Post-Change Review Pflicht
 
@@ -261,6 +263,28 @@ Verfuegbare Claude Code Skills:
 - `/autopilot-status` – Status der Autopilot-Schicht: Workflows, Issues, Memory-Review
 - `/save-memory` – Erkenntnisse aus der Session in memory/ speichern
 - `/memory-review` – Memory-Dateien reviewen, kuerzen, archivieren
+- `/infra-check` – Hostinger VPS/DNS/Firewall Status pruefen (read-only)
+
+## MCP-Integrationen
+
+Verfuegbare MCP-Server in diesem Projekt:
+- **GitHub** (immer verfuegbar) – Issues, PRs, Repos
+- **Hostinger** (.mcp.json) – VPS, DNS, Domains, Firewall, Snapshots (119 Tools)
+  - Nur lesende Ops ohne Rueckfrage. Schreibende Ops: D7-Guardrail beachten.
+- **Slack** (wenn konfiguriert) – Channels, Messages, Canvases
+
+Neue MCP-Integration = Skill-Audit-Trigger.
+
+## Skill-Audit Trigger
+
+Ein Re-Audit der Skills/Guardrails ist faellig wenn:
+- Neue MCP-Integration hinzugefuegt wird
+- Neue zentrale Architekturdatei entsteht
+- Auth/Security/Deploy-Logik grundlegend geaendert wird
+- Gleicher Bug-Typ 3x in verschiedenen Sessions auftritt
+- Ein neues Playbook oder eine neue Skill-Datei erstellt wird
+
+Pruefung: `docs/agent-guardrails.md` lesen + CLAUDE.md Skills/MCP-Liste vergleichen.
 
 ## Ende
 
