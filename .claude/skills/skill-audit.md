@@ -105,6 +105,11 @@ Lies alle memory-Dateien. Pruefe:
 | Hostinger | ja | D7 | ja | OK |
 | Slack | nein | nein | ja | LUECKE |
 
+### Env-Var-Abdeckung
+| MCP | Variable | In .env.example | Status |
+|-----|----------|----------------|--------|
+| Hostinger | HOSTINGER_API_TOKEN | ja/nein | OK / FEHLT |
+
 ### Workflows
 - Erwartet: X | Tatsaechlich: Y | Match: JA/NEIN
 
