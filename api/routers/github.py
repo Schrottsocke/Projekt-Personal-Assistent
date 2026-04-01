@@ -64,10 +64,7 @@ async def list_labels(
         raise HTTPException(status_code=502, detail="GitHub-Labels konnten nicht geladen werden")
 
     raw = resp.json()
-    _label_cache = [
-        {"name": lb["name"], "color": lb["color"], "description": lb.get("description")}
-        for lb in raw
-    ]
+    _label_cache = [{"name": lb["name"], "color": lb["color"], "description": lb.get("description")} for lb in raw]
     _label_cache_ts = now
 
     return [LabelOut(**lb) for lb in _label_cache]
