@@ -11,7 +11,7 @@ const ShoppingView = (() => {
         <span class="section-icon">&#128722;</span> Einkaufsliste
       </div>
       <div class="input-group">
-        <input type="text" id="shopping-input" placeholder="Neuen Artikel hinzufuegen…"
+        <input type="text" id="shopping-input" placeholder="Neuen Artikel hinzufügen…"
                onkeydown="if(event.key==='Enter') ShoppingView.addItem()">
         <button class="btn btn-primary" onclick="ShoppingView.addItem()">+</button>
       </div>
@@ -22,7 +22,7 @@ const ShoppingView = (() => {
             Erledigte ausblenden
           </button>
           <button class="btn btn-sm btn-danger" onclick="ShoppingView.clearChecked()" id="clear-checked-btn">
-            Erledigte loeschen
+            Erledigte löschen
           </button>
         </div>
       </div>
@@ -93,7 +93,7 @@ const ShoppingView = (() => {
                    onchange="ShoppingView.toggleItem(${item.id}, this.checked)">
             <span class="item-name">${escapeHtml(item.name)}</span>
             ${detail ? `<span class="item-detail">${escapeHtml(detail)}</span>` : ''}
-            <button class="item-delete" onclick="ShoppingView.deleteItem(${item.id})" title="Loeschen">&#128465;</button>
+            <button class="item-delete" onclick="ShoppingView.deleteItem(${item.id})" title="Löschen">&#128465;</button>
           </div>
         `;
       });
@@ -146,7 +146,7 @@ const ShoppingView = (() => {
   async function clearChecked() {
     const count = items.filter(i => i.checked).length;
     if (count === 0) return;
-    if (!confirm(`${count} erledigte Artikel loeschen?`)) return;
+    if (!confirm(`${count} erledigte Artikel löschen?`)) return;
 
     try {
       await Api.clearCheckedItems();
