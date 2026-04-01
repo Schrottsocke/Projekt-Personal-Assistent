@@ -68,7 +68,7 @@ const CalendarView = (() => {
     el.innerHTML = `
       <div class="flex-between mb-8">
         <span class="card-subtitle">${connected === false ? '&#9888; Kalender nicht verbunden' : ''}</span>
-        <button class="btn btn-sm btn-primary" onclick="CalendarView.toggleForm()">+ Termin</button>
+        <button class="btn btn-sm btn-primary" onclick="CalendarView.toggleForm()" ${connected === false ? 'disabled title="Kalender nicht verbunden"' : ''}>+ Termin</button>
       </div>
       <div id="calendar-form-area"></div>
     `;
