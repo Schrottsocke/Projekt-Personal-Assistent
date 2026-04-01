@@ -175,7 +175,7 @@ const TasksView = (() => {
     try {
       const updated = await Api.updateTaskStatus(id, newStatus);
       const idx = tasks.findIndex(t => t.id === id);
-      if (idx >= 0) tasks[idx] = updated;
+      if (updated && idx >= 0) tasks[idx] = updated;
       renderList();
     } catch (err) {
       alert('Fehler: ' + err.message);
