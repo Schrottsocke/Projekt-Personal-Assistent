@@ -119,7 +119,7 @@ def _deploy_inner() -> tuple[bool, str]:
     # 3. Services neustarten
     for svc in SERVICES:
         logger.info(f"systemctl restart {svc} ...")
-        rc, out = _run(["systemctl", "restart", svc])
+        rc, out = _run(["sudo", "systemctl", "restart", svc])
         lines.append(f"restart {svc}: rc={rc} {out}")
         if rc != 0:
             logger.warning(f"restart {svc} fehlgeschlagen: {out}")

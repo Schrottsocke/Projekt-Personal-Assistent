@@ -298,7 +298,6 @@ systemctl stop personal-assistant
 ```bash
 git clone https://github.com/schrottsocke/projekt-personal-assistent.git
 cd projekt-personal-assistent
-git checkout claude/dual-personal-assistants-0Uqna
 
 python3.11 -m venv venv
 source venv/bin/activate      # Windows: venv\Scripts\activate
