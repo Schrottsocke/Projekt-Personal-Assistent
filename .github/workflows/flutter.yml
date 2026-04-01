@@ -29,7 +29,9 @@ jobs:
       - run: flutter test
 
   build-apk:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || github.event_name == 'workflow_dispatch'
     needs: flutter-check
     runs-on: ubuntu-latest
     defaults:
@@ -46,9 +48,13 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
-      - run: flutter build apk --release
-      - uses: actions/upload-artifact@v7
+      - run: flutter build apk --release --dart-define=API_BASE_URL=https://dualmind.cloud
+      # TODO Signierter Release-Build: key.properties + Upload-Keystore (.jks) als
+      # GitHub Secrets (KEYSTORE_BASE64, KEY_ALIAS, KEY_PASSWORD, STORE_PASSWORD)
+      # einrichten und build.gradle.kts Release-signingConfig anpassen.
+      - uses: actions/upload-artifact@v4
         with:
-          name: release-apk
+          name: personal-assistant-apk
           path: app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
           retention-days: 14
