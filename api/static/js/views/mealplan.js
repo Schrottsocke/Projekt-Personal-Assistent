@@ -41,7 +41,7 @@ const MealPlanView = (() => {
       <div class="week-nav">
         <button class="btn btn-sm btn-secondary" onclick="MealPlanView.prevWeek()">&#8592; Vorherige</button>
         <span id="week-label" class="week-label">KW ${getWeekNumber(weekStart)}</span>
-        <button class="btn btn-sm btn-secondary" onclick="MealPlanView.nextWeek()">Naechste &#8594;</button>
+        <button class="btn btn-sm btn-secondary" onclick="MealPlanView.nextWeek()">Nächste &#8594;</button>
       </div>
       <div class="flex-between mb-8">
         <div></div>
@@ -112,7 +112,7 @@ const MealPlanView = (() => {
                 <div class="meal-title">${escapeHtml(m.recipe_title)}</div>
                 ${m.servings ? `<div class="meal-meta">${m.servings} Portionen</div>` : ''}
                 ${m.notes ? `<div class="meal-meta">${escapeHtml(m.notes)}</div>` : ''}
-                <button class="item-delete" onclick="MealPlanView.deleteEntry(${m.id})" title="Loeschen">&#128465;</button>
+                <button class="item-delete" onclick="MealPlanView.deleteEntry(${m.id})" title="Löschen">&#128465;</button>
               </div>
             `;
           });
@@ -143,13 +143,14 @@ const MealPlanView = (() => {
           </select>
         </div>
         <div class="input-group mb-8">
+          <label for="meal-servings" style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:2px">Portionen</label>
           <input type="number" id="meal-servings" value="4" min="1" max="20" placeholder="Portionen"
                  style="flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px;font-size:0.9rem">
           <input type="text" id="meal-notes" placeholder="Notizen (optional)" style="flex:2">
         </div>
         <div class="flex-between">
           <button class="btn btn-sm btn-secondary" onclick="MealPlanView.toggleForm()">Abbrechen</button>
-          <button class="btn btn-sm btn-primary" onclick="MealPlanView.createEntry()">Hinzufuegen</button>
+          <button class="btn btn-sm btn-primary" onclick="MealPlanView.createEntry()">Hinzufügen</button>
         </div>
       </div>
     `;
@@ -180,7 +181,7 @@ const MealPlanView = (() => {
   }
 
   async function deleteEntry(id) {
-    if (!confirm('Mahlzeit loeschen?')) return;
+    if (!confirm('Mahlzeit löschen?')) return;
     try {
       await Api.deleteMealPlan(id);
       entries = entries.filter(e => e.id !== id);

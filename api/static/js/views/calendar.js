@@ -113,7 +113,9 @@ const CalendarView = (() => {
     const location = document.getElementById('event-location').value.trim();
 
     if (!summary || !start || !end) {
-      alert('Bitte Titel, Start und Ende angeben.');
+      if (!summary) document.getElementById('event-summary').style.border = '2px solid #e74c3c';
+      if (!start) document.getElementById('event-start').style.border = '2px solid #e74c3c';
+      if (!end) document.getElementById('event-end').style.border = '2px solid #e74c3c';
       return;
     }
 

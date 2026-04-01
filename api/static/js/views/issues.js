@@ -116,7 +116,7 @@ const IssuesView = (() => {
         </div>
 
         <div class="input-group">
-          <label for="issue-priority">Prioritaet</label>
+          <label for="issue-priority">Priorität</label>
           <select id="issue-priority">
             <option value="">– keine –</option>
             ${priorities.map(l => `<option value="${escapeHtml(l.name)}">${escapeHtml(l.name)}</option>`).join('')}
