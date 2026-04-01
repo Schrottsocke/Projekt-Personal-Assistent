@@ -206,6 +206,13 @@ async def homepage():
     return _LANDING_PAGE_HTML
 
 
+@app.get("/app/sw.js", include_in_schema=False)
+async def service_worker():
+    """ServiceWorker mit erweitertem Scope-Header ausliefern."""
+    sw_path = Path(__file__).parent / "static" / "sw.js"
+    return FileResponse(str(sw_path), media_type="application/javascript", headers={"Service-Worker-Allowed": "/app"})
+
+
 @app.get("/app", include_in_schema=False)
 async def web_app_root():
     """SPA-Shell fuer die Web-App."""
