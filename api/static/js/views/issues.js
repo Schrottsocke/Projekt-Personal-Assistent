@@ -1,5 +1,5 @@
 /**
- * Issues View – GitHub Issue erstellen
+ * Issues View – GitHub Issue-Liste + Erstellung
  */
 const IssuesView = (() => {
   let labels = [];
@@ -8,12 +8,66 @@ const IssuesView = (() => {
   async function render(container) {
     container.innerHTML = `
       <a class="view-back" href="#/profile">&#8592; Profil</a>
-      <div class="section-header"><span class="section-icon">&#128196;</span> GitHub Issue erstellen</div>
+      <div class="section-header"><span class="section-icon">&#128196;</span> Offene Issues</div>
+      <div id="issue-list"><div class="loading"><div class="spinner"></div> Issues laden&hellip;</div></div>
+      <div class="section-header mt-16"><span class="section-icon">&#10133;</span> Neues Issue erstellen</div>
       <div id="issue-form-area"><div class="loading"><div class="spinner"></div> Labels laden&hellip;</div></div>
       <div id="issue-result"></div>
     `;
     await loadLabels();
+    await loadIssues();
   }
+
+  /* ---------- Issue List ---------- */
+
+  async function loadIssues() {
+    const el = document.getElementById('issue-list');
+    try {
+      const issues = await Api.getGitHubIssues();
+      renderIssueList(el, issues);
+    } catch (err) {
+      el.innerHTML = `
+        <div class="error-state">
+          <p>${escapeHtml(err.message)}</p>
+          <button class="btn btn-primary btn-sm" onclick="IssuesView.render(document.getElementById('view'))">Erneut versuchen</button>
+        </div>
+      `;
+    }
+  }
+
+  function renderIssueList(el, issues) {
+    if (issues.length === 0) {
+      el.innerHTML = '<div class="empty-state">Keine offenen Issues</div>';
+      return;
+    }
+    el.innerHTML = issues.map(iss => `
+      <a href="${escapeHtml(iss.html_url)}" target="_blank" rel="noopener" class="card issue-item">
+        <div class="flex-between">
+          <span class="issue-number">#${iss.number}</span>
+          <span class="issue-date">${formatIssueDate(iss.created_at)}</span>
+        </div>
+        <div class="issue-title">${escapeHtml(iss.title)}</div>
+        ${iss.labels.length ? `<div class="issue-labels">${iss.labels.map(l => renderLabelBadge(l)).join('')}</div>` : ''}
+      </a>
+    `).join('');
+  }
+
+  function formatIssueDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function renderLabelBadge(labelName) {
+    const labelData = labels.find(l => l.name === labelName);
+    if (labelData && labelData.color) {
+      const bg = `#${labelData.color}33`;
+      const fg = `#${labelData.color}`;
+      return `<span class="badge" style="background:${bg};color:${fg}">${escapeHtml(labelName)}</span>`;
+    }
+    return `<span class="badge badge-accent">${escapeHtml(labelName)}</span>`;
+  }
+
+  /* ---------- Labels + Form ---------- */
 
   async function loadLabels() {
     const area = document.getElementById('issue-form-area');
@@ -144,6 +198,8 @@ const IssuesView = (() => {
       document.getElementById('issue-type').value = '';
       document.getElementById('issue-priority').value = '';
       document.querySelectorAll('#issue-areas input:checked').forEach(cb => { cb.checked = false; });
+      // Issue-Liste aktualisieren
+      await loadIssues();
     } catch (err) {
       resultEl.innerHTML = `
         <div class="card" style="border-left: 3px solid var(--error)">
