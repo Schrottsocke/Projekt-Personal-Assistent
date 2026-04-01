@@ -153,7 +153,7 @@ const RecipesView = (() => {
 
         <div class="modal-actions">
           ${!isSaved ? `<button class="btn btn-primary" onclick="RecipesView.saveRecipe(${idx})">Speichern</button>` : ''}
-          ${ingredients.length > 0 ? `<button class="btn btn-secondary" onclick="RecipesView.addToShopping('${r.chefkoch_id || ''}')">Zur Einkaufsliste</button>` : ''}
+          ${ingredients.length > 0 ? `<button class="btn btn-secondary" onclick="RecipesView.addToShopping('${escapeHtml(r.chefkoch_id || '')}')">Zur Einkaufsliste</button>` : ''}
         </div>
       </div>
     `;

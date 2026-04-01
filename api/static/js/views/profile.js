@@ -46,8 +46,7 @@ const ProfileView = (() => {
       </div>
     `;
 
-    loadServices();
-    loadFeatures();
+    await Promise.all([loadServices(), loadFeatures()]);
   }
 
   async function loadServices() {

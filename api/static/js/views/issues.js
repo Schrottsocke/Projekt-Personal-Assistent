@@ -29,7 +29,7 @@ const IssuesView = (() => {
       el.innerHTML = `
         <div class="error-state">
           <p>${escapeHtml(err.message)}</p>
-          <button class="btn btn-primary btn-sm" onclick="IssuesView.render(document.getElementById('view'))">Erneut versuchen</button>
+          <button class="btn btn-primary btn-sm" onclick="IssuesView.render(document.getElementById('view-container'))">Erneut versuchen</button>
         </div>
       `;
     }
@@ -78,7 +78,7 @@ const IssuesView = (() => {
       area.innerHTML = `
         <div class="error-state">
           <p>${escapeHtml(err.message)}</p>
-          <button class="btn btn-primary btn-sm" onclick="IssuesView.render(document.getElementById('view'))">Erneut versuchen</button>
+          <button class="btn btn-primary btn-sm" onclick="IssuesView.render(document.getElementById('view-container'))">Erneut versuchen</button>
         </div>
       `;
     }

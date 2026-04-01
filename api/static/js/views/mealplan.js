@@ -53,16 +53,16 @@ const MealPlanView = (() => {
     await loadWeek();
   }
 
-  function prevWeek() {
+  async function prevWeek() {
     weekStart = new Date(weekStart.getTime() - 7 * 86400000);
     updateWeekLabel();
-    loadWeek();
+    await loadWeek();
   }
 
-  function nextWeek() {
+  async function nextWeek() {
     weekStart = new Date(weekStart.getTime() + 7 * 86400000);
     updateWeekLabel();
-    loadWeek();
+    await loadWeek();
   }
 
   function updateWeekLabel() {
