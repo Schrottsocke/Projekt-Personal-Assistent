@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 User=assistant
 WorkingDirectory=/home/assistant/projekt-personal-assistent
-Environment=PATH=/home/assistant/projekt-personal-assistent/venv/bin
+Environment=PATH=/home/assistant/projekt-personal-assistent/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/home/assistant/projekt-personal-assistent/venv/bin/python main.py
 
 # Restart with backoff
