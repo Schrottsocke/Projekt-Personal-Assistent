@@ -23,6 +23,11 @@ _label_cache: list[dict] | None = None
 _label_cache_ts: float = 0
 _CACHE_TTL = 3600  # 1 Stunde
 
+# In-memory Issue-Cache (haeufiger aendernd, 5min TTL)
+_issue_cache: list[dict] | None = None
+_issue_cache_ts: float = 0
+_ISSUE_CACHE_TTL = 300  # 5 Minuten
+
 _GITHUB_API = "https://api.github.com"
 
 
@@ -70,6 +75,49 @@ async def list_labels(
     return [LabelOut(**lb) for lb in _label_cache]
 
 
+@router.get("/issues", response_model=list[IssueOut])
+async def list_issues(
+    user_key: Annotated[str, Depends(get_current_user)],
+) -> list[IssueOut]:
+    """Offene Issues des konfigurierten Repos zurueckgeben (cached)."""
+    _require_token()
+
+    global _issue_cache, _issue_cache_ts
+    now = time.monotonic()
+
+    if _issue_cache is not None and (now - _issue_cache_ts) < _ISSUE_CACHE_TTL:
+        return [IssueOut(**iss) for iss in _issue_cache]
+
+    url = f"{_GITHUB_API}/repos/{settings.GITHUB_REPO}/issues"
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.get(
+            url,
+            params={"state": "open", "per_page": 30, "sort": "created", "direction": "desc"},
+            headers=_headers(),
+        )
+
+    if resp.status_code != 200:
+        logger.warning("github_issues_error", status=resp.status_code, body=resp.text[:200])
+        raise HTTPException(status_code=502, detail="GitHub-Issues konnten nicht geladen werden")
+
+    raw = resp.json()
+    # GitHub /issues endpoint includes PRs – filter them out
+    _issue_cache = [
+        {
+            "number": iss["number"],
+            "title": iss["title"],
+            "html_url": iss["html_url"],
+            "labels": [lb["name"] for lb in iss.get("labels", [])],
+            "created_at": iss["created_at"],
+        }
+        for iss in raw
+        if "pull_request" not in iss
+    ]
+    _issue_cache_ts = now
+
+    return [IssueOut(**iss) for iss in _issue_cache]
+
+
 @router.post("/issues", response_model=IssueOut, status_code=status.HTTP_201_CREATED)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def create_issue(
@@ -100,6 +148,10 @@ async def create_issue(
         elif resp.status_code == 422:
             detail = "Ungueltige Daten – pruefen Sie Titel und Labels"
         raise HTTPException(status_code=502, detail=detail)
+
+    # Invalidate issue list cache so the new issue appears immediately
+    global _issue_cache
+    _issue_cache = None
 
     data = resp.json()
     logger.info(

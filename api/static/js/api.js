@@ -239,6 +239,7 @@ const Api = (() => {
 
   // GitHub Issues
   function getGitHubLabels() { return request('/github/labels'); }
+  function getGitHubIssues() { return request('/github/issues'); }
   function createGitHubIssue(data) { return request('/github/issues', { method: 'POST', body: data }); }
 
   return {
@@ -252,6 +253,6 @@ const Api = (() => {
     getTasks, createTask, updateTaskStatus, deleteTask,
     getMealPlanWeek, createMealPlan, deleteMealPlan,
     getDriveFiles, uploadFile,
-    getGitHubLabels, createGitHubIssue,
+    getGitHubLabels, getGitHubIssues, createGitHubIssue,
   };
 })();
