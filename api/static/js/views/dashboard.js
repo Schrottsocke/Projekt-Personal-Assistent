@@ -28,7 +28,7 @@ const DashboardView = (() => {
     const user = capitalize(Api.getUserKey());
     container.innerHTML = `
       <div class="greeting">${getGreeting()}, ${user}</div>
-      <div class="greeting-sub">Hier ist dein Tagesueberblick</div>
+      <div class="greeting-sub">Hier ist dein Tagesüberblick</div>
       <div id="dashboard-content"><div class="loading"><div class="spinner"></div> Laden…</div></div>
     `;
 
@@ -103,7 +103,7 @@ const DashboardView = (() => {
     const pending = shop.pending || (total - checked);
     const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
 
-    html += `<div class="section-header"><span class="section-icon">&#128722;</span> Einkaufsliste</div>`;
+    html += `<a class="section-header section-link" href="#/shopping"><span class="section-icon">&#128722;</span> Einkaufsliste <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
     if (total === 0) {
       html += `<div class="empty-state">Einkaufsliste ist leer</div>`;
     } else {

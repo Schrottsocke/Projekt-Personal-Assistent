@@ -116,7 +116,7 @@ const TasksView = (() => {
           ${t.description ? `<div class="card-subtitle">${escapeHtml(t.description)}</div>` : ''}
           ${t.due_date ? `<div class="card-subtitle mt-8">&#128197; ${formatDate(t.due_date)}</div>` : ''}
         </div>
-        <button class="item-delete" onclick="TasksView.deleteTask(${t.id})" title="Loeschen">&#128465;</button>
+        <button class="item-delete" onclick="TasksView.deleteTask(${t.id})" title="Löschen">&#128465;</button>
       </div>
     `).join('');
   }
@@ -149,7 +149,7 @@ const TasksView = (() => {
 
   async function createTask() {
     const title = document.getElementById('task-title').value.trim();
-    if (!title) { alert('Bitte Titel angeben.'); return; }
+    if (!title) { document.getElementById('task-title').style.border = '2px solid #e74c3c'; return; }
 
     const desc = document.getElementById('task-desc').value.trim();
     const priority = document.getElementById('task-priority').value;
@@ -184,7 +184,7 @@ const TasksView = (() => {
   }
 
   async function deleteTask(id) {
-    if (!confirm('Aufgabe loeschen?')) return;
+    if (!confirm('Aufgabe löschen?')) return;
     try {
       await Api.deleteTask(id);
       tasks = tasks.filter(t => t.id !== id);
