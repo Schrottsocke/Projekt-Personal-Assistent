@@ -231,7 +231,7 @@ class AIService:
         # Feature-Gate: Deaktivierte Features fallen auf Chat zurück
         if not self._feature_enabled(intent, user_key):
             logger.info(f"Feature für Intent '{intent}' deaktiviert für {user_key}, Fallback auf Chat")
-            return await self._handle_chat(message, user_key, bot)
+            return await self._handle_chat(message, intent_data, user_key, chat_id, bot)
 
         handlers = {
             INTENT_CALENDAR_READ: self._handle_calendar_read,
