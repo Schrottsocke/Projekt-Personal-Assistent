@@ -13,6 +13,7 @@
   Router.register('#/tasks', (c) => TasksView.render(c));
   Router.register('#/mealplan', (c) => MealPlanView.render(c));
   Router.register('#/drive', (c) => DriveView.render(c));
+  Router.register('#/issues', (c) => IssuesView.render(c));
 
   // Init router on DOM ready
   if (document.readyState === 'loading') {

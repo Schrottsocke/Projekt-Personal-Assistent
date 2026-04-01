@@ -33,6 +33,14 @@ const ProfileView = (() => {
         </div>
       </div>
 
+      <div class="section-header"><span class="section-icon">&#128187;</span> Entwickler</div>
+      <div class="settings-list">
+        <a href="#/issues" class="settings-item" style="text-decoration:none;color:inherit">
+          <span>&#128196; GitHub Issue erstellen</span>
+          <span class="card-subtitle">&#8594;</span>
+        </a>
+      </div>
+
       <div class="text-center mt-16">
         <button class="btn btn-danger" onclick="ProfileView.confirmLogout()">Abmelden</button>
       </div>

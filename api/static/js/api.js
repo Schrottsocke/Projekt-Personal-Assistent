@@ -237,6 +237,10 @@ const Api = (() => {
     return res.json();
   }
 
+  // GitHub Issues
+  function getGitHubLabels() { return request('/github/labels'); }
+  function createGitHubIssue(data) { return request('/github/issues', { method: 'POST', body: data }); }
+
   return {
     getToken, getUserKey, isLoggedIn, login, logout, clearAuth,
     getDashboard,
@@ -248,5 +252,6 @@ const Api = (() => {
     getTasks, createTask, updateTaskStatus, deleteTask,
     getMealPlanWeek, createMealPlan, deleteMealPlan,
     getDriveFiles, uploadFile,
+    getGitHubLabels, createGitHubIssue,
   };
 })();
