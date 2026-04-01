@@ -33,7 +33,7 @@ if [ -z "$RESOLVED_IP" ]; then
     exit 1
 fi
 
-SERVER_IP=$(curl -sf https://ifconfig.me 2>/dev/null || curl -sf https://api.ipify.org 2>/dev/null || echo "unknown")
+SERVER_IP=$(curl -4 -sf https://ifconfig.me 2>/dev/null || curl -4 -sf https://api.ipify.org 2>/dev/null || echo "unknown")
 if [ "$RESOLVED_IP" != "$SERVER_IP" ] && [ "$SERVER_IP" != "unknown" ]; then
     echo "WARNING: $DOMAIN resolves to $RESOLVED_IP but this server's IP is $SERVER_IP"
     echo "  → Certbot will fail if the domain does not point to this server."
