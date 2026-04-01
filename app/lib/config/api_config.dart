@@ -8,7 +8,7 @@
 /// | Umgebung    | URL                                          | Hinweis                        |
 /// |-------------|----------------------------------------------|--------------------------------|
 /// | Development | `http://localhost:8000`                       | Default, kein Flag noetig      |
-/// | Production  | `https://your-domain.com` (eigene VPS-Domain) | Muss per `--dart-define` gesetzt werden |
+/// | Production  | `https://dualmind.cloud`                      | Muss per `--dart-define` gesetzt werden |
 ///
 /// ## Konfiguration per --dart-define
 ///
@@ -17,10 +17,10 @@
 /// flutter run
 ///
 /// # Produktion:
-/// flutter run --dart-define=API_BASE_URL=https://your-domain.com
+/// flutter run --dart-define=API_BASE_URL=https://dualmind.cloud
 ///
 /// # APK fuer Produktion bauen:
-/// flutter build apk --dart-define=API_BASE_URL=https://your-domain.com
+/// flutter build apk --dart-define=API_BASE_URL=https://dualmind.cloud
 /// ```
 class ApiConfig {
   /// Basis-URL der FastAPI.
@@ -33,10 +33,10 @@ class ApiConfig {
   );
 
   /// Produktions-URL-Muster. Beim Deployment die eigene Domain einsetzen.
-  /// Beispiel: `https://api.dualmind.example.com`
+  /// Beispiel: `https://dualmind.cloud`
   static const String prodBaseUrl = String.fromEnvironment(
     'API_PROD_URL',
-    defaultValue: 'https://your-domain.com',
+    defaultValue: 'https://dualmind.cloud',
   );
 
   /// Gibt `true` zurueck, wenn die App gegen den Produktionsserver laeuft.
