@@ -135,6 +135,10 @@ class Settings:
     WEBHOOK_PORT: int = int(os.getenv("WEBHOOK_PORT", "9000"))
     DEPLOY_BRANCH: str = os.getenv("DEPLOY_BRANCH", "main")
 
+    # GitHub API (Issue-Erstellung aus der WebApp)
+    GITHUB_TOKEN: str = os.getenv("GITHUB_TOKEN", "")
+    GITHUB_REPO: str = os.getenv("GITHUB_REPO", "schrottsocke/projekt-personal-assistent")
+
     # Logging
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: Path = BASE_DIR / os.getenv("LOG_FILE", "logs/assistant.log")

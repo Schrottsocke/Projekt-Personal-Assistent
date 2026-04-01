@@ -1105,3 +1105,50 @@ textarea { resize: vertical; min-height: 80px; }
 .mb-8 { margin-bottom: 8px; }
 .mb-16 { margin-bottom: 16px; }
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+/* Issue-Formular */
+#issue-form-area .input-group {
+  flex-direction: column;
+  gap: 4px;
+}
+#issue-form-area label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+select {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color var(--transition);
+}
+select:focus { border-color: var(--accent); }
+.label-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.label-chips .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+.label-chips .chip:has(input:checked) {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+.label-chips .chip input { display: none; }

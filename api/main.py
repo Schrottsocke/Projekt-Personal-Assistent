@@ -32,6 +32,7 @@ from api.routers import (
     mealplan,
     drive,
     features,
+    github,
     status,
 )
 
@@ -190,6 +191,7 @@ app.include_router(recipes.router, prefix="/recipes", tags=["Rezepte"])
 app.include_router(mealplan.router, prefix="/meal-plan", tags=["Wochenplan"])
 app.include_router(drive.router, prefix="/drive", tags=["Drive"])
 app.include_router(features.router)
+app.include_router(github.router, prefix="/github", tags=["GitHub"])
 app.include_router(status.router)
 
 
