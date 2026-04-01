@@ -3,6 +3,7 @@
 ## Uebersicht
 
 Nach jedem Merge auf `main` deployt GitHub Actions automatisch auf den Hostinger VPS.
+Der Workflow nutzt den Webhook-Deployer (`deploy/webhook_deployer.py`) auf Port 9000.
 Workflow-Datei: `.github/workflows/deploy-hostinger.yml`
 
 ## Voraussetzungen
@@ -17,27 +18,15 @@ bash /home/assistant/projekt-personal-assistent/deploy/setup_server.sh
 nano /home/assistant/projekt-personal-assistent/.env   # Secrets eintragen
 ```
 
-Falls das Repo noch nicht auf dem VPS liegt, klont `setup_server.sh` es automatisch.
+### 2. Webhook-Deployer muss laufen
 
-### 2. SSH-Key fuer GitHub Actions erzeugen
-
-Auf deinem lokalen Rechner:
+Der Webhook-Deployer laeuft als systemd Service auf Port 9000:
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/hostinger_deploy -C "github-actions-deploy" -N ""
+systemctl status personal-assistant-webhook
 ```
 
-Den **oeffentlichen** Key auf den VPS kopieren:
-
-```bash
-ssh-copy-id -i ~/.ssh/hostinger_deploy.pub root@<VPS_IP>
-```
-
-Oder manuell:
-
-```bash
-cat ~/.ssh/hostinger_deploy.pub | ssh root@<VPS_IP> 'cat >> ~/.ssh/authorized_keys'
-```
+Er wird automatisch beim Serverstart gestartet. Der Service braucht `WEBHOOK_SECRET` in der `.env`.
 
 ### 3. GitHub Secrets setzen
 
@@ -45,28 +34,24 @@ Gehe zu: **GitHub Repo → Settings → Secrets and variables → Actions → Ne
 
 | Secret | Wert | Pflicht |
 |--------|------|---------|
-| `HOSTINGER_HOST` | VPS-IP, z.B. `72.62.152.187` | Ja |
-| `HOSTINGER_PORT` | SSH-Port, z.B. `22` | Ja |
-| `HOSTINGER_USER` | SSH-User, z.B. `root` | Ja |
-| `HOSTINGER_SSH_KEY` | Inhalt von `~/.ssh/hostinger_deploy` (Private Key!) | Ja |
-| `HOSTINGER_KNOWN_HOSTS` | Ausgabe von `ssh-keyscan -p 22 <VPS_IP>` | Empfohlen |
-| `DEPLOY_PATH` | Projektpfad auf dem VPS (Standard: `/home/assistant/projekt-personal-assistent`) | Optional |
+| `HOSTINGER_WEBHOOK_URL` | `http://<VPS_IP>:9000/deploy` | Ja |
+| `HOSTINGER_WEBHOOK_SECRET` | Wert von `WEBHOOK_SECRET` aus `.env` auf dem VPS | Ja |
+| `HOSTINGER_HEALTH_URL` | `http://<VPS_IP>:8000/health` (oder `http://<VPS_IP>/health` mit Nginx) | Empfohlen |
 
-**HOSTINGER_SSH_KEY** einfuegen:
+**WEBHOOK_SECRET** auf dem VPS anzeigen:
 
 ```bash
-cat ~/.ssh/hostinger_deploy
+grep WEBHOOK_SECRET /home/assistant/projekt-personal-assistent/.env
 ```
 
-Den gesamten Inhalt (inkl. `-----BEGIN/END-----` Zeilen) als Secret-Wert einfuegen.
+### Alte SSH-Secrets (nicht mehr benoetigt)
 
-**HOSTINGER_KNOWN_HOSTS** erzeugen (empfohlen fuer sichere Verbindung):
-
-```bash
-ssh-keyscan -p 22 <VPS_IP> 2>/dev/null
-```
-
-Ausgabe als Secret-Wert einfuegen.
+Die folgenden Secrets koennen geloescht werden:
+- `HOSTINGER_HOST`
+- `HOSTINGER_PORT`
+- `HOSTINGER_USER`
+- `HOSTINGER_SSH_KEY`
+- `HOSTINGER_KNOWN_HOSTS`
 
 ## Deploy ausloesen
 
@@ -82,23 +67,18 @@ Jeder Push/Merge auf `main` startet den Deploy automatisch.
 
 ## Was der Deploy tut
 
-1. SSH-Verbindung zum VPS aufbauen
-2. `git pull origin main` (als User `assistant`)
-3. `pip install -r requirements.txt` (im virtualenv)
-4. Restart: `personal-assistant`, `personal-assistant-api`, `personal-assistant-webhook`
-5. 5 Sekunden warten
-6. Alle drei Services auf `active` pruefen
-7. Health-Check: `curl http://127.0.0.1:8000/health`
-8. Web-App-Check: `curl http://127.0.0.1:8000/app`
-9. Commit-Hash und Timestamp ausgeben
-
-Bei Fehlern bricht der Deploy ab und zeigt die letzten 15 Log-Zeilen des fehlerhaften Services.
+1. GitHub Actions sendet einen signierten Webhook an den VPS (Port 9000)
+2. Der Webhook-Deployer verifiziert die HMAC-Signatur
+3. Bei gueltigem Webhook:
+   - `git pull --rebase origin main`
+   - `pip install -r requirements.txt`
+   - Restart: `personal-assistant`, `personal-assistant-api`, `personal-assistant-webhook`
+4. GitHub Actions wartet 30 Sekunden
+5. Health-Check gegen die API
 
 ## App-URL
 
 ### Mit Nginx (empfohlen)
-
-Wenn Nginx auf dem VPS eingerichtet ist (`deploy/nginx.conf`):
 
 | URL | Inhalt |
 |-----|--------|
@@ -106,16 +86,6 @@ Wenn Nginx auf dem VPS eingerichtet ist (`deploy/nginx.conf`):
 | `http://<VPS_IP>/app` | Web-App (SPA) |
 | `http://<VPS_IP>/health` | Health-Check JSON |
 | `http://<VPS_IP>/docs` | API-Dokumentation |
-
-Nginx einrichten (einmalig auf dem VPS):
-
-```bash
-apt install -y nginx
-cp /home/assistant/projekt-personal-assistent/deploy/nginx.conf /etc/nginx/sites-available/dualmind-api
-ln -sf /etc/nginx/sites-available/dualmind-api /etc/nginx/sites-enabled/
-rm -f /etc/nginx/sites-enabled/default
-nginx -t && systemctl reload nginx
-```
 
 ### Ohne Nginx (Direktzugriff)
 
@@ -125,39 +95,23 @@ nginx -t && systemctl reload nginx
 | `http://<VPS_IP>:8000/app` | Web-App (SPA) |
 | `http://<VPS_IP>:8000/health` | Health-Check JSON |
 
-Port 8000 muss in der Hostinger-Firewall geoeffnet sein.
-
 ### Mit eigener Domain + SSL
 
 1. DNS A-Record: `deine-domain.de` → `<VPS_IP>`
-2. Nginx aktivieren (siehe oben)
-3. SSL einrichten: `bash /home/assistant/projekt-personal-assistent/deploy/setup_ssl.sh deine-domain.de`
-4. HTTPS-Block in `nginx.conf` aktivieren (Anleitung in der Datei)
-
-## Offene Blocker fuer oeffentliche App-URL
-
-| Blocker | Loesung |
-|---------|---------|
-| Nginx nicht installiert | `apt install -y nginx` + Config kopieren (siehe oben) |
-| Port 80 nicht offen | Hostinger → VPS → Firewall → TCP Port 80 freigeben |
-| Port 8000 nicht offen (ohne Nginx) | Hostinger → VPS → Firewall → TCP Port 8000 freigeben |
-| Keine Domain | App ist ueber IP erreichbar, Domain ist optional |
-| Kein SSL | Funktioniert ueber HTTP, SSL optional via `setup_ssl.sh` |
+2. SSL einrichten: `bash deploy/setup_ssl.sh deine-domain.de`
+3. HTTPS-Block in `deploy/nginx.conf` aktivieren
 
 ## Fehlerbehebung
 
-### Deploy schlaegt fehl
+### Webhook-Deploy schlaegt fehl
 
-1. GitHub Actions → den fehlgeschlagenen Run oeffnen → Logs lesen
+1. GitHub Actions → Run oeffnen → Logs lesen
 2. Haeufige Ursachen:
-   - SSH-Key falsch → `HOSTINGER_SSH_KEY` pruefen
-   - VPS nicht erreichbar → Firewall/Port 22 pruefen
-   - Service startet nicht → `.env` auf dem VPS pruefen (Pflichtfelder fehlen?)
-   - `venv` fehlt → `setup_server.sh` wurde nicht ausgefuehrt
+   - `HOSTINGER_WEBHOOK_SECRET` stimmt nicht mit `.env` auf dem VPS ueberein
+   - Webhook-Deployer laeuft nicht: `systemctl status personal-assistant-webhook`
+   - Port 9000 nicht in Hostinger-Firewall offen
 
 ### Services laufen nicht
-
-Auf dem VPS pruefen:
 
 ```bash
 journalctl -u personal-assistant -n 30 --no-pager
