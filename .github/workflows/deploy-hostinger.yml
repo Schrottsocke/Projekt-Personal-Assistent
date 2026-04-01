@@ -27,7 +27,7 @@ jobs:
         run: |
           # Build HMAC signature matching webhook_deployer.py expectations
           PAYLOAD='{"ref":"refs/heads/main"}'
-          SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | awk '{print "sha256="$NF}')
+          SIGNATURE=$(echo -n "$PAYLOAD" | openssl dgst -sha256 -hmac "$WEBHOOK_SECRET" | sed 's/.*= /sha256=/')
 
           echo "=== Triggering deploy ==="
           HTTP_CODE=$(curl -s -o /tmp/deploy_response.txt -w "%{http_code}" \

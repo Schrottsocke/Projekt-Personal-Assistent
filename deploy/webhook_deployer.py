@@ -53,7 +53,10 @@ def _load_secret() -> str:
     if ENV_FILE.exists():
         for line in ENV_FILE.read_text().splitlines():
             if line.startswith("WEBHOOK_SECRET="):
-                return line.split("=", 1)[1].strip().strip('"').strip("'")
+                value = line.split("=", 1)[1].strip()
+                if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+                    value = value[1:-1]
+                return value
     return os.getenv("WEBHOOK_SECRET", "")
 
 
