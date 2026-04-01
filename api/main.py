@@ -219,16 +219,6 @@ async def web_app_root():
     return FileResponse(str(_static_dir / "app.html"))
 
 
-@app.get("/app/sw.js", include_in_schema=False)
-async def service_worker():
-    """ServiceWorker unter /app Scope ausliefern."""
-    return FileResponse(
-        str(_static_dir / "sw.js"),
-        media_type="application/javascript",
-        headers={"Service-Worker-Allowed": "/app"},
-    )
-
-
 @app.get("/app/{path:path}", include_in_schema=False)
 async def web_app_catchall(path: str):
     """SPA Catch-All fuer Deep-Links."""
