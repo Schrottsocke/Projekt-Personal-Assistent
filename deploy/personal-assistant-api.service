@@ -7,11 +7,11 @@ Wants=network-online.target
 Type=simple
 User=assistant
 WorkingDirectory=/home/assistant/projekt-personal-assistent
-Environment=PATH=/home/assistant/projekt-personal-assistent/venv/bin
+Environment=PATH=/home/assistant/projekt-personal-assistent/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStart=/home/assistant/projekt-personal-assistent/venv/bin/python api/api_main.py
 
 # Health-Check: prüft nach Start ob der API-Endpunkt erreichbar ist
-ExecStartPost=/bin/sh -c 'sleep 3 && curl -sf http://localhost:8000/health || exit 1'
+ExecStartPost=/bin/sh -c '/bin/sleep 3 && /usr/bin/curl -sf http://localhost:8000/health || exit 1'
 
 # Restart with backoff
 Restart=on-failure
