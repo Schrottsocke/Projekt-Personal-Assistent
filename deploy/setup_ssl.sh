@@ -2,6 +2,12 @@
 # Setup Let's Encrypt SSL for DualMind API
 # Usage: sudo bash deploy/setup_ssl.sh <domain>
 #
+# This script handles the full bootstrapping process:
+#   1. Deploys a temporary HTTP-only nginx config with the correct server_name
+#   2. Requests a Let's Encrypt certificate via certbot
+#   3. Deploys the final HTTPS nginx config
+#   4. Enables auto-renewal
+#
 # Prerequisites:
 #   - DNS A-record for <domain> must point to this server's IP
 #   - Port 80 must be open (for ACME HTTP-01 challenge)
@@ -11,6 +17,8 @@ set -euo pipefail
 
 DOMAIN="${1:?Usage: $0 <domain>}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+NGINX_SITE="/etc/nginx/sites-available/dualmind-api"
+NGINX_ENABLED="/etc/nginx/sites-enabled/dualmind-api"
 
 echo "=== SSL Setup for $DOMAIN ==="
 
@@ -42,8 +50,7 @@ if ! command -v nginx &>/dev/null; then
     echo "ERROR: nginx is not installed. Install with: apt install nginx"
     exit 1
 fi
-nginx -t 2>/dev/null || { echo "ERROR: nginx config test failed. Fix before continuing."; exit 1; }
-echo "  nginx config OK ✓"
+echo "  nginx found ✓"
 
 # --- Install certbot ---
 
@@ -55,7 +62,45 @@ apt-get install -y -qq certbot python3-certbot-nginx
 
 mkdir -p /var/www/certbot
 
-# --- Request certificate ---
+# --- Phase 1: Deploy temporary HTTP-only config with correct server_name ---
+# Certbot --nginx needs a server block with server_name matching the domain.
+# The final nginx.conf includes HTTPS blocks that require certs to exist,
+# so we deploy a temporary HTTP-only config first.
+
+echo "=== Deploying temporary HTTP-only nginx config ==="
+
+cat > "$NGINX_SITE" << CONF
+server {
+    listen 80;
+    server_name $DOMAIN www.$DOMAIN;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+}
+CONF
+
+# Ensure symlink exists
+ln -sf "$NGINX_SITE" "$NGINX_ENABLED"
+# Remove default site if it exists (avoids conflicts on port 80)
+rm -f /etc/nginx/sites-enabled/default
+
+nginx -t || { echo "ERROR: temporary nginx config failed validation"; exit 1; }
+systemctl reload nginx
+echo "  temporary config deployed ✓"
+
+# --- Phase 2: Request certificate ---
 
 echo "=== Requesting certificate for $DOMAIN ==="
 
@@ -69,11 +114,30 @@ else
     DOMAINS="-d $DOMAIN"
 fi
 
-certbot --nginx $DOMAINS \
-    --non-interactive \
-    --agree-tos \
-    --email admin@"$DOMAIN" \
-    --redirect
+# Check if cert already exists (e.g. from a previous failed install)
+if certbot certificates -d "$DOMAIN" 2>/dev/null | grep -q "Certificate Name"; then
+    echo "  Certificate already exists → installing into nginx"
+    certbot install --cert-name "$DOMAIN" --nginx --non-interactive --redirect
+else
+    certbot --nginx $DOMAINS \
+        --non-interactive \
+        --agree-tos \
+        --email admin@"$DOMAIN" \
+        --redirect
+fi
+
+# --- Phase 3: Deploy final HTTPS config ---
+
+echo "=== Deploying final HTTPS nginx config ==="
+cp "$SCRIPT_DIR/nginx.conf" "$NGINX_SITE"
+nginx -t || {
+    echo "ERROR: final nginx config failed validation."
+    echo "  Certbot's auto-generated config is still active and working."
+    echo "  Fix deploy/nginx.conf and re-run: sudo cp deploy/nginx.conf $NGINX_SITE && sudo nginx -t && sudo systemctl reload nginx"
+    exit 1
+}
+systemctl reload nginx
+echo "  final HTTPS config deployed ✓"
 
 # --- Setup auto-renewal ---
 
@@ -83,17 +147,15 @@ systemctl start certbot.timer
 
 # --- Verify ---
 
-echo "=== Verifying certificate ==="
+echo "=== Verifying ==="
+echo ""
 certbot certificates -d "$DOMAIN"
+echo ""
 
+echo "=== Done! SSL is active for $DOMAIN ==="
 echo ""
-echo "=== Done! ==="
-echo "Certificate installed for $DOMAIN"
-echo "Auto-renewal is enabled via systemd timer."
-echo ""
-echo "Next steps:"
-echo "  1. Deploy the HTTPS nginx config:"
-echo "     sudo cp $SCRIPT_DIR/nginx.conf /etc/nginx/sites-available/dualmind-api"
-echo "     sudo nginx -t && sudo systemctl reload nginx"
-echo "  2. Verify HTTPS: curl -I https://$DOMAIN"
-echo "  3. Test renewal:  sudo certbot renew --dry-run"
+echo "Verification commands:"
+echo "  curl -I http://$DOMAIN          # should 301 → https"
+echo "  curl -I https://$DOMAIN         # should 200"
+echo "  curl https://$DOMAIN/health     # API health check"
+echo "  sudo certbot renew --dry-run    # test auto-renewal"
