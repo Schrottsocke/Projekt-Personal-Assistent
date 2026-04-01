@@ -35,7 +35,13 @@ jobs:
           if [ -n "${{ secrets.HOSTINGER_KNOWN_HOSTS }}" ]; then
             echo "${{ secrets.HOSTINGER_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
           else
-            ssh-keyscan -p "$SSH_PORT" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+            ssh-keyscan -t ed25519,rsa,ecdsa -p "$SSH_PORT" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts 2>&1
+            echo "ssh-keyscan found $(wc -l < ~/.ssh/known_hosts) host key(s)"
+          fi
+
+          # Verify known_hosts is not empty
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::warning::known_hosts is empty, using StrictHostKeyChecking=accept-new"
           fi
           chmod 644 ~/.ssh/known_hosts
 
@@ -44,7 +50,12 @@ jobs:
           SSH_HOST: ${{ secrets.HOSTINGER_HOST }}
           SSH_USER: ${{ secrets.HOSTINGER_USER }}
         run: |
-          ssh -i ~/.ssh/deploy_key -p "$SSH_PORT" "${SSH_USER}@${SSH_HOST}" bash -s -- "$DEPLOY_PATH" << 'DEPLOY_SCRIPT'
+          SSH_OPTS="-i ~/.ssh/deploy_key -p $SSH_PORT"
+          # Fall back to accept-new if known_hosts is empty
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            SSH_OPTS="$SSH_OPTS -o StrictHostKeyChecking=accept-new"
+          fi
+          ssh $SSH_OPTS "${SSH_USER}@${SSH_HOST}" bash -s -- "$DEPLOY_PATH" << 'DEPLOY_SCRIPT'
           set -euo pipefail
           PROJ_DIR="${1:-/home/assistant/projekt-personal-assistent}"
 
