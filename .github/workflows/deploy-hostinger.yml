@@ -54,6 +54,12 @@ jobs:
             pip install -r requirements.txt -q
           "
 
+          echo "=== Update systemd services ==="
+          cp "$PROJ_DIR/deploy/personal-assistant.service" /etc/systemd/system/
+          cp "$PROJ_DIR/deploy/personal-assistant-api.service" /etc/systemd/system/
+          cp "$PROJ_DIR/deploy/personal-assistant-webhook.service" /etc/systemd/system/
+          systemctl daemon-reload
+
           echo "=== Restart services ==="
           systemctl restart personal-assistant
           systemctl restart personal-assistant-api
