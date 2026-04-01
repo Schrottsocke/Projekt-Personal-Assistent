@@ -44,7 +44,7 @@ else
 fi
 
 # Branch wechseln
-sudo -u assistant git -C "$PROJ_DIR" checkout claude/dual-personal-assistants-0Uqna
+sudo -u assistant git -C "$PROJ_DIR" checkout main
 
 # --- Virtualenv + Dependencies ---
 echo ">>> Python-Umgebung einrichten..."
@@ -78,6 +78,13 @@ fi
 
 # --- Verzeichnis für Scans ---
 sudo -u assistant mkdir -p "$PROJ_DIR/data/scans"
+
+# --- Sudoers: assistant darf Services ohne Passwort neustarten ---
+echo ">>> Sudoers-Regel fuer Service-Restarts..."
+cat > /etc/sudoers.d/assistant-services << 'SUDOERS'
+assistant ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart personal-assistant, /usr/bin/systemctl restart personal-assistant-api, /usr/bin/systemctl restart personal-assistant-webhook
+SUDOERS
+chmod 440 /etc/sudoers.d/assistant-services
 
 # --- Systemd Services installieren ---
 echo ">>> Systemd Services installieren..."

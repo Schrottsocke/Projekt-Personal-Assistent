@@ -6,14 +6,14 @@
 #   bash /home/assistant/projekt-personal-assistent/deploy/bootstrap.sh ghp_DEINTOKEN
 #
 # Oder direkt von GitHub (vor dem ersten Pull):
-#   curl -fsSL https://raw.githubusercontent.com/Schrottsocke/Projekt-Personal-Assistent/claude/dual-personal-assistants-0Uqna/deploy/bootstrap.sh | bash -s -- ghp_DEINTOKEN
+#   curl -fsSL https://raw.githubusercontent.com/Schrottsocke/Projekt-Personal-Assistent/main/deploy/bootstrap.sh | bash -s -- ghp_DEINTOKEN
 # =============================================================================
 
 set -e
 
 PAT="${1:-}"
 PROJ_DIR="/home/assistant/projekt-personal-assistent"
-BRANCH="claude/dual-personal-assistants-0Uqna"
+BRANCH="main"
 REPO="Schrottsocke/Projekt-Personal-Assistent"
 
 # --- Farben ---
@@ -97,6 +97,14 @@ if [ -f "$ENV_FILE" ]; then
 else
     warn ".env nicht gefunden – überspringe WEBHOOK_SECRET."
 fi
+
+# --- Sudoers: assistant darf Services ohne Passwort neustarten ---
+echo ">>> Sudoers-Regel fuer Service-Restarts..."
+cat > /etc/sudoers.d/assistant-services << 'SUDOERS'
+assistant ALL=(ALL) NOPASSWD: /usr/bin/systemctl restart personal-assistant, /usr/bin/systemctl restart personal-assistant-api, /usr/bin/systemctl restart personal-assistant-webhook
+SUDOERS
+chmod 440 /etc/sudoers.d/assistant-services
+ok "Sudoers-Regel eingerichtet."
 
 # --- Webhook Service installieren + starten ---
 echo ">>> Webhook-Service installieren..."
