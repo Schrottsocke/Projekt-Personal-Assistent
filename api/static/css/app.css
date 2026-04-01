@@ -1161,3 +1161,10 @@ select:focus { border-color: var(--accent); }
 .issue-title { font-weight: 600; font-size: 0.9rem; margin: 4px 0; }
 .issue-labels { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .mt-16 { margin-top: 16px; }
+
+/* ── Scrollbar (Dark Theme) ─────────────────────── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-secondary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-secondary); }
+* { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg-secondary); }
