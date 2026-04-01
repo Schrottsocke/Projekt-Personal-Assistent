@@ -137,6 +137,10 @@ def get_chefkoch_service():
     return _require("chefkoch")
 
 
+def get_notes_service():
+    return _require("notes")
+
+
 def get_email_service():
     return _require("email")
 
