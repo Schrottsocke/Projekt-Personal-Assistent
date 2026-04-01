@@ -14,6 +14,9 @@ Flutter-App, API-Integration, plattformspezifische Erkenntnisse.
 ## Meta
 
 - **CORS Produktion**: VPS auf `https://dualmind.cloud,https://www.dualmind.cloud` eingeschraenkt. Steuerung ueber `API_CORS_ORIGINS` in `.env`, FastAPI CORSMiddleware in `api/main.py:162-177`. Wildcard nur fuer Dev. (2026-04-01)
+- **VPS-Projektpfad**: `/home/assistant/projekt-personal-assistent` – User `assistant`, venv mit Python 3.12 (nicht 3.11, Ubuntu 24.04). Services: `personal-assistant`, `personal-assistant-api`, `personal-assistant-webhook`. (2026-04-01)
+- **VPS .env Setup**: `.env` wird aus `.env.example` kopiert. Platzhalter muessen manuell gesetzt werden: `API_SECRET_KEY` (token_hex(32)), `API_PASSWORD_TAAKE/NINA` (token_urlsafe(16)), `GITHUB_TOKEN`. API startet nicht mit unsicherem API_SECRET_KEY-Platzhalter. (2026-04-01)
+- **Webapp GitHub Issues**: `GET /github/issues` Endpoint mit 5-Min-Cache. View zeigt Issue-Liste + Erstellformular. Labels zuerst laden (fuer Farbdaten), dann Issues. Cache-Invalidierung nach Erstellung. (2026-04-01)
 - Zuletzt geprueft: 2026-04-01
 - Review bis: 2026-06-28
 - Max Eintraege: 20
