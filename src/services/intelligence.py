@@ -27,6 +27,67 @@ class IntelligenceEngine:
         self.tz = pytz.timezone(settings.TIMEZONE)
 
     # =========================================================================
+    # 0. CHAT MIT MEMORY-KONTEXT
+    # =========================================================================
+
+    async def process_with_memory(self, message: str, user_key: str, chat_id: int) -> str:
+        """
+        Verarbeitet eine Chat-Nachricht mit Memory-Kontext und Conversation History.
+        Speichert User-Nachricht und Antwort in der DB.
+        """
+        from src.services.database import ConversationHistory, get_db
+
+        # 1. Letzte Nachrichten als Kontext laden
+        try:
+            with get_db()() as session:
+                recent = (
+                    session.query(ConversationHistory)
+                    .filter_by(user_key=user_key)
+                    .order_by(ConversationHistory.created_at.desc())
+                    .limit(10)
+                    .all()
+                )
+            history = [{"role": r.role, "content": r.content} for r in reversed(recent)]
+        except Exception:
+            history = []
+
+        # 2. Memory-Kontext laden (relevante Erinnerungen zur Nachricht)
+        memory_context = ""
+        try:
+            from api.dependencies import _svc
+            mem_svc = _svc.get("memory")
+            if mem_svc:
+                memories = await mem_svc.search_memories(user_key=user_key, query=message, limit=5)
+                if memories:
+                    memory_context = "\n\nWas du über den Nutzer weißt:\n" + "\n".join(
+                        f"- {m.get('memory', '')}" for m in memories
+                    )
+        except Exception as e:
+            logger.debug(f"Memory-Lookup fehlgeschlagen: {e}")
+
+        # 3. System-Prompt mit Memory bauen
+        system_prompt = self._ai._get_system_prompt(user_key) + memory_context
+
+        # 4. Messages zusammenbauen
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(history)
+        messages.append({"role": "user", "content": message})
+
+        # 5. AI-Antwort generieren
+        response = await self._ai._complete(messages)
+
+        # 6. Nachricht und Antwort in DB speichern
+        try:
+            with get_db()() as session:
+                session.add(ConversationHistory(user_key=user_key, role="user", content=message))
+                session.add(ConversationHistory(user_key=user_key, role="assistant", content=response))
+                session.commit()
+        except Exception as e:
+            logger.warning(f"Chat-History speichern fehlgeschlagen: {e}")
+
+        return response
+
+    # =========================================================================
     # 1. SMARTE GEDÄCHTNIS-EXTRAKTION
     # =========================================================================
 
