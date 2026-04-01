@@ -26,33 +26,29 @@ jobs:
 
     steps:
       - name: Configure SSH
+        env:
+          KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.HOSTINGER_SSH_KEY }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
 
-          # Use known_hosts if provided, otherwise fetch from host
-          if [ -n "${{ secrets.HOSTINGER_KNOWN_HOSTS }}" ]; then
-            echo "${{ secrets.HOSTINGER_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          if [ -n "$KNOWN_HOSTS" ]; then
+            echo "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+            chmod 644 ~/.ssh/known_hosts
+            echo "Using provided known_hosts"
           else
-            ssh-keyscan -t ed25519,rsa,ecdsa -p "$SSH_PORT" "${{ secrets.HOSTINGER_HOST }}" >> ~/.ssh/known_hosts 2>&1
-            echo "ssh-keyscan found $(wc -l < ~/.ssh/known_hosts) host key(s)"
+            echo "No HOSTINGER_KNOWN_HOSTS secret set, will use StrictHostKeyChecking=accept-new"
           fi
-
-          # Verify known_hosts is not empty
-          if [ ! -s ~/.ssh/known_hosts ]; then
-            echo "::warning::known_hosts is empty, using StrictHostKeyChecking=accept-new"
-          fi
-          chmod 644 ~/.ssh/known_hosts
 
       - name: Deploy via SSH
         env:
           SSH_HOST: ${{ secrets.HOSTINGER_HOST }}
           SSH_USER: ${{ secrets.HOSTINGER_USER }}
+          KNOWN_HOSTS: ${{ secrets.HOSTINGER_KNOWN_HOSTS }}
         run: |
           SSH_OPTS="-i ~/.ssh/deploy_key -p $SSH_PORT"
-          # Fall back to accept-new if known_hosts is empty
-          if [ ! -s ~/.ssh/known_hosts ]; then
+          if [ -z "$KNOWN_HOSTS" ]; then
             SSH_OPTS="$SSH_OPTS -o StrictHostKeyChecking=accept-new"
           fi
           ssh $SSH_OPTS "${SSH_USER}@${SSH_HOST}" bash -s -- "$DEPLOY_PATH" << 'DEPLOY_SCRIPT'
