@@ -22,8 +22,10 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  // Skip API calls and non-GET requests
-  if (e.request.url.includes('/api/') || e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  // Only cache static assets and app shell – skip all API endpoints and non-GET
+  if (e.request.method !== 'GET') return;
+  if (!url.pathname.startsWith('/static/') && url.pathname !== '/app') return;
   e.respondWith(
     caches.match(e.request).then((r) => r || fetch(e.request))
   );
