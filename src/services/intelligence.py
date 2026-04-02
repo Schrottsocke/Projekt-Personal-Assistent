@@ -82,7 +82,6 @@ class IntelligenceEngine:
             with get_db()() as session:
                 session.add(ConversationHistory(user_key=user_key, role="user", content=message))
                 session.add(ConversationHistory(user_key=user_key, role="assistant", content=response))
-                session.commit()
         except Exception as e:
             logger.warning(f"Chat-History speichern fehlgeschlagen: {e}")
 
