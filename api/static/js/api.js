@@ -209,6 +209,56 @@ const Api = (() => {
     return request('/chat/message', { method: 'POST', body: { message }, timeoutMs: 30000 });
   }
 
+  async function sendMessageStream(message, chatId, onToken, onDone, onError) {
+    const token = getToken();
+    try {
+      const res = await fetch('/chat/message/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: message, chat_id: chatId }),
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const data = JSON.parse(line.slice(6));
+            if (data.token) onToken(data.token);
+            if (data.done) onDone();
+            if (data.error) onError(data.error);
+          } catch (_) { /* ignore malformed SSE lines */ }
+        }
+      }
+      // Flush remaining buffer
+      if (buffer.startsWith('data: ')) {
+        try {
+          const data = JSON.parse(buffer.slice(6));
+          if (data.token) onToken(data.token);
+          if (data.done) onDone();
+          if (data.error) onError(data.error);
+        } catch (_) { /* ignore */ }
+      }
+    } catch (err) {
+      onError(err.message);
+    }
+  }
+
   // Features
   function getFeatures() { return request('/features'); }
   function toggleFeature(featureId) {
@@ -326,7 +376,7 @@ const Api = (() => {
     getDashboard,
     getShoppingItems, addShoppingItem, toggleShoppingItem, updateShoppingItem, deleteShoppingItem, clearCheckedItems,
     searchRecipes, getSavedRecipes, saveRecipe, deleteRecipe, toggleFavorite, addRecipeToShopping,
-    getChatHistory, sendMessage,
+    getChatHistory, sendMessage, sendMessageStream,
     getFeatures, toggleFeature,
     getCalendarToday, getCalendarWeek, createCalendarEvent,
     getTasks, createTask, updateTaskStatus, deleteTask,

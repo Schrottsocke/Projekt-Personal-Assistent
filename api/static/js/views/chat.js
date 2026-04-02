@@ -127,14 +127,66 @@ const ChatView = (() => {
     sendBtn.disabled = true;
 
     try {
-      const result = await Api.sendMessage(message);
-      typing.remove();
+      // Streaming response
+      const responseBubble = document.createElement('div');
+      responseBubble.className = 'chat-bubble assistant';
+      let firstToken = true;
+      let fullResponse = '';
+      let streamDone = false;
 
-      const assistantBubble = document.createElement('div');
-      assistantBubble.className = 'chat-bubble assistant';
-      assistantBubble.textContent = result.response;
-      messagesEl.appendChild(assistantBubble);
-      scrollToBottom();
+      await Api.sendMessageStream(
+        message,
+        null,
+        (token) => {
+          if (firstToken) {
+            typing.remove();
+            messagesEl.appendChild(responseBubble);
+            firstToken = false;
+          }
+          fullResponse += token;
+          responseBubble.textContent = fullResponse;
+          scrollToBottom();
+        },
+        () => {
+          streamDone = true;
+          // Finalize: re-set as escaped text
+          if (!firstToken) {
+            responseBubble.textContent = fullResponse;
+          }
+        },
+        (error) => {
+          // Stream error: fall back to non-streaming
+          if (firstToken) {
+            // No tokens received yet — try non-streaming fallback
+            typing.textContent = 'Streaming fehlgeschlagen, versuche erneut…';
+            Api.sendMessage(message).then((result) => {
+              typing.remove();
+              const assistantBubble = document.createElement('div');
+              assistantBubble.className = 'chat-bubble assistant';
+              assistantBubble.textContent = result.response;
+              messagesEl.appendChild(assistantBubble);
+              scrollToBottom();
+            }).catch((fallbackErr) => {
+              typing.remove();
+              const errorBubble = document.createElement('div');
+              errorBubble.className = 'chat-bubble assistant';
+              errorBubble.innerHTML = `<span style="color:var(--error)">Fehler: ${escapeHtml(fallbackErr.message)}</span>
+                <button class="btn btn-sm" onclick="ChatView.retry()" style="margin-top:6px">Erneut versuchen</button>`;
+              messagesEl.appendChild(errorBubble);
+              scrollToBottom();
+            });
+          } else {
+            // Partial response received — show error after partial text
+            responseBubble.innerHTML = escapeHtml(fullResponse) +
+              `<br><span style="color:var(--error)">Stream abgebrochen: ${escapeHtml(error)}</span>`;
+          }
+        }
+      );
+
+      // If stream ended without any tokens and no error handler fired, show empty response
+      if (firstToken && !streamDone) {
+        typing.remove();
+      }
     } catch (err) {
       typing.remove();
       const errorBubble = document.createElement('div');
