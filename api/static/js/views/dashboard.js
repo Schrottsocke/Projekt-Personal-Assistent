@@ -71,6 +71,22 @@ const DashboardView = (() => {
       html += `<div class="mb-16"><span class="badge badge-accent email-badge"><span class="material-symbols-outlined mi-sm">mail</span> ${emails} ungelesene E-Mail${emails > 1 ? 's' : ''}</span></div>`;
     }
 
+    // Shifts today
+    const shifts = (data.shifts_today || []).slice(0, 3);
+    if (shifts.length > 0) {
+      html += `<a class="section-header section-link" href="#/shifts"><span class="section-icon material-symbols-outlined">work</span> Dienste heute <span class="section-arrow">Verwalten &#8594;</span></a>`;
+      shifts.forEach(s => {
+        const color = s.shift_color || 'var(--accent)';
+        html += `
+          <div class="card" style="border-left:4px solid ${color}">
+            <div class="event-time">${formatTime(s.start)}${s.end ? ' – ' + formatTime(s.end) : ''}</div>
+            <div class="card-title"><span class="shift-badge" style="background:${color}22;color:${color}">${escapeHtml(s.shift_short_name || '')}</span> ${escapeHtml(s.summary || '')}</div>
+            ${s.description ? `<div class="card-subtitle">${escapeHtml(s.description)}</div>` : ''}
+          </div>
+        `;
+      });
+    }
+
     // Events
     html += `<a class="section-header section-link" href="#/calendar"><span class="section-icon material-symbols-outlined">calendar_month</span> Termine heute <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
     if (events.length === 0) {

@@ -224,6 +224,38 @@ class MealPlanEntry(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class ShiftType(Base):
+    """Diensttyp-Definition (z.B. Fruhdienst, Spaetdienst)."""
+
+    __tablename__ = "shift_types"
+
+    id = Column(Integer, primary_key=True)
+    user_key = Column(String(50), nullable=False)
+    name = Column(String(100), nullable=False)
+    short_name = Column(String(10), nullable=False)
+    color = Column(String(7), default="#7c4dff")
+    start_time = Column(String(5), nullable=True)  # HH:MM
+    end_time = Column(String(5), nullable=True)  # HH:MM
+    break_minutes = Column(Integer, default=0)
+    category = Column(String(20), default="work")  # work/free/vacation/special
+    default_note = Column(String(200), nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class ShiftEntry(Base):
+    """Diensteintrag: Zuweisung eines Diensttyps zu einem Datum."""
+
+    __tablename__ = "shift_entries"
+
+    id = Column(Integer, primary_key=True)
+    user_key = Column(String(50), nullable=False)
+    shift_type_id = Column(Integer, nullable=False)
+    date = Column(String(10), nullable=False)  # YYYY-MM-DD
+    note = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 # Engine & Session Setup
 _engine = None
 _SessionLocal = None

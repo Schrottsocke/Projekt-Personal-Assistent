@@ -14,6 +14,7 @@
   Router.register('#/mealplan', (c) => MealPlanView.render(c));
   Router.register('#/drive', (c) => DriveView.render(c));
   Router.register('#/issues', (c) => IssuesView.render(c));
+  Router.register('#/shifts', (c) => ShiftsView.render(c));
 
   // Init router on DOM ready
   if (document.readyState === 'loading') {

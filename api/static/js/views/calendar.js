@@ -68,7 +68,10 @@ const CalendarView = (() => {
     el.innerHTML = `
       <div class="flex-between mb-8">
         <span class="card-subtitle">${connected === false ? '<span class="material-symbols-outlined mi-sm">warning</span> Kalender nicht verbunden' : ''}</span>
-        <button class="btn btn-sm btn-primary" onclick="CalendarView.toggleForm()" ${connected === false ? 'disabled title="Kalender nicht verbunden"' : ''}>+ Termin</button>
+        <div style="display:flex;gap:8px">
+          <a href="#/shifts" class="btn btn-sm btn-secondary"><span class="mi-sm material-symbols-outlined">work</span> Dienstplan</a>
+          <button class="btn btn-sm btn-primary" onclick="CalendarView.toggleForm()" ${connected === false ? 'disabled title="Kalender nicht verbunden"' : ''}>+ Termin</button>
+        </div>
       </div>
       <div id="calendar-form-area"></div>
     `;
@@ -163,10 +166,15 @@ const CalendarView = (() => {
   }
 
   function renderEventCard(e) {
+    const isShift = e.source === 'shift';
+    const borderStyle = isShift ? `border-left:4px solid ${e.shift_color || 'var(--accent)'}` : '';
+    const catBadge = isShift
+      ? `<span class="shift-badge" style="background:${e.shift_color || 'var(--accent)'}22;color:${e.shift_color || 'var(--accent)'}">${escapeHtml(e.shift_short_name || '')}</span> `
+      : '';
     return `
-      <div class="card">
+      <div class="card" style="${borderStyle}">
         <div class="event-time">${formatTime(e.start)}${e.end ? ' – ' + formatTime(e.end) : ''}</div>
-        <div class="card-title">${escapeHtml(e.summary || '')}</div>
+        <div class="card-title">${catBadge}${escapeHtml(e.summary || '')}</div>
         ${e.location ? `<div class="card-subtitle">${escapeHtml(e.location)}</div>` : ''}
         ${e.description ? `<div class="card-subtitle mt-8">${escapeHtml(e.description)}</div>` : ''}
       </div>
