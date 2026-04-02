@@ -24,7 +24,7 @@ CHEFKOCH_BASE = "https://www.chefkoch.de/rezepte"
 
 def _parse_recipe(raw: dict) -> dict:
     """Normalisiert ein Chefkoch-API-Ergebnis."""
-    item = raw.get("item", raw)
+    item = raw.get("recipe", raw.get("item", raw))
     rid = item.get("id", "")
     return {
         "chefkoch_id": str(rid),
@@ -64,6 +64,11 @@ async def search_recipes(
     if not q:
         return []
     results = await chefkoch_svc.search_recipes(q, limit=limit)
+    if results is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Chefkoch-API nicht erreichbar.",
+        )
     return [_parse_recipe(r) for r in results]
 
 
