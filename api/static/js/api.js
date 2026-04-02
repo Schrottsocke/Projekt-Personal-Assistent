@@ -49,7 +49,7 @@ const Api = (() => {
   }
 
   async function request(path, options = {}) {
-    const { body, method = 'GET', noAuth = false } = options;
+    const { body, method = 'GET', noAuth = false, timeoutMs = 0 } = options;
 
     const headers = { 'Content-Type': 'application/json' };
     if (!noAuth) {
@@ -60,7 +60,25 @@ const Api = (() => {
     const fetchOpts = { method, headers };
     if (body !== undefined) fetchOpts.body = JSON.stringify(body);
 
-    let res = await fetch(path, fetchOpts);
+    // Timeout via AbortController (0 = kein Timeout)
+    let controller, timer;
+    if (timeoutMs > 0) {
+      controller = new AbortController();
+      fetchOpts.signal = controller.signal;
+      timer = setTimeout(() => controller.abort(), timeoutMs);
+    }
+
+    let res;
+    try {
+      res = await fetch(path, fetchOpts);
+    } catch (err) {
+      if (timer) clearTimeout(timer);
+      if (err.name === 'AbortError') {
+        throw new Error('Zeitüberschreitung – der Server hat zu lange gebraucht. Bitte versuche es erneut.');
+      }
+      throw err;
+    }
+    if (timer) clearTimeout(timer);
 
     // Auto-refresh on 401
     if (res.status === 401 && !noAuth && getRefreshToken()) {
@@ -150,7 +168,7 @@ const Api = (() => {
     return request(`/chat/history?limit=${limit}`);
   }
   function sendMessage(message) {
-    return request('/chat/message', { method: 'POST', body: { message } });
+    return request('/chat/message', { method: 'POST', body: { message }, timeoutMs: 60000 });
   }
 
   // Features

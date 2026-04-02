@@ -5,6 +5,7 @@ Entscheidet ob Kalender, Notiz, Erinnerung oder normaler Chat gemeint ist.
 
 import json
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import Optional
 import pytz
@@ -225,9 +226,13 @@ class AIService:
         Hauptfunktion: Verarbeitet eine Nutzernachricht.
         Erkennt Intent und delegiert an passenden Handler.
         """
+        t_start = time.perf_counter()
+
+        t0 = time.perf_counter()
         intent_data = await self._detect_intent(message, user_key)
         intent = intent_data.get("intent", INTENT_CHAT)
-        logger.info(f"Intent erkannt: {intent} für Nachricht: {message[:50]}")
+        t_intent = time.perf_counter() - t0
+        logger.info("perf | phase=intent_detection | duration_ms=%d | intent=%s | user=%s", int(t_intent * 1000), intent, user_key)
 
         # Feature-Gate: Deaktivierte Features fallen auf Chat zurück
         if not self._feature_enabled(intent, user_key):
@@ -261,7 +266,14 @@ class AIService:
         }
 
         handler = handlers.get(intent, self._handle_chat)
-        return await handler(message, intent_data, user_key, chat_id, bot)
+        t0 = time.perf_counter()
+        result = await handler(message, intent_data, user_key, chat_id, bot)
+        t_handler = time.perf_counter() - t0
+        t_total = time.perf_counter() - t_start
+
+        logger.info("perf | phase=handler | duration_ms=%d | intent=%s | user=%s", int(t_handler * 1000), intent, user_key)
+        logger.info("perf | phase=total | duration_ms=%d | intent=%s | user=%s", int(t_total * 1000), intent, user_key)
+        return result
 
     async def _detect_intent(self, message: str, user_key: str) -> tuple[str, dict]:
         """
