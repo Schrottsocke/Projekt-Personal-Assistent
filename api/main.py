@@ -8,6 +8,11 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+try:
+    import sentry_sdk
+except ImportError:
+    sentry_sdk = None
+
 import structlog
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
@@ -109,6 +114,16 @@ async def lifespan(app: FastAPI):
         for err in jwt_errors:
             logger.critical(err)
         raise SystemExit("API-Start abgebrochen: unsicheres API_SECRET_KEY. Siehe Logs.")
+
+    # Sentry Observability (nur wenn DSN konfiguriert)
+    if settings.SENTRY_DSN and sentry_sdk is not None:
+        sentry_sdk.init(
+            dsn=settings.SENTRY_DSN,
+            environment=settings.SENTRY_ENVIRONMENT,
+            traces_sample_rate=settings.SENTRY_TRACES_SAMPLE_RATE,
+            send_default_pii=False,
+        )
+        logger.info("Sentry initialisiert (env=%s)", settings.SENTRY_ENVIRONMENT)
 
     await dependencies.startup()
     logger.info("DualMind API bereit auf Port %s.", settings.API_PORT)
@@ -249,7 +264,13 @@ async def health():
         checks["database"] = f"error: {e}"
         overall_healthy = False
 
-    # 2. Kritische Services prüfen (AI, Memory)
+    # 2. Sentry-Check
+    if settings.SENTRY_DSN:
+        checks["sentry"] = "configured"
+    else:
+        checks["sentry"] = "disabled"
+
+    # 3. Kritische Services prüfen (AI, Memory)
     for name in ("ai", "memory", "calendar"):
         svc = dependencies._svc.get(name)
         if svc is None:

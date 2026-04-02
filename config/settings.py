@@ -147,6 +147,11 @@ class Settings:
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     LOG_FILE: Path = BASE_DIR / os.getenv("LOG_FILE", "logs/assistant.log")
 
+    # Observability (Sentry)
+    SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
+    SENTRY_ENVIRONMENT: str = os.getenv("SENTRY_ENVIRONMENT", "development")
+    SENTRY_TRACES_SAMPLE_RATE: float = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.2"))
+
     # Bot Configs
     @classmethod
     def get_bot_configs(cls) -> dict[str, BotConfig]:
