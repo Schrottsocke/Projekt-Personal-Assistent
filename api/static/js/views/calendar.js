@@ -27,8 +27,8 @@ const CalendarView = (() => {
   async function render(container) {
     showForm = false;
     container.innerHTML = `
-      <a class="view-back" href="#/dashboard">&#8592; Dashboard</a>
-      <div class="section-header"><span class="section-icon">&#128197;</span> Kalender</div>
+      <a class="view-back" href="#/dashboard"><span class="material-symbols-outlined mi-sm">arrow_back</span> Dashboard</a>
+      <div class="section-header"><span class="section-icon material-symbols-outlined">calendar_month</span> Kalender</div>
       <div class="tabs">
         <button class="tab ${activeTab === 'today' ? 'active' : ''}" data-tab="today" onclick="CalendarView.switchTab('today')">Heute</button>
         <button class="tab ${activeTab === 'week' ? 'active' : ''}" data-tab="week" onclick="CalendarView.switchTab('week')">Woche</button>
@@ -67,7 +67,7 @@ const CalendarView = (() => {
     if (!el) return;
     el.innerHTML = `
       <div class="flex-between mb-8">
-        <span class="card-subtitle">${connected === false ? '&#9888; Kalender nicht verbunden' : ''}</span>
+        <span class="card-subtitle">${connected === false ? '<span class="material-symbols-outlined mi-sm">warning</span> Kalender nicht verbunden' : ''}</span>
         <button class="btn btn-sm btn-primary" onclick="CalendarView.toggleForm()" ${connected === false ? 'disabled title="Kalender nicht verbunden"' : ''}>+ Termin</button>
       </div>
       <div id="calendar-form-area"></div>

@@ -27,8 +27,8 @@ const TasksView = (() => {
   async function render(container) {
     showForm = false;
     container.innerHTML = `
-      <a class="view-back" href="#/dashboard">&#8592; Dashboard</a>
-      <div class="section-header"><span class="section-icon">&#9745;</span> Aufgaben</div>
+      <a class="view-back" href="#/dashboard"><span class="material-symbols-outlined mi-sm">arrow_back</span> Dashboard</a>
+      <div class="section-header"><span class="section-icon material-symbols-outlined">check_circle</span> Aufgaben</div>
       <div class="flex-between mb-8">
         <div></div>
         <button class="btn btn-sm btn-primary" onclick="TasksView.toggleForm()">+ Aufgabe</button>
@@ -114,9 +114,9 @@ const TasksView = (() => {
             </div>
           </div>
           ${t.description ? `<div class="card-subtitle">${escapeHtml(t.description)}</div>` : ''}
-          ${t.due_date ? `<div class="card-subtitle mt-8">&#128197; ${formatDate(t.due_date)}</div>` : ''}
+          ${t.due_date ? `<div class="card-subtitle mt-8"><span class="material-symbols-outlined mi-sm">event</span> ${formatDate(t.due_date)}</div>` : ''}
         </div>
-        <button class="item-delete" onclick="TasksView.deleteTask(${t.id})" title="Löschen">&#128465;</button>
+        <button class="item-delete" onclick="TasksView.deleteTask(${t.id})" title="Löschen"><span class="material-symbols-outlined">delete</span></button>
       </div>
     `).join('');
   }

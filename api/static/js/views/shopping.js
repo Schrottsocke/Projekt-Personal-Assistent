@@ -8,7 +8,7 @@ const ShoppingView = (() => {
   async function render(container) {
     container.innerHTML = `
       <div class="section-header">
-        <span class="section-icon">&#128722;</span> Einkaufsliste
+        <span class="section-icon material-symbols-outlined">shopping_cart</span> Einkaufsliste
       </div>
       <div class="input-group">
         <input type="text" id="shopping-input" placeholder="Neuen Artikel hinzufügen…"
@@ -93,7 +93,7 @@ const ShoppingView = (() => {
                    onchange="ShoppingView.toggleItem(${item.id}, this.checked)">
             <span class="item-name">${escapeHtml(item.name)}</span>
             ${detail ? `<span class="item-detail">${escapeHtml(detail)}</span>` : ''}
-            <button class="item-delete" onclick="ShoppingView.deleteItem(${item.id})" title="Löschen">&#128465;</button>
+            <button class="item-delete" onclick="ShoppingView.deleteItem(${item.id})" title="Löschen"><span class="material-symbols-outlined">delete</span></button>
           </div>
         `;
       });

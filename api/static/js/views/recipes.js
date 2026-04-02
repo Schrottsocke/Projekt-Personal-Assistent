@@ -10,7 +10,7 @@ const RecipesView = (() => {
 
   async function render(container) {
     container.innerHTML = `
-      <div class="section-header"><span class="section-icon">&#127869;</span> Rezepte</div>
+      <div class="section-header"><span class="section-icon material-symbols-outlined">restaurant</span> Rezepte</div>
       <div class="tabs">
         <button class="tab active" data-tab="search" onclick="RecipesView.switchTab('search')">Suche</button>
         <button class="tab" data-tab="saved" onclick="RecipesView.switchTab('saved')">Gespeichert</button>
@@ -98,7 +98,7 @@ const RecipesView = (() => {
           <div class="recipe-info">
             <div class="recipe-title">${escapeHtml(r.title)}</div>
             <div class="recipe-meta">
-              ${time > 0 ? `<span>&#9201; ${time} Min.</span>` : ''}
+              ${time > 0 ? `<span><span class="material-symbols-outlined mi-sm">schedule</span> ${time} Min.</span>` : ''}
               ${r.difficulty ? `<span>${escapeHtml(r.difficulty)}</span>` : ''}
             </div>
           </div>
@@ -129,17 +129,17 @@ const RecipesView = (() => {
       <div class="modal-content">
         <div class="modal-header">
           <h2 style="font-size:1.1rem;font-weight:600">${escapeHtml(r.title)}</h2>
-          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()">&#10005;</button>
+          <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><span class="material-symbols-outlined">close</span></button>
         </div>
         ${r.image_url ? `<img class="modal-img" src="${escapeHtml(r.image_url)}" alt="">` : ''}
         <div class="recipe-meta mb-16">
-          ${r.prep_time ? `<span>&#9201; ${r.prep_time} Min. Vorbereitung</span>` : ''}
-          ${r.cook_time ? `<span>&#127859; ${r.cook_time} Min. Kochen</span>` : ''}
+          ${r.prep_time ? `<span><span class="material-symbols-outlined mi-sm">schedule</span> ${r.prep_time} Min. Vorbereitung</span>` : ''}
+          ${r.cook_time ? `<span><span class="material-symbols-outlined mi-sm">skillet</span> ${r.cook_time} Min. Kochen</span>` : ''}
           ${r.difficulty ? `<span class="badge badge-accent">${escapeHtml(r.difficulty)}</span>` : ''}
         </div>
 
         ${ingredients.length > 0 ? `
-          <div class="section-header"><span class="section-icon">&#129367;</span> Zutaten</div>
+          <div class="section-header"><span class="section-icon material-symbols-outlined">grocery</span> Zutaten</div>
           <div class="servings-control">
             <span>Portionen:</span>
             <input type="range" min="1" max="12" value="${currentServings}"
