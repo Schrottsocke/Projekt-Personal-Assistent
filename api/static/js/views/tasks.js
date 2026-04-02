@@ -190,7 +190,8 @@ const TasksView = (() => {
       tasks = tasks.filter(t => t.id !== id);
       renderList();
     } catch (err) {
-      alert('Fehler: ' + err.message);
+      alert('Fehler beim Löschen: ' + err.message);
+      await loadTasks();
     }
   }
 
