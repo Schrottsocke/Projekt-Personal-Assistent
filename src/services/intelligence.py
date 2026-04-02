@@ -111,6 +111,80 @@ class IntelligenceEngine:
         return response
 
     # =========================================================================
+    # 0b. STREAMING CHAT MIT MEMORY-KONTEXT
+    # =========================================================================
+
+    async def process_with_memory_stream(self, message: str, user_key: str, chat_id: int = 0):
+        """
+        Streaming-Variante von process_with_memory().
+        Yields Token-Chunks, speichert History am Ende.
+        """
+        from src.services.database import ConversationHistory, get_db
+
+        # 1. History und Memory-Kontext PARALLEL laden (identisch zu process_with_memory)
+        async def _load_history() -> list[dict]:
+            try:
+
+                def _query():
+                    with get_db()() as session:
+                        recent = (
+                            session.query(ConversationHistory)
+                            .filter_by(user_key=user_key)
+                            .order_by(ConversationHistory.created_at.desc())
+                            .limit(10)
+                            .all()
+                        )
+                        return [{"role": r.role, "content": r.content} for r in reversed(recent)]
+
+                return await asyncio.to_thread(_query)
+            except Exception:
+                return []
+
+        async def _load_memory() -> str:
+            try:
+                from api.dependencies import _svc
+
+                mem_svc = _svc.get("memory")
+                if mem_svc:
+                    memories = await mem_svc.search_memories(user_key=user_key, query=message, limit=5)
+                    if memories:
+                        return "\n\nWas du über den Nutzer weißt:\n" + "\n".join(
+                            f"- {m.get('memory', '')}" for m in memories
+                        )
+            except Exception as e:
+                logger.debug(f"Memory-Lookup fehlgeschlagen: {e}")
+            return ""
+
+        history, memory_context = await asyncio.gather(_load_history(), _load_memory())
+
+        # 2. System-Prompt mit Memory bauen
+        system_prompt = self._ai._get_system_prompt(user_key) + memory_context
+
+        # 3. Messages zusammenbauen
+        messages = [{"role": "system", "content": system_prompt}]
+        messages.extend(history)
+        messages.append({"role": "user", "content": message})
+
+        # 4. Streaming AI-Antwort generieren
+        full_response = []
+        async for chunk in self._ai._complete_stream(messages):
+            full_response.append(chunk)
+            yield chunk
+
+        # 5. Nach Stream-Ende: History non-blocking speichern
+        complete_text = "".join(full_response)
+
+        def _save_history():
+            try:
+                with get_db()() as session:
+                    session.add(ConversationHistory(user_key=user_key, role="user", content=message))
+                    session.add(ConversationHistory(user_key=user_key, role="assistant", content=complete_text))
+            except Exception as e:
+                logger.warning(f"Chat-History speichern fehlgeschlagen: {e}")
+
+        asyncio.create_task(asyncio.to_thread(_save_history))
+
+    # =========================================================================
     # 1. SMARTE GEDÄCHTNIS-EXTRAKTION
     # =========================================================================
 
