@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from api.dependencies import get_current_user, get_calendar_service
+from api.dependencies import get_current_user, get_calendar_service, get_calendar_service_optional
 from api.routers.shifts import get_shift_events_for_range
 from api.schemas.calendar import CalendarEventCreate
 from config.settings import settings
@@ -40,11 +40,12 @@ def _to_out(event: dict) -> dict:
 @router.get("/today")
 async def calendar_today(
     user_key: Annotated[str, Depends(get_current_user)],
-    cal_svc=Depends(get_calendar_service),
+    cal_svc=Depends(get_calendar_service_optional),
 ):
-    connected = cal_svc.is_connected(user_key)
+    connected = False
     events = []
-    if connected:
+    if cal_svc and cal_svc.is_connected(user_key):
+        connected = True
         cal_events = await cal_svc.get_todays_events(user_key)
         events = [_to_out(e) for e in cal_events]
 
@@ -62,12 +63,13 @@ async def calendar_today(
 @router.get("/week")
 async def calendar_week(
     user_key: Annotated[str, Depends(get_current_user)],
-    cal_svc=Depends(get_calendar_service),
+    cal_svc=Depends(get_calendar_service_optional),
     days: int = Query(7, ge=1, le=90),
 ):
-    connected = cal_svc.is_connected(user_key)
+    connected = False
     events = []
-    if connected:
+    if cal_svc and cal_svc.is_connected(user_key):
+        connected = True
         cal_events = await cal_svc.get_upcoming_events(user_key, days=days)
         events = [_to_out(e) for e in cal_events]
 

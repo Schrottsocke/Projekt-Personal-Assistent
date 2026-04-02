@@ -132,6 +132,11 @@ def get_calendar_service():
     return _require("calendar")
 
 
+def get_calendar_service_optional():
+    """Calendar-Service oder None (kein 503 wenn nicht verfuegbar)."""
+    return _svc.get("calendar")
+
+
 def get_task_service():
     return _require("task")
 

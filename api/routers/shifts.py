@@ -60,10 +60,12 @@ def get_shift_events_for_range(user_key: str, start: str, end: str) -> list[dict
 
         result = []
         for entry, stype in entries:
+            if not stype:
+                continue
             st = stype.start_time or "00:00"
             et = stype.end_time or "23:59"
-            summary = f"{stype.name} ({stype.short_name})" if stype else "Dienst"
-            note = entry.note or (stype.default_note if stype else "")
+            summary = f"{stype.name} ({stype.short_name})"
+            note = entry.note or stype.default_note or ""
             result.append(
                 {
                     "id": f"shift_{entry.id}",
