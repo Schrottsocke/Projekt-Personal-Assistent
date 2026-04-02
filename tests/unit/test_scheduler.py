@@ -95,7 +95,7 @@ class TestStop:
 
         scheduler.stop()
 
-        scheduler.scheduler.shutdown.assert_called_once_with(wait=False)
+        scheduler.scheduler.shutdown.assert_called_once_with(wait=True)
 
     def test_stop_noop_when_not_running(self, scheduler):
         """stop() tut nichts, wenn der Scheduler nicht läuft."""
