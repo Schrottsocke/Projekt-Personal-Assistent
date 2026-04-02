@@ -1,61 +1,79 @@
-AGENTS.md — Produktkontext und Architekturleitplanken
-Diese Datei beschreibt den fachlichen Kontext des Projekts sowie produktbezogene Leitplanken fuer Coding Agents.
-Arbeitsmodus, Sessionregeln, GitHub-Flow, Stop-Regeln und Claude-spezifisches Verhalten stehen ausschliesslich in `CLAUDE.md`.
-Produktverstaendnis
-DualMind ist ein produktiv nutzbarer persoenlicher Assistent, keine Demo-Oberflaeche.
-Neue Features sollen alltagstauglich, robust und plattformuebergreifend nutzbar sein.
-WebApp, iOS und Android sollen moeglichst dieselbe fachliche Logik und dieselben Nutzerpraeferenzen verwenden.
-Der Nutzer soll zentrale Assistentenfunktionen nicht nur im Chat, sondern auch ueber eine klare App-Oberflaeche steuern koennen.
-Informationsarchitektur
-Home ist das Dashboard.
-Das Dashboard ist modular und widget-basiert.
-Navigation ist nutzerkonfigurierbar.
-Tasks, Kalender und Meal Plan sind standardmaessig aktiviert.
-Auf kleinen Screens duerfen nicht beliebig viele Haupt-Tabs gleichzeitig sichtbar sein; zusaetzliche aktive Bereiche sollen ueber Overflow oder „Mehr“ erreichbar sein.
-Fokus-/Heute-Ansichten sind reduzierte Varianten des Dashboards und kein separates zweites Dashboard-System.
-Produktregeln nach Bereich
-Dashboard
-Widgets sollen aktivierbar, deaktivierbar und umsortierbar sein.
-Kompakte Fokus-/Heute-Ansichten sollen nur die wichtigsten Tagespunkte priorisieren.
-Dashboard-Varianten sollen auf denselben Daten- und Preference-Strukturen aufbauen.
-Chat
-Text ist das kanonische Nachrichtenformat.
-Voice ist ein alternativer Eingabekanal und wird zu Text transkribiert.
-Chat-Logik soll nicht plattformabhaengig auseinanderlaufen.
-Telegram, WebApp und spaetere Mobile-Apps sollen dieselben fachlichen Chat-Faehigkeiten verwenden.
-Inbox und Notifications
-Inbox ist fuer pruef- und uebernehmbare Vorschlaege.
-Notifications sind fuer Hinweise, Warnungen, Erinnerungen und Statusaenderungen.
-Diese beiden Konzepte duerfen fachlich nicht vermischt werden.
-Dokumente
-Dokumentverarbeitung ist ein echter Nutzerfluss: neu -> analysiert -> Aktion vorgeschlagen -> abgelegt.
-Dokumente sollen nachvollziehbare Status, Extraktionen und Folgeaktionen haben.
-Dokumente sind keine reine Debug- oder Admin-Ansicht.
-Kontakte und Follow-ups
-Kontakte dienen als leichte Kontextschicht fuer E-Mail, Kalender, Erinnerungen und Vorschlaege.
-Kein vollwertiges CRM aufbauen.
-Follow-ups sollen offene Rueckmeldungen und Zusagen unterstuetzen, nicht komplexe Sales-Prozesse.
-Wetter und Mobility
-Wetter ist Kontext fuer Tagesplanung, nicht nur eine isolierte Einzelabfrage.
-Mobility soll proaktiv mit Kalender- und Wetterkontext zusammenarbeiten.
-Das Ziel ist Assistenz im Alltag, nicht der Bau einer vollstaendigen Navigations- oder Wetter-App.
-Preferences
-Nutzerpraeferenzen sind plattformuebergreifend zu denken.
-Theme, Schriftgroesse, Navigation, Fokus, Quiet Hours, TTS und aehnliche Einstellungen sollen als zusammenhaengendes Preferences-Modell behandelt werden.
-Serverseitige Speicherung ist die bevorzugte Richtung; lokaler Cache ist nur Fallback.
-UX-Leitplanken
-Jede produktive Ansicht braucht Loading-, Empty- und Error-States.
-Keine toten Platzhalter oder rein visuellen Demo-Elemente in produktiven Flows.
-Mobile Nutzbarkeit immer mitdenken.
-Bestehende Muster konsistent halten, statt fuer jedes neue Feature eine neue Interaktionslogik einzufuehren.
-Architekturleitplanken
-Bestehende Models, Services, Provider und API-Vertraege bevorzugt wiederverwenden.
-Neue Strukturen nur einfuehren, wenn vorhandene Strukturen fachlich nicht passen.
-Neue Features sollen nach Moeglichkeit an bestehende Bausteine andocken, insbesondere Dashboard, Inbox, Notifications, Preferences, Kontakte und Dokumente.
-Backend-Erweiterungen sollen generisch und wiederverwendbar modelliert werden.
-Relevante Bereiche im Repo
-`app/` — Flutter-App / WebApp-Client
-`api/` — FastAPI-Backend und REST-Endpunkte
-`src/` — Kernlogik und Services
-`memory/` — projektbezogene Dokumentation und Erkenntnisse
-`docs/` — Playbooks und ergänzende Projektdokumentation
+# AGENTS.md — DualMind Personal Assistant
+
+> Fuer detaillierte Arbeitsregeln, Guardrails und Workflow-Pflichten: siehe `CLAUDE.md`.
+
+## Projektuebersicht
+
+- **Was:** Persoenlicher Assistent mit Telegram Bot + REST API + Web App + Flutter App
+- **Stack:** Python 3.11+, FastAPI, SQLite, Flutter/Dart, Vanilla JS (kein Build-Step)
+- **Hosting:** Hostinger VPS (systemd, nginx, SSL)
+- **Zwei Bots:** TaakeBot + NinaBot – eigene Tokens, eigene Persoenlichkeit, gemeinsames Memory
+
+## Architektur
+
+| Pfad | Funktion |
+|---|---|
+| `main.py` | Telegram Bot Einstiegspunkt (python-telegram-bot, beide Bots parallel) |
+| `api/api_main.py` | FastAPI REST API Starter (Port 8000, uvicorn) |
+| `api/main.py` | FastAPI App-Definition, Routen, Middleware |
+| `api/static/` | Web App (Vanilla JS, IIFE-Module, kein Build-Step) |
+| `app/` | Flutter Mobile App (iOS/Android) |
+| `src/bots/` | TaakeBot, NinaBot – Telegram Handler |
+| `src/services/` | Shared Business Logic (AI, Calendar, Shopping, Tasks, …) |
+| `src/memory/` | Memory Service (mem0 + ChromaDB) |
+| `src/scheduler/` | Proaktive Jobs (Briefing, Reminder, Wochenrueckblick) |
+| `config/settings.py` | Zentrale Konfiguration, alle Werte aus `.env` |
+| `deploy/` | systemd-Units, nginx.conf, Setup-Skripte |
+
+## Wichtige Architekturentscheidungen
+
+- **Zwei-Modell-Split:** `AI_MODEL_INTENT` (schnell/klein, Regex-Pre-Filter vor LLM-Call) + `AI_MODEL_CHAT` (qualitativ, OpenRouter)
+- **Memory-Architektur:** `BaseMemoryService` (gemeinsame mem0-Logik) → `BotMemoryService` (SQLite Facts, Onboarding) + `ApiMemoryService` (add_fact)
+- **Memory-Cache:** TTL-Cache auf Memory-Search-Queries
+- **Image-Proxy:** Proxy-Endpunkt fuer Chefkoch-CDN (CORS-Umgehung)
+- **Auth:** JWT mit Auto-Refresh in `api/static/js/api.js`
+- **Chat-Streaming:** SSE-Streaming fuer Chat-Responses
+- **Web App:** IIFE-Module in `api/static/js/views/` — kein Bundler, Script-Reihenfolge in `app.html` ist kritisch
+
+## Modul-Grenzen (kein Cross-Edit in parallelen Batches)
+
+- `main.py` und `config/settings.py` sind zentrale Dateien → nur sequentiell aendern
+- `src/memory/base_memory_service.py` ist Basis beider MemoryService-Varianten → nur sequentiell
+- `api/static/` (Web App) und `app/` (Flutter) sind vollstaendig getrennte Schichten
+- Bot-Services (`src/bots/`) und API-Routen (`api/`) nicht im selben Batch bearbeiten
+
+## Technische Leitplanken
+
+- `.env` enthaelt Secrets — niemals committen, niemals ungefragt aendern
+- Stop-Pflicht bei: Auth/Security, Migrationen, Deploy-Aenderungen, Web-App-Architektur, Flutter `applicationId`, externe Service-Integrationen (vollstaendige Liste: `CLAUDE.md` → Abschnitt „Stop”)
+- Keine stillen Refactorings — nur minimale, gezielte Aenderungen
+- Externe Services: Groq (Voice/Whisper), OpenRouter (AI), Google (Calendar/Drive/Gmail), Spotify, Home Assistant
+
+## UX-Roadmap (offene Bereiche)
+
+DualMind ist ein produktiv genutzter Assistent, keine Demo-Oberflaeche. Bekannte offene Bereiche:
+
+- **Dashboard:** Widgets aktivierbar/deaktivierbar/sortierbar, Fokus-/Heute-Ansicht als kompakte Variante
+- **Chat:** Plattformuebergreifende Chat-Logik (Telegram, Web, App), Voice als Eingabekanal → Text
+- **Inbox/Notifications:** Inbox fuer Vorschlaege, Notifications fuer Hinweise — fachlich getrennt halten
+- **Dokumente:** Echter Nutzerfluss: neu → analysiert → Aktion vorgeschlagen → abgelegt
+- **Kontakte:** Leichte Kontextschicht fuer E-Mail/Kalender/Erinnerungen, kein CRM
+- **Preferences:** Plattformuebergreifendes Preferences-Modell (Theme, Navigation, Fokus, Quiet Hours, TTS)
+- **Mobility/Wetter:** Proaktive Zusammenarbeit mit Kalenderkontext
+
+UX-Grundregeln: Loading-, Empty- und Error-States in jeder Ansicht. Mobile immer mitdenken.
+
+## Testing
+
+- Framework: `pytest`
+- Unit-Tests: `tests/unit/`
+- Integration-Tests: `tests/integration/`
+- Konfiguration: `tests/conftest.py`
+- Kein Frontend-Test-Framework (manuelle Tests)
+
+## Deployment
+
+- **systemd Services:** `personal-assistant.service`, `personal-assistant-api.service`, `personal-assistant-webhook.service`
+- **Konfigurationsdateien:** `deploy/`
+- **nginx:** Reverse Proxy + SSL (Let's Encrypt)
+- **Gefuehrtes Deployment:** `/deploy` Skill verwenden — nicht manuell deployen ohne Pruefung

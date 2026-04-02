@@ -3,6 +3,9 @@
  */
 const ChatView = (() => {
   let sending = false;
+  let lastMessage = '';
+  let pendingController = null;
+  let slowTimer = null;
 
   async function render(container) {
     container.innerHTML = `
@@ -82,13 +85,14 @@ const ChatView = (() => {
     if (el) el.scrollTop = el.scrollHeight;
   }
 
-  async function send() {
+  async function send(retryMsg) {
     if (sending) return;
     const input = document.getElementById('chat-input');
-    const message = input.value.trim();
+    const message = retryMsg || input.value.trim();
     if (!message) return;
 
-    input.value = '';
+    if (!retryMsg) input.value = '';
+    lastMessage = message;
     sending = true;
 
     const messagesEl = document.getElementById('chat-messages');
@@ -97,11 +101,13 @@ const ChatView = (() => {
     const empty = messagesEl.querySelector('.empty-state');
     if (empty) empty.remove();
 
-    // Add user message
-    const userBubble = document.createElement('div');
-    userBubble.className = 'chat-bubble user';
-    userBubble.textContent = message;
-    messagesEl.appendChild(userBubble);
+    // Add user message (only if not a retry – retry already has the bubble)
+    if (!retryMsg) {
+      const userBubble = document.createElement('div');
+      userBubble.className = 'chat-bubble user';
+      userBubble.textContent = message;
+      messagesEl.appendChild(userBubble);
+    }
 
     // Add typing indicator
     const typing = document.createElement('div');
@@ -110,31 +116,115 @@ const ChatView = (() => {
     messagesEl.appendChild(typing);
     scrollToBottom();
 
+    // Slow-response hint after 15s
+    slowTimer = setTimeout(() => {
+      if (typing.parentNode) {
+        typing.innerHTML = 'Dauert länger als erwartet… <button class="btn btn-sm" onclick="ChatView.cancelPending()">Abbrechen</button>';
+      }
+    }, 15000);
+
     const sendBtn = document.getElementById('chat-send-btn');
     sendBtn.disabled = true;
 
     try {
-      const result = await Api.sendMessage(message);
-      typing.remove();
+      // Streaming response
+      const responseBubble = document.createElement('div');
+      responseBubble.className = 'chat-bubble assistant';
+      let firstToken = true;
+      let fullResponse = '';
+      let streamDone = false;
 
-      const assistantBubble = document.createElement('div');
-      assistantBubble.className = 'chat-bubble assistant';
-      assistantBubble.textContent = result.response;
-      messagesEl.appendChild(assistantBubble);
-      scrollToBottom();
+      await Api.sendMessageStream(
+        message,
+        null,
+        (token) => {
+          if (firstToken) {
+            typing.remove();
+            messagesEl.appendChild(responseBubble);
+            firstToken = false;
+          }
+          fullResponse += token;
+          responseBubble.textContent = fullResponse;
+          scrollToBottom();
+        },
+        () => {
+          streamDone = true;
+          // Finalize: re-set as escaped text
+          if (!firstToken) {
+            responseBubble.textContent = fullResponse;
+          }
+        },
+        (error) => {
+          // Stream error: fall back to non-streaming
+          if (firstToken) {
+            // No tokens received yet — try non-streaming fallback
+            typing.textContent = 'Streaming fehlgeschlagen, versuche erneut…';
+            Api.sendMessage(message).then((result) => {
+              typing.remove();
+              const assistantBubble = document.createElement('div');
+              assistantBubble.className = 'chat-bubble assistant';
+              assistantBubble.textContent = result.response;
+              messagesEl.appendChild(assistantBubble);
+              scrollToBottom();
+            }).catch((fallbackErr) => {
+              typing.remove();
+              const errorBubble = document.createElement('div');
+              errorBubble.className = 'chat-bubble assistant';
+              errorBubble.innerHTML = `<span style="color:var(--error)">Fehler: ${escapeHtml(fallbackErr.message)}</span>
+                <button class="btn btn-sm" onclick="ChatView.retry()" style="margin-top:6px">Erneut versuchen</button>`;
+              messagesEl.appendChild(errorBubble);
+              scrollToBottom();
+            });
+          } else {
+            // Partial response received — show error after partial text
+            responseBubble.innerHTML = escapeHtml(fullResponse) +
+              `<br><span style="color:var(--error)">Stream abgebrochen: ${escapeHtml(error)}</span>`;
+          }
+        }
+      );
+
+      // If stream ended without any tokens and no error handler fired, show empty response
+      if (firstToken && !streamDone) {
+        typing.remove();
+      }
     } catch (err) {
       typing.remove();
       const errorBubble = document.createElement('div');
       errorBubble.className = 'chat-bubble assistant';
-      errorBubble.innerHTML = `<span style="color:var(--error)">Fehler: ${escapeHtml(err.message)}</span>`;
+      errorBubble.innerHTML = `<span style="color:var(--error)">Fehler: ${escapeHtml(err.message)}</span>
+        <button class="btn btn-sm" onclick="ChatView.retry()" style="margin-top:6px">Erneut versuchen</button>`;
       messagesEl.appendChild(errorBubble);
       scrollToBottom();
     } finally {
+      if (slowTimer) { clearTimeout(slowTimer); slowTimer = null; }
       sending = false;
+      pendingController = null;
       sendBtn.disabled = false;
       input.focus();
     }
   }
 
-  return { render, send };
+  function cancelPending() {
+    // The AbortController lives inside Api.request; we signal cancellation
+    // by setting sending = false so the UI cleans up on the resulting error.
+    // Since we can't reach the internal controller, we rely on the timeout
+    // to eventually fire. For immediate UX, remove the indicator now.
+    const typing = document.querySelector('.typing-indicator');
+    if (typing) typing.remove();
+    sending = false;
+    const sendBtn = document.getElementById('chat-send-btn');
+    if (sendBtn) sendBtn.disabled = false;
+    if (slowTimer) { clearTimeout(slowTimer); slowTimer = null; }
+  }
+
+  function retry() {
+    if (!lastMessage) return;
+    // Remove the error bubble that contains the retry button
+    const bubbles = document.querySelectorAll('.chat-bubble.assistant');
+    const last = bubbles[bubbles.length - 1];
+    if (last && last.querySelector('.btn')) last.remove();
+    send(lastMessage);
+  }
+
+  return { render, send, cancelPending, retry };
 })();

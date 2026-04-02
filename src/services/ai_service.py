@@ -242,6 +242,27 @@ class AIService:
                 last_exc = e
         raise last_exc
 
+    async def _complete_stream(self, messages: list[dict], model: str = None):
+        """Streaming-Variante von _complete(). Yields Token-Chunks."""
+        primary = model or self._model_chat
+        kwargs = {
+            "model": primary,
+            "messages": messages,
+            "max_tokens": 1024,
+            "temperature": 0.7,
+            "stream": True,
+        }
+        try:
+            response = await self._client.chat.completions.create(**kwargs)
+            async for chunk in response:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except (RateLimitError, APITimeoutError, httpx.HTTPError, OSError, ValueError) as e:
+            logger.warning(f"Streaming fehlgeschlagen ({primary}): {e}, Fallback auf non-streaming")
+            # Fallback: yield complete response from non-streaming
+            result = await self._complete(messages, model=model)
+            yield result
+
     def _feature_enabled(self, intent: str, user_key: str) -> bool:
         """Prüft ob das Feature für diesen Intent aktiv ist."""
         from src.features.catalog import INTENT_TO_FEATURES
