@@ -47,7 +47,11 @@ const TasksView = (() => {
           <button class="filter-btn ${filterPriority === 'low' ? 'active' : ''}" onclick="TasksView.setFilter('priority','low',this)">Niedrig</button>
         </div>
       </div>
-      <div id="task-list"><div class="loading"><div class="spinner"></div> Laden…</div></div>
+      <div id="task-list">
+        <div class="skeleton skeleton-task"></div>
+        <div class="skeleton skeleton-task"></div>
+        <div class="skeleton skeleton-task"></div>
+      </div>
     `;
     await loadTasks();
   }
@@ -96,7 +100,11 @@ const TasksView = (() => {
 
     if (filtered.length === 0) {
       const msg = tasks.length === 0 ? 'Keine Aufgaben vorhanden' : 'Keine passenden Aufgaben';
-      el.innerHTML = `<div class="empty-state">${msg}</div>`;
+      el.innerHTML = `<div class="empty-state">
+        <span class="material-symbols-outlined" style="font-size:40px;color:var(--text-muted);display:block;margin-bottom:8px">check_circle</span>
+        ${msg}
+        ${tasks.length === 0 ? '<br><button class="btn btn-sm btn-primary mt-8" onclick="TasksView.toggleForm()">+ Neue Aufgabe</button>' : ''}
+      </div>`;
       return;
     }
 

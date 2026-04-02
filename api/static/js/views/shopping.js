@@ -1,10 +1,17 @@
 /**
- * Shopping View – CRUD, Toggle, Categories, Inline Quantity Edit
+ * Shopping View – CRUD, Toggle, Categories, Inline Quantity Edit, Swipe Gestures, Collapsible Categories
  */
 const ShoppingView = (() => {
   let showChecked = true;
   let items = [];
   let editingId = null;
+  let collapsedCats = {};
+
+  // Swipe state
+  let swipeStartX = 0;
+  let swipeCurrentX = 0;
+  let swipingEl = null;
+  const SWIPE_THRESHOLD = 80;
 
   async function render(container) {
     container.innerHTML = `
@@ -27,11 +34,10 @@ const ShoppingView = (() => {
           </button>
         </div>
       </div>
-      <div id="shopping-list"><div class="loading"><div class="spinner"></div> Laden…</div></div>
+      <div id="shopping-list"><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div></div>
     `;
 
     await loadItems();
-    // #459: Ensure input has focus after render
     const input = document.getElementById('shopping-input');
     if (input) input.focus();
   }
@@ -67,7 +73,10 @@ const ShoppingView = (() => {
     const visible = showChecked ? items : items.filter(i => !i.checked);
 
     if (visible.length === 0) {
-      listEl.innerHTML = `<div class="empty-state">${total === 0 ? 'Einkaufsliste ist leer' : 'Alle Artikel erledigt'}</div>`;
+      listEl.innerHTML = `<div class="empty-state">
+        <span class="material-symbols-outlined" style="font-size:40px;color:var(--text-muted);display:block;margin-bottom:8px">shopping_cart</span>
+        ${total === 0 ? 'Einkaufsliste ist leer' : 'Alle Artikel erledigt'}
+      </div>`;
       return;
     }
 
@@ -87,36 +96,45 @@ const ShoppingView = (() => {
     });
 
     sortedCats.forEach(cat => {
-      html += `<div class="category-header">${escapeHtml(cat)}</div>`;
-      groups[cat].forEach(item => {
-        const detail = [item.quantity, item.unit].filter(Boolean).join(' ');
-        const isEditing = editingId === item.id;
-        html += `
-          <div class="shopping-item ${item.checked ? 'checked' : ''}">
-            <input type="checkbox" class="shopping-checkbox"
-                   ${item.checked ? 'checked' : ''}
-                   onchange="ShoppingView.toggleItem(${item.id}, this.checked)">
-            <span class="item-name">${escapeHtml(item.name)}</span>
-            ${isEditing ? `
-              <span class="item-detail-edit">
-                <input type="text" id="edit-qty-${item.id}" value="${escapeHtml(item.quantity || '')}"
-                       placeholder="Menge" size="4"
-                       onkeydown="if(event.key==='Enter') ShoppingView.saveQuantity(${item.id})">
-                <input type="text" id="edit-unit-${item.id}" value="${escapeHtml(item.unit || '')}"
-                       placeholder="Einheit" size="5"
-                       onkeydown="if(event.key==='Enter') ShoppingView.saveQuantity(${item.id})">
-                <button class="btn btn-sm btn-primary" onclick="ShoppingView.saveQuantity(${item.id})">&#10003;</button>
-                <button class="btn btn-sm btn-secondary" onclick="ShoppingView.cancelEdit()">&#10005;</button>
-              </span>
-            ` : `
-              <span class="item-detail" onclick="ShoppingView.editQuantity(${item.id})" title="Menge bearbeiten" style="cursor:pointer">
-                ${detail ? escapeHtml(detail) : '<span style="opacity:0.4;font-size:0.8rem">+ Menge</span>'}
-              </span>
-            `}
-            <button class="item-delete" onclick="ShoppingView.deleteItem(${item.id})" title="Löschen"><span class="material-symbols-outlined">delete</span></button>
-          </div>
-        `;
-      });
+      const isCollapsed = collapsedCats[cat] === true;
+      const count = groups[cat].length;
+      html += `<div class="category-header category-collapsible" onclick="ShoppingView.toggleCategory('${escapeHtml(cat)}')">
+        <span class="material-symbols-outlined mi-sm category-chevron ${isCollapsed ? 'collapsed' : ''}">expand_more</span>
+        ${escapeHtml(cat)} <span class="category-count">(${count})</span>
+      </div>`;
+
+      if (!isCollapsed) {
+        groups[cat].forEach(item => {
+          const detail = [item.quantity, item.unit].filter(Boolean).join(' ');
+          const isEditing = editingId === item.id;
+          html += `
+            <div class="shopping-item swipe-item ${item.checked ? 'checked' : ''}" data-id="${item.id}"
+                 ontouchstart="ShoppingView.swipeStart(event)" ontouchmove="ShoppingView.swipeMove(event)" ontouchend="ShoppingView.swipeEnd(event)">
+              <input type="checkbox" class="shopping-checkbox"
+                     ${item.checked ? 'checked' : ''}
+                     onchange="ShoppingView.toggleItem(${item.id}, this.checked)">
+              <span class="item-name">${escapeHtml(item.name)}</span>
+              ${isEditing ? `
+                <span class="item-detail-edit">
+                  <input type="text" id="edit-qty-${item.id}" value="${escapeHtml(item.quantity || '')}"
+                         placeholder="Menge" size="4"
+                         onkeydown="if(event.key==='Enter') ShoppingView.saveQuantity(${item.id})">
+                  <input type="text" id="edit-unit-${item.id}" value="${escapeHtml(item.unit || '')}"
+                         placeholder="Einheit" size="5"
+                         onkeydown="if(event.key==='Enter') ShoppingView.saveQuantity(${item.id})">
+                  <button class="btn btn-sm btn-primary" onclick="ShoppingView.saveQuantity(${item.id})">&#10003;</button>
+                  <button class="btn btn-sm btn-secondary" onclick="ShoppingView.cancelEdit()">&#10005;</button>
+                </span>
+              ` : `
+                <span class="item-detail" onclick="ShoppingView.editQuantity(${item.id})" title="Menge bearbeiten" style="cursor:pointer">
+                  ${detail ? escapeHtml(detail) : '<span style="opacity:0.4;font-size:0.8rem">+ Menge</span>'}
+                </span>
+              `}
+              <button class="item-delete" onclick="ShoppingView.deleteItem(${item.id})" title="Löschen"><span class="material-symbols-outlined">delete</span></button>
+            </div>
+          `;
+        });
+      }
     });
 
     listEl.innerHTML = html;
@@ -132,6 +150,53 @@ const ShoppingView = (() => {
     if (btn) btn.textContent = showChecked ? 'Erledigte ausblenden' : 'Erledigte einblenden';
   }
 
+  function toggleCategory(cat) {
+    collapsedCats[cat] = !collapsedCats[cat];
+    renderList();
+  }
+
+  // ── Swipe Gesture Handling ──
+
+  function swipeStart(e) {
+    const touch = e.touches[0];
+    swipeStartX = touch.clientX;
+    swipeCurrentX = touch.clientX;
+    swipingEl = e.currentTarget;
+  }
+
+  function swipeMove(e) {
+    if (!swipingEl) return;
+    const touch = e.touches[0];
+    swipeCurrentX = touch.clientX;
+    const diff = swipeStartX - swipeCurrentX;
+
+    if (diff > 10) {
+      // Swiping left – reveal delete/check action
+      const shift = Math.min(diff, 120);
+      swipingEl.style.transform = `translateX(-${shift}px)`;
+      swipingEl.style.transition = 'none';
+    }
+  }
+
+  function swipeEnd(e) {
+    if (!swipingEl) return;
+    const diff = swipeStartX - swipeCurrentX;
+    const id = parseInt(swipingEl.dataset.id);
+
+    swipingEl.style.transition = 'transform 0.2s ease';
+    swipingEl.style.transform = '';
+
+    if (diff > SWIPE_THRESHOLD && id) {
+      // Toggle check status on swipe
+      const item = items.find(i => i.id === id);
+      if (item) {
+        toggleItem(id, !item.checked);
+      }
+    }
+
+    swipingEl = null;
+  }
+
   async function addItem() {
     const input = document.getElementById('shopping-input');
     const name = input.value.trim();
@@ -145,7 +210,6 @@ const ShoppingView = (() => {
     } catch (err) {
       alert('Fehler: ' + err.message);
     }
-    // #459: Restore focus to input after adding
     input.focus();
   }
 
@@ -223,5 +287,9 @@ const ShoppingView = (() => {
     renderList();
   }
 
-  return { render, addItem, toggleItem, deleteItem, clearChecked, toggleShowChecked, editQuantity, saveQuantity, cancelEdit };
+  return {
+    render, addItem, toggleItem, deleteItem, clearChecked, toggleShowChecked,
+    editQuantity, saveQuantity, cancelEdit, toggleCategory,
+    swipeStart, swipeMove, swipeEnd,
+  };
 })();

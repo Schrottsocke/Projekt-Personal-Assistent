@@ -2173,3 +2173,276 @@ select:focus-visible,
 .toggle-sm input:checked + .toggle-slider::before {
   transform: translateX(16px);
 }
+
+/* ── Focus View ── */
+
+.focus-container {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.focus-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  margin-bottom: var(--space-2);
+  text-decoration: none;
+  color: inherit;
+  transition: background var(--transition), border-color var(--transition);
+}
+
+.focus-card:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent-border);
+}
+
+.focus-card-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+}
+
+.focus-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.focus-card-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.focus-card-title {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.focus-card-sub {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.focus-card-meta {
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.focus-empty {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-secondary);
+}
+
+.focus-empty p {
+  margin-top: var(--space-3);
+  font-size: var(--text-md);
+}
+
+.focus-toggle {
+  text-align: center;
+  margin-top: var(--space-5);
+  padding: var(--space-3) 0;
+}
+
+.focus-toggle a {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: var(--text-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.focus-toggle a:hover {
+  text-decoration: underline;
+}
+
+/* ── Skeleton Variants ── */
+
+.skeleton-task {
+  height: 56px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-2);
+}
+
+/* ── MealPlan Enhancements ── */
+
+.meal-card {
+  position: relative;
+}
+
+.meal-card-image {
+  width: 100%;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  margin: -8px -8px 6px -8px;
+  width: calc(100% + 16px);
+}
+
+.meal-card-actions {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  margin-top: var(--space-1);
+  justify-content: flex-end;
+}
+
+.meal-card-actions .btn-sm {
+  padding: 2px 6px;
+  font-size: var(--text-xs);
+}
+
+/* Recipe Search in MealPlan Form */
+
+.recipe-search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 20;
+  box-shadow: var(--shadow-lg);
+}
+
+.recipe-search-results:empty {
+  display: none;
+}
+
+.recipe-search-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  transition: background var(--transition);
+}
+
+.recipe-search-item:hover {
+  background: var(--bg-hover);
+}
+
+.recipe-search-empty {
+  color: var(--text-muted);
+  cursor: default;
+  font-size: var(--text-sm);
+}
+
+.recipe-search-empty:hover {
+  background: transparent;
+}
+
+.recipe-search-thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.recipe-search-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.recipe-search-name {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.recipe-search-meta {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.recipe-selected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--accent);
+  margin-top: var(--space-1);
+}
+
+.recipe-selected-badge .btn-inline {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: var(--text-base);
+}
+
+.recipe-selected-badge .btn-inline:hover {
+  color: var(--error);
+}
+
+/* ── Shopping Enhancements ── */
+
+.category-collapsible {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  user-select: none;
+}
+
+.category-chevron {
+  transition: transform var(--transition);
+}
+
+.category-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.category-count {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.swipe-item {
+  position: relative;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+/* Toast info variant */
+.toast-info {
+  background: var(--accent);
+  color: #fff;
+}

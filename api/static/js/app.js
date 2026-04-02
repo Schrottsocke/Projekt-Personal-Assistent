@@ -21,6 +21,7 @@
   Router.register('#/drive', (c) => DriveView.render(c));
   Router.register('#/issues', (c) => IssuesView.render(c));
   Router.register('#/shifts', (c) => ShiftsView.render(c));
+  Router.register('#/focus', (c) => FocusView.render(c));
 
   // ── Default Nav (vor Preferences-Load) ──
   const DEFAULT_NAV = [
@@ -44,6 +45,7 @@
     drive: { route: '#/drive', icon: 'folder', label: 'Drive' },
     shifts: { route: '#/shifts', icon: 'work', label: 'Dienste' },
     issues: { route: '#/issues', icon: 'bug_report', label: 'Issues' },
+    focus: { route: '#/focus', icon: 'center_focus_strong', label: 'Fokus' },
   };
 
   // ── Cached Preferences ──
