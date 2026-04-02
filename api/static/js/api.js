@@ -417,43 +417,6 @@ const Api = (() => {
     return request('/notifications', { method: 'POST', body: data });
   }
 
-  // Documents
-  function getDocuments(params = {}) {
-    const qs = new URLSearchParams();
-    if (params.doc_type) qs.set('doc_type', params.doc_type);
-    if (params.limit) qs.set('limit', params.limit);
-    if (params.offset) qs.set('offset', params.offset);
-    const q = qs.toString();
-    return request(`/documents${q ? '?' + q : ''}`);
-  }
-  function getDocument(id) { return request(`/documents/${id}`); }
-  function triggerDocumentAction(id, action) {
-    return request(`/documents/${id}/actions`, { method: 'POST', body: { action } });
-  }
-
-  // Templates
-  function getTemplates(params = {}) {
-    const qs = new URLSearchParams();
-    if (params.category) qs.set('category', params.category);
-    if (params.limit) qs.set('limit', params.limit);
-    if (params.offset) qs.set('offset', params.offset);
-    const q = qs.toString();
-    return request(`/templates${q ? '?' + q : ''}`);
-  }
-  function getTemplate(id) { return request(`/templates/${id}`); }
-  function createTemplate(data) {
-    return request('/templates', { method: 'POST', body: data });
-  }
-  function updateTemplate(id, data) {
-    return request(`/templates/${id}`, { method: 'PATCH', body: data });
-  }
-  function deleteTemplate(id) {
-    return request(`/templates/${id}`, { method: 'DELETE' });
-  }
-  function applyTemplate(id) {
-    return request(`/templates/${id}/apply`, { method: 'POST' });
-  }
-
   // Shifts / Dienstplan
   function getShiftTypes(all = false) {
     return request(`/shifts/types${all ? '?all=true' : ''}`);
@@ -490,8 +453,6 @@ const Api = (() => {
     getDriveFiles, uploadFile,
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
     getNotifications, getNotificationCount, updateNotification, bulkUpdateNotifications, markAllNotificationsRead, createNotification,
-    getDocuments, getDocument, triggerDocumentAction,
-    getTemplates, getTemplate, createTemplate, updateTemplate, deleteTemplate, applyTemplate,
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
     getPreferences, updatePreferences, getPreferencesRegistry,
