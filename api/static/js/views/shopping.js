@@ -139,7 +139,8 @@ const ShoppingView = (() => {
       items = items.filter(i => i.id !== id);
       renderList();
     } catch (err) {
-      alert('Fehler: ' + err.message);
+      alert('Fehler beim Löschen: ' + err.message);
+      await loadItems();
     }
   }
 
@@ -153,7 +154,8 @@ const ShoppingView = (() => {
       items = items.filter(i => !i.checked);
       renderList();
     } catch (err) {
-      alert('Fehler: ' + err.message);
+      alert('Fehler beim Löschen: ' + err.message);
+      await loadItems();
     }
   }
 

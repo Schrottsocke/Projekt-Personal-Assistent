@@ -38,26 +38,37 @@ async def startup():
 
     init_db()
 
-    # Services erst in lokaler Map aufbauen, dann nach erfolgreicher Init uebernehmen
+    # Services erst in lokaler Map aufbauen, dann nach erfolgreicher Init uebernehmen.
+    # Jeden Konstruktor einzeln wrappen, damit ein fehlender Service nicht alle blockiert.
     pending: dict = {}
-    pending["ai"] = AIService()
-    pending["memory"] = MemoryService()
-    pending["calendar"] = CalendarService()
-    pending["notes"] = NotesService()
-    pending["reminder"] = ReminderService()
-    pending["task"] = TaskService()
-    pending["shopping"] = ShoppingService()
-    pending["chefkoch"] = ChefkochService()
-    pending["email"] = EmailService()
-    pending["drive"] = DriveService()
+    _constructors = [
+        ("ai", AIService),
+        ("memory", MemoryService),
+        ("calendar", CalendarService),
+        ("notes", NotesService),
+        ("reminder", ReminderService),
+        ("task", TaskService),
+        ("shopping", ShoppingService),
+        ("chefkoch", ChefkochService),
+        ("email", EmailService),
+        ("drive", DriveService),
+    ]
+    for name, cls in _constructors:
+        try:
+            pending[name] = cls()
+        except Exception as e:
+            logger.warning("API Service '%s' Konstruktor-Fehler (uebersprungen): %s", name, e)
 
     # Async-Initialisierung – nur erfolgreich initialisierte Services uebernehmen
     # Services ohne async init (ai, shopping, chefkoch) werden direkt uebernommen
     for name in ("ai", "shopping", "chefkoch"):
-        _svc[name] = pending[name]
-        logger.info("API Service '%s' registriert (sync).", name)
+        if name in pending:
+            _svc[name] = pending[name]
+            logger.info("API Service '%s' registriert (sync).", name)
 
     for name in ("memory", "calendar", "notes", "reminder", "task", "email", "drive"):
+        if name not in pending:
+            continue
         try:
             await pending[name].initialize()
             _svc[name] = pending[name]
