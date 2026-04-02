@@ -21,6 +21,7 @@
   Router.register('#/drive', (c) => DriveView.render(c));
   Router.register('#/issues', (c) => IssuesView.render(c));
   Router.register('#/shifts', (c) => ShiftsView.render(c));
+  Router.register('#/notifications', (c) => NotificationsView.render(c));
   Router.register('#/focus', (c) => FocusView.render(c));
 
   // ── Default Nav (vor Preferences-Load) ──
@@ -46,6 +47,7 @@
     shifts: { route: '#/shifts', icon: 'work', label: 'Dienste' },
     issues: { route: '#/issues', icon: 'bug_report', label: 'Issues' },
     focus: { route: '#/focus', icon: 'center_focus_strong', label: 'Fokus' },
+    notifications: { route: '#/notifications', icon: 'notifications', label: 'Alerts' },
   };
 
   // ── Cached Preferences ──
@@ -142,6 +144,11 @@
     QuickCapture.init();
     // Load preferences in background (updates nav when ready)
     await loadPreferences();
+    // Init notification bell (polling + badge)
+    if (Api.isLoggedIn()) {
+      document.querySelector('.notification-bell')?.classList.remove('hidden');
+      NotificationBell.init();
+    }
   }
 
   if (document.readyState === 'loading') {

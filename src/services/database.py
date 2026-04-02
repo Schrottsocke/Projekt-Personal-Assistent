@@ -226,6 +226,24 @@ class MealPlanEntry(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
+class Notification(Base):
+    """Zentrale Benachrichtigung fuer Systemereignisse, Warnungen, Erinnerungen."""
+
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True)
+    user_key = Column(String(50), nullable=False)
+    type = Column(String(30), nullable=False)  # reminder, follow_up, document, inbox, weather, system
+    title = Column(String(300), nullable=False)
+    message = Column(Text, nullable=True)
+    status = Column(String(20), default="new")  # new, read, completed, hidden
+    link = Column(String(500), nullable=True)  # Deep-Link zum zugehoerigen Modul
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(
+        DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
+    )
+
+
 class ShiftType(Base):
     """Diensttyp-Definition (z.B. Fruhdienst, Spaetdienst)."""
 
