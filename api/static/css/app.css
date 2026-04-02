@@ -2,6 +2,7 @@
 
 :root,
 [data-theme="dark"] {
+  color-scheme: dark;
   --bg-primary: #121212;
   --bg-secondary: #1e1e1e;
   --bg-card: #252525;
@@ -52,6 +53,7 @@
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   --bg-primary: #f5f5f7;
   --bg-secondary: #ffffff;
   --bg-card: #ffffff;
@@ -343,6 +345,16 @@ input:focus, textarea:focus, select:focus {
 }
 
 textarea { resize: vertical; min-height: 80px; }
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+select option {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
 
 /* Progress Bar */
 .progress-bar {
@@ -1627,6 +1639,26 @@ select:focus-visible,
   border-top: 1px solid var(--border);
   margin-top: 4px;
   padding-top: 8px;
+}
+
+/* ── Touch Targets (Mobile) ─────────────────────── */
+@media (pointer: coarse) {
+  .btn { min-height: 48px; padding: 12px 20px; }
+  .btn-sm { min-height: 44px; padding: 10px 14px; }
+  .btn-icon { width: 48px; height: 48px; }
+  .nav-item { padding: var(--space-3) var(--space-4); }
+  .tab { min-height: 48px; padding: 12px; }
+  input[type="text"],
+  input[type="password"],
+  input[type="search"],
+  input[type="date"],
+  input[type="number"],
+  input[type="datetime-local"],
+  textarea,
+  select { min-height: 44px; }
+  .label-chips .chip { min-height: 44px; padding: 8px 14px; }
+  .filter-btn { min-height: 44px; }
+  .shift-popover-item { min-height: 44px; }
 }
 
 /* ── Scrollbar (Dark Theme) ─────────────────────── */

@@ -1,9 +1,57 @@
 /**
  * Issues View – GitHub Issue-Liste + Erstellung
+ * #458: Timeout, Retry mit Backoff, Error-Klassifikation
  */
 const IssuesView = (() => {
   let labels = [];
   let submitting = false;
+
+  const RETRY_DELAYS = [1000, 3000, 10000];
+
+  /* ---------- Error Classification ---------- */
+
+  function classifyError(err) {
+    const msg = err.message || '';
+    if (msg.includes('401') || msg.includes('Session abgelaufen')) {
+      return { type: 'auth', message: 'Authentifizierung fehlgeschlagen. Bitte erneut einloggen.', icon: 'lock' };
+    }
+    if (msg.includes('403') || msg.toLowerCase().includes('rate')) {
+      return { type: 'rate_limit', message: 'API-Rate-Limit erreicht. Bitte warte einen Moment.', icon: 'schedule' };
+    }
+    if (msg.includes('Zeitüberschreitung') || err.name === 'AbortError') {
+      return { type: 'timeout', message: 'Zeitüberschreitung – der Server hat nicht rechtzeitig geantwortet.', icon: 'timer_off' };
+    }
+    if (msg.includes('5') && /HTTP 5\d\d/.test(msg)) {
+      return { type: 'server', message: 'Serverfehler – bitte später erneut versuchen.', icon: 'cloud_off' };
+    }
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('network')) {
+      return { type: 'network', message: 'Keine Verbindung zum Server. Prüfe deine Internetverbindung.', icon: 'wifi_off' };
+    }
+    return { type: 'unknown', message: msg || 'Ein unbekannter Fehler ist aufgetreten.', icon: 'error' };
+  }
+
+  /* ---------- Retry with Backoff ---------- */
+
+  async function withRetry(fn) {
+    let lastError;
+    for (let attempt = 0; attempt <= RETRY_DELAYS.length; attempt++) {
+      try {
+        return await fn();
+      } catch (err) {
+        lastError = err;
+        const classified = classifyError(err);
+        // Don't retry auth errors
+        if (classified.type === 'auth') throw err;
+        // Don't retry if we've exhausted retries
+        if (attempt >= RETRY_DELAYS.length) throw err;
+        // Wait before next attempt
+        await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+      }
+    }
+    throw lastError;
+  }
+
+  /* ---------- Render ---------- */
 
   async function render(container) {
     container.innerHTML = `
@@ -14,26 +62,52 @@ const IssuesView = (() => {
       <div id="issue-form-area"><div class="loading"><div class="spinner"></div> Labels laden&hellip;</div></div>
       <div id="issue-result"></div>
     `;
-    await loadLabels();
-    await loadIssues();
+
+    // Load issues and labels in parallel with independent error handling
+    const [issuesResult, labelsResult] = await Promise.allSettled([
+      withRetry(() => Api.getGitHubIssues()),
+      withRetry(() => Api.getGitHubLabels()),
+    ]);
+
+    // Handle labels result
+    const labelsEl = document.getElementById('issue-form-area');
+    if (labelsResult.status === 'fulfilled') {
+      labels = labelsResult.value;
+      renderForm();
+    } else {
+      renderSectionError(labelsEl, labelsResult.reason, 'Labels');
+    }
+
+    // Handle issues result
+    const issuesEl = document.getElementById('issue-list');
+    if (issuesResult.status === 'fulfilled') {
+      renderIssueList(issuesEl, issuesResult.value);
+    } else {
+      renderSectionError(issuesEl, issuesResult.reason, 'Issues');
+    }
+  }
+
+  /* ---------- Error State Rendering ---------- */
+
+  function renderSectionError(el, err, section) {
+    const classified = classifyError(err);
+    el.innerHTML = `
+      <div class="error-state">
+        <span class="material-symbols-outlined" style="font-size:2rem;color:var(--error);margin-bottom:8px">${classified.icon}</span>
+        <p>${escapeHtml(classified.message)}</p>
+        <button class="btn btn-primary btn-sm" onclick="IssuesView.reload()">
+          <span class="material-symbols-outlined mi-sm">refresh</span> Erneut versuchen
+        </button>
+      </div>
+    `;
+  }
+
+  function reload() {
+    const container = document.getElementById('view-container');
+    if (container) render(container);
   }
 
   /* ---------- Issue List ---------- */
-
-  async function loadIssues() {
-    const el = document.getElementById('issue-list');
-    try {
-      const issues = await Api.getGitHubIssues();
-      renderIssueList(el, issues);
-    } catch (err) {
-      el.innerHTML = `
-        <div class="error-state">
-          <p>${escapeHtml(err.message)}</p>
-          <button class="btn btn-primary btn-sm" onclick="IssuesView.render(document.getElementById('view-container'))">Erneut versuchen</button>
-        </div>
-      `;
-    }
-  }
 
   function renderIssueList(el, issues) {
     if (issues.length === 0) {
@@ -68,21 +142,6 @@ const IssuesView = (() => {
   }
 
   /* ---------- Labels + Form ---------- */
-
-  async function loadLabels() {
-    const area = document.getElementById('issue-form-area');
-    try {
-      labels = await Api.getGitHubLabels();
-      renderForm();
-    } catch (err) {
-      area.innerHTML = `
-        <div class="error-state">
-          <p>${escapeHtml(err.message)}</p>
-          <button class="btn btn-primary btn-sm" onclick="IssuesView.render(document.getElementById('view-container'))">Erneut versuchen</button>
-        </div>
-      `;
-    }
-  }
 
   function groupLabels(prefix) {
     return labels.filter(l => l.name.startsWith(prefix));
@@ -199,12 +258,17 @@ const IssuesView = (() => {
       document.getElementById('issue-priority').value = '';
       document.querySelectorAll('#issue-areas input:checked').forEach(cb => { cb.checked = false; });
       // Issue-Liste aktualisieren
-      await loadIssues();
+      try {
+        const issues = await withRetry(() => Api.getGitHubIssues());
+        renderIssueList(document.getElementById('issue-list'), issues);
+      } catch (_) { /* list refresh is best-effort */ }
     } catch (err) {
+      const classified = classifyError(err);
       resultEl.innerHTML = `
         <div class="card" style="border-left: 3px solid var(--error)">
-          <strong>Fehler</strong>
-          <p>${escapeHtml(err.message)}</p>
+          <span class="material-symbols-outlined" style="color:var(--error);vertical-align:middle">${classified.icon}</span>
+          <strong> Fehler</strong>
+          <p>${escapeHtml(classified.message)}</p>
         </div>
       `;
     } finally {
@@ -214,5 +278,5 @@ const IssuesView = (() => {
     }
   }
 
-  return { render, submit };
+  return { render, submit, reload };
 })();
