@@ -23,6 +23,8 @@
   Router.register('#/shifts', (c) => ShiftsView.render(c));
   Router.register('#/notifications', (c) => NotificationsView.render(c));
   Router.register('#/focus', (c) => FocusView.render(c));
+  Router.register('#/weather', (c) => WeatherView.render(c));
+  Router.register('#/mobility', (c) => MobilityView.render(c));
 
   // ── Default Nav (vor Preferences-Load) ──
   const DEFAULT_NAV = [
@@ -48,6 +50,8 @@
     issues: { route: '#/issues', icon: 'bug_report', label: 'Issues' },
     focus: { route: '#/focus', icon: 'center_focus_strong', label: 'Fokus' },
     notifications: { route: '#/notifications', icon: 'notifications', label: 'Alerts' },
+    weather: { route: '#/weather', icon: 'cloud', label: 'Wetter' },
+    mobility: { route: '#/mobility', icon: 'route', label: 'Mobilität' },
   };
 
   // ── Cached Preferences ──

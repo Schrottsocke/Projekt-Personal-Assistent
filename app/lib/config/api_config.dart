@@ -64,4 +64,10 @@ class ApiConfig {
   static const String driveUploadPath = '/drive/upload';
   static const String preferencesPath = '/preferences';
   static const String preferencesRegistryPath = '/preferences/registry';
+  static const String weatherCurrentPath = '/weather/current';
+  static const String weatherForecastPath = '/weather/forecast';
+  static const String weatherSimplePath = '/weather/simple';
+  static const String mobilityTravelTimePath = '/mobility/travel-time';
+  static const String mobilityDepartureTimePath = '/mobility/departure-time';
+  static const String mobilityDailyFlowPath = '/mobility/daily-flow';
 }
