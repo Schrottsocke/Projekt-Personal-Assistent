@@ -57,9 +57,7 @@ async def send_message_stream(
 
     async def event_generator():
         try:
-            async for chunk in intelligence.process_with_memory_stream(
-                body.message, user_key
-            ):
+            async for chunk in intelligence.process_with_memory_stream(body.message, user_key):
                 yield f"data: {json.dumps({'token': chunk})}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
