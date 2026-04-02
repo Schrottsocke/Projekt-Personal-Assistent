@@ -23,6 +23,8 @@
   Router.register('#/shifts', (c) => ShiftsView.render(c));
   Router.register('#/notifications', (c) => NotificationsView.render(c));
   Router.register('#/focus', (c) => FocusView.render(c));
+  Router.register('#/documents', (c) => DocumentsView.render(c));
+  Router.register('#/templates', (c) => TemplatesView.render(c));
 
   // ── Default Nav (vor Preferences-Load) ──
   const DEFAULT_NAV = [
@@ -47,6 +49,8 @@
     shifts: { route: '#/shifts', icon: 'work', label: 'Dienste' },
     issues: { route: '#/issues', icon: 'bug_report', label: 'Issues' },
     focus: { route: '#/focus', icon: 'center_focus_strong', label: 'Fokus' },
+    documents: { route: '#/documents', icon: 'scanner', label: 'Dokumente' },
+    templates: { route: '#/templates', icon: 'library_books', label: 'Vorlagen' },
     notifications: { route: '#/notifications', icon: 'notifications', label: 'Alerts' },
   };
 

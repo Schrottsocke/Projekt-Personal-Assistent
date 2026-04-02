@@ -36,6 +36,7 @@ from api.routers import (
     recipes,
     mealplan,
     drive,
+    documents,
     features,
     github,
     notifications,
@@ -43,6 +44,7 @@ from api.routers import (
     status,
     search,
     preferences,
+    templates,
 )
 
 logger = structlog.get_logger(__name__)
@@ -209,6 +211,8 @@ app.include_router(shopping.router, prefix="/shopping", tags=["Einkauf"])
 app.include_router(recipes.router, prefix="/recipes", tags=["Rezepte"])
 app.include_router(mealplan.router, prefix="/meal-plan", tags=["Wochenplan"])
 app.include_router(drive.router, prefix="/drive", tags=["Drive"])
+app.include_router(documents.router, prefix="/documents", tags=["Dokumente"])
+app.include_router(templates.router, prefix="/templates", tags=["Vorlagen"])
 app.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 app.include_router(shifts.router, prefix="/shifts", tags=["Dienstplan"])
 app.include_router(features.router)
