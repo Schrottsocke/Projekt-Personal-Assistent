@@ -43,12 +43,24 @@ const ChatView = (() => {
     const el = document.getElementById('chat-messages');
     if (!el) return;
 
-    el.innerHTML = messages.map(m => {
+    el.innerHTML = messages.map((m, i) => {
       const time = m.created_at ? formatMessageTime(m.created_at) : '';
+      const prev = i > 0 ? messages[i - 1] : null;
+      const next = i < messages.length - 1 ? messages[i + 1] : null;
+      const sameAsPrev = prev && prev.role === m.role;
+      const sameAsNext = next && next.role === m.role;
+
+      let groupClass = '';
+      if (sameAsPrev && sameAsNext) groupClass = 'group-middle';
+      else if (sameAsPrev) groupClass = 'group-end';
+      else if (sameAsNext) groupClass = 'group-start';
+
+      const hideTime = sameAsNext;
+
       return `
-        <div class="chat-bubble ${m.role}">
+        <div class="chat-bubble ${m.role} ${groupClass}">
           ${escapeHtml(m.content)}
-          ${time ? `<div class="chat-time">${time}</div>` : ''}
+          ${time ? `<div class="chat-time${hideTime ? ' grouped-time' : ''}">${time}</div>` : ''}
         </div>
       `;
     }).join('');

@@ -1268,6 +1268,80 @@ select {
 .issue-labels { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
 .mt-16 { margin-top: 16px; }
 
+/* ── Skeleton Loading ────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-hover) 50%, var(--bg-card) 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+
+.skeleton-card {
+  height: 72px;
+  border-radius: var(--radius);
+  margin-bottom: var(--space-3);
+}
+
+.skeleton-line {
+  height: 14px;
+  margin-bottom: var(--space-2);
+}
+
+.skeleton-line-short { width: 40%; }
+.skeleton-line-medium { width: 65%; }
+.skeleton-line-long { width: 90%; }
+
+.skeleton-section-header {
+  height: 20px;
+  width: 50%;
+  margin: var(--space-7) 0 var(--space-3);
+  border-radius: var(--radius-sm);
+}
+
+/* ── Chat Message Grouping ───────────────────────── */
+.chat-bubble.grouped {
+  margin-top: -4px;
+}
+
+.chat-bubble.user.group-start {
+  border-bottom-right-radius: 4px;
+}
+
+.chat-bubble.user.group-middle {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+  margin-top: 2px;
+}
+
+.chat-bubble.user.group-end {
+  border-top-right-radius: 4px;
+  margin-top: 2px;
+}
+
+.chat-bubble.assistant.group-start {
+  border-bottom-left-radius: 4px;
+}
+
+.chat-bubble.assistant.group-middle {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  margin-top: 2px;
+}
+
+.chat-bubble.assistant.group-end {
+  border-top-left-radius: 4px;
+  margin-top: 2px;
+}
+
+.chat-bubble .chat-time.grouped-time {
+  display: none;
+}
+
 /* ── Global Focus States (Accessibility) ─────────── */
 a:focus-visible,
 button:focus-visible,
