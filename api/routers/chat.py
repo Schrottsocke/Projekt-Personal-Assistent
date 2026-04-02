@@ -1,10 +1,10 @@
-"""POST /chat/message, POST /chat/message/stream, GET /chat/history"""
+"""POST /chat/message, POST /chat/message/stream, POST /chat/voice, GET /chat/history"""
 
 import json
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -57,9 +57,7 @@ async def send_message_stream(
 
     async def event_generator():
         try:
-            async for chunk in intelligence.process_with_memory_stream(
-                body.message, user_key
-            ):
+            async for chunk in intelligence.process_with_memory_stream(body.message, user_key):
                 yield f"data: {json.dumps({'token': chunk})}\n\n"
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
@@ -74,6 +72,27 @@ async def send_message_stream(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/voice")
+@limiter.limit(settings.RATE_LIMIT_CHAT)
+async def send_voice_message(
+    request: Request,
+    user_key: Annotated[str, Depends(get_current_user)],
+    ai_svc=Depends(get_ai_service),
+    file: UploadFile = File(...),
+):
+    """Empfängt Audio, transkribiert via Whisper, gibt Text zurück."""
+    content = await file.read()
+    max_audio = 10 * 1024 * 1024  # 10 MB
+    if len(content) > max_audio:
+        raise HTTPException(status_code=413, detail="Audio zu groß (max 10 MB)")
+
+    text = await ai_svc.transcribe_voice(content, filename=file.filename or "voice.webm")
+    if not text:
+        raise HTTPException(status_code=422, detail="Transkription fehlgeschlagen – bitte erneut versuchen.")
+
+    return {"transcription": text}
 
 
 @router.get("/history", response_model=list[ChatMessageOut])
