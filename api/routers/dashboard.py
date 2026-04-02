@@ -55,6 +55,18 @@ async def dashboard_today(
         safe(email_svc.get_unread_count(user_key), 0) if email_svc.is_connected(user_key) else resolved(0),
     )
 
+    # Shift-Eintraege fuer heute
+    from datetime import datetime as _dt
+
+    from api.routers.shifts import get_shift_events_for_range
+
+    today_str = _dt.now().strftime("%Y-%m-%d")
+    try:
+        shifts_today = get_shift_events_for_range(user_key, today_str, today_str)
+    except Exception as e:
+        logger.warning("Dashboard Shift-Fehler: %s", e)
+        shifts_today = []
+
     # Shopping-Kurzinfo
     checked = sum(1 for i in shopping_items if i.get("checked"))
     total = len(shopping_items)
@@ -63,6 +75,7 @@ async def dashboard_today(
         "user_key": user_key,
         "calendar_connected": calendar_svc.is_connected(user_key),
         "events_today": events[:5],
+        "shifts_today": shifts_today,
         "open_tasks": tasks[:5],
         "task_count": len(tasks),
         "shopping_preview": {

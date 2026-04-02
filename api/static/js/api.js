@@ -260,6 +260,29 @@ const Api = (() => {
   function getGitHubIssues() { return request('/github/issues'); }
   function createGitHubIssue(data) { return request('/github/issues', { method: 'POST', body: data }); }
 
+  // Shifts / Dienstplan
+  function getShiftTypes(all = false) {
+    return request(`/shifts/types${all ? '?all=true' : ''}`);
+  }
+  function createShiftType(data) {
+    return request('/shifts/types', { method: 'POST', body: data });
+  }
+  function updateShiftType(id, data) {
+    return request(`/shifts/types/${id}`, { method: 'PATCH', body: data });
+  }
+  function deleteShiftType(id) {
+    return request(`/shifts/types/${id}`, { method: 'DELETE' });
+  }
+  function getShiftEntries(start, end) {
+    return request(`/shifts/entries?start=${start}&end=${end}`);
+  }
+  function createShiftEntry(data) {
+    return request('/shifts/entries', { method: 'POST', body: data });
+  }
+  function deleteShiftEntry(id) {
+    return request(`/shifts/entries/${id}`, { method: 'DELETE' });
+  }
+
   return {
     getToken, getUserKey, isLoggedIn, login, logout, clearAuth,
     getDashboard,
@@ -272,5 +295,7 @@ const Api = (() => {
     getMealPlanWeek, createMealPlan, deleteMealPlan,
     getDriveFiles, uploadFile,
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
+    getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
+    getShiftEntries, createShiftEntry, deleteShiftEntry,
   };
 })();
