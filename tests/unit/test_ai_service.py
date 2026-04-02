@@ -14,8 +14,9 @@ def ai_service():
         with patch("src.services.ai_service.settings") as mock_settings:
             mock_settings.OPENROUTER_API_KEY = "fake-key"
             mock_settings.OPENROUTER_BASE_URL = "https://fake.api"
-            mock_settings.AI_MODEL = "test-model"
-            mock_settings.AI_MODEL_FALLBACK = "test-fallback"
+            mock_settings.AI_MODEL_INTENT = "test-intent-model"
+            mock_settings.AI_MODEL_CHAT = "test-chat-model"
+            mock_settings.AI_MODEL_FALLBACK_NVIDIA = "nvidia_fallback"
             mock_settings.TIMEZONE = "Europe/Berlin"
             mock_settings.GROQ_API_KEY = None
             mock_settings.NVIDIA_API_KEY = None
@@ -24,8 +25,9 @@ def ai_service():
 
             svc = AIService.__new__(AIService)
             svc._client = mock_client
-            svc._model = "test-model"
-            svc._fallback_model = "test-fallback"
+            svc._model_intent = "test-intent-model"
+            svc._model_chat = "test-chat-model"
+            svc._fallback_nvidia = "nvidia_fallback"
 
             import pytz
 

@@ -164,8 +164,8 @@ TELEGRAM_USER_ID_NINA=    # Ninas ID
 
 # AI
 OPENROUTER_API_KEY=       # openrouter.ai/keys
-AI_MODEL=meta-llama/llama-3.3-70b-instruct:free
-AI_MODEL_FALLBACK=mistralai/mistral-7b-instruct:free
+AI_MODEL_INTENT=meta-llama/llama-3.1-8b-instruct
+AI_MODEL_CHAT=google/gemma-3-27b-it
 
 # Voice
 GROQ_API_KEY=             # console.groq.com (kostenlos, 7.200 Sek./Tag)
