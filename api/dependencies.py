@@ -36,6 +36,10 @@ async def startup():
     from src.services.drive_service import DriveService
     from src.services.notification_service import NotificationService
     from src.services.template_service import TemplateService
+    from src.services.contacts_service import ContactsService
+    from src.services.followup_service import FollowUpService
+    from src.services.weather_service import WeatherService
+    from src.services.mobility_service import MobilityService
     from src.services.database import init_db
 
     init_db()
@@ -56,6 +60,10 @@ async def startup():
         ("drive", DriveService),
         ("notification", NotificationService),
         ("template", TemplateService),
+        ("contacts", ContactsService),
+        ("followup", FollowUpService),
+        ("weather", WeatherService),
+        ("mobility", MobilityService),
     ]
     for name, cls in _constructors:
         try:
@@ -65,12 +73,13 @@ async def startup():
 
     # Async-Initialisierung – nur erfolgreich initialisierte Services uebernehmen
     # Services ohne async init (ai, shopping, chefkoch) werden direkt uebernommen
-    for name in ("ai", "shopping", "chefkoch"):
+    for name in ("ai", "shopping", "chefkoch", "weather", "mobility"):
         if name in pending:
             _svc[name] = pending[name]
             logger.info("API Service '%s' registriert (sync).", name)
 
     for name in ("memory", "calendar", "notes", "reminder", "task", "email", "drive", "notification", "template"):
+    for name in ("memory", "calendar", "notes", "reminder", "task", "email", "drive", "notification", "contacts", "followup"):
         if name not in pending:
             continue
         try:
@@ -175,6 +184,25 @@ def get_notification_service():
 
 def get_template_service():
     return _require("template")
+def get_contacts_service():
+    return _require("contacts")
+
+
+def get_followup_service():
+    return _require("followup")
+
+
+def get_weather_service():
+    return _require("weather")
+
+
+def get_weather_service_optional():
+    """Weather-Service oder None (kein 503 wenn nicht verfuegbar)."""
+    return _svc.get("weather")
+
+
+def get_mobility_service():
+    return _require("mobility")
 
 
 def get_bot_shim():
