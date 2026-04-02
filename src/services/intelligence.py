@@ -44,6 +44,7 @@ class IntelligenceEngine:
         # 1. History und Memory-Kontext PARALLEL laden
         async def _load_history() -> list[dict]:
             try:
+
                 def _query():
                     with get_db()() as session:
                         recent = (
@@ -54,6 +55,7 @@ class IntelligenceEngine:
                             .all()
                         )
                         return [{"role": r.role, "content": r.content} for r in reversed(recent)]
+
                 return await asyncio.to_thread(_query)
             except Exception:
                 return []
