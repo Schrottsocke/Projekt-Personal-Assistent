@@ -135,6 +135,9 @@ const Api = (() => {
   function toggleShoppingItem(id, checked) {
     return request(`/shopping/items/${id}`, { method: 'PATCH', body: { checked } });
   }
+  function updateShoppingItem(id, data) {
+    return request(`/shopping/items/${id}`, { method: 'PATCH', body: data });
+  }
   function deleteShoppingItem(id) {
     return request(`/shopping/items/${id}`, { method: 'DELETE' });
   }
@@ -286,7 +289,7 @@ const Api = (() => {
   return {
     getToken, getUserKey, isLoggedIn, login, logout, clearAuth,
     getDashboard,
-    getShoppingItems, addShoppingItem, toggleShoppingItem, deleteShoppingItem, clearCheckedItems,
+    getShoppingItems, addShoppingItem, toggleShoppingItem, updateShoppingItem, deleteShoppingItem, clearCheckedItems,
     searchRecipes, getSavedRecipes, saveRecipe, deleteRecipe, toggleFavorite, addRecipeToShopping,
     getChatHistory, sendMessage,
     getFeatures, toggleFeature,
