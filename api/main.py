@@ -43,6 +43,8 @@ from api.routers import (
     status,
     search,
     preferences,
+    inbox,
+    automation,
 )
 
 logger = structlog.get_logger(__name__)
@@ -215,6 +217,8 @@ app.include_router(features.router)
 app.include_router(github.router, prefix="/github", tags=["GitHub"])
 app.include_router(search.router, prefix="/search", tags=["Suche"])
 app.include_router(preferences.router, prefix="/preferences", tags=["Preferences"])
+app.include_router(inbox.router, prefix="/inbox", tags=["Inbox"])
+app.include_router(automation.router, prefix="/automation", tags=["Automation"])
 app.include_router(status.router)
 
 

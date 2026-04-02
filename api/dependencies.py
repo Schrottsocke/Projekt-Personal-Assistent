@@ -35,6 +35,8 @@ async def startup():
     from src.services.email_service import EmailService
     from src.services.drive_service import DriveService
     from src.services.notification_service import NotificationService
+    from src.services.inbox_service import InboxService
+    from src.services.automation_service import AutomationService
     from src.services.database import init_db
 
     init_db()
@@ -54,6 +56,8 @@ async def startup():
         ("email", EmailService),
         ("drive", DriveService),
         ("notification", NotificationService),
+        ("inbox", InboxService),
+        ("automation", AutomationService),
     ]
     for name, cls in _constructors:
         try:
@@ -68,7 +72,7 @@ async def startup():
             _svc[name] = pending[name]
             logger.info("API Service '%s' registriert (sync).", name)
 
-    for name in ("memory", "calendar", "notes", "reminder", "task", "email", "drive", "notification"):
+    for name in ("memory", "calendar", "notes", "reminder", "task", "email", "drive", "notification", "inbox", "automation"):
         if name not in pending:
             continue
         try:
@@ -169,6 +173,14 @@ def get_drive_service():
 
 def get_notification_service():
     return _require("notification")
+
+
+def get_inbox_service():
+    return _require("inbox")
+
+
+def get_automation_service():
+    return _require("automation")
 
 
 def get_bot_shim():
