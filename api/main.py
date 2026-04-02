@@ -45,6 +45,7 @@ from api.routers import (
     preferences,
     weather,
     mobility,
+    sync,
 )
 
 logger = structlog.get_logger(__name__)
@@ -219,6 +220,7 @@ app.include_router(search.router, prefix="/search", tags=["Suche"])
 app.include_router(preferences.router, prefix="/preferences", tags=["Preferences"])
 app.include_router(weather.router, prefix="/weather", tags=["Wetter"])
 app.include_router(mobility.router, prefix="/mobility", tags=["Mobilität"])
+app.include_router(sync.router, prefix="/sync", tags=["Sync"])
 app.include_router(status.router)
 
 
