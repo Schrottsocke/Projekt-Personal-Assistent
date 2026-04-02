@@ -1,9 +1,13 @@
-"""Rezepte: Chefkoch-Suche + gespeicherte Rezepte."""
+"""Rezepte: Chefkoch-Suche + gespeicherte Rezepte + Bild-Proxy."""
 
+import hashlib
 import logging
+import re
 from typing import Annotated
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import Response
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -20,16 +24,27 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 CHEFKOCH_BASE = "https://www.chefkoch.de/rezepte"
+_CHEFKOCH_CDN = "https://img.chefkoch-cdn.de"
+_ALLOWED_CDN_RE = re.compile(r"^https://img\.chefkoch-cdn\.de/")
+
+
+def _to_proxy_url(original_url: str) -> str:
+    """Wandelt eine Chefkoch-CDN-URL in eine lokale Proxy-URL um."""
+    if not original_url or not _ALLOWED_CDN_RE.match(original_url):
+        return original_url
+    path = original_url.replace(_CHEFKOCH_CDN, "", 1)
+    return f"/recipes/img-proxy{path}"
 
 
 def _parse_recipe(raw: dict) -> dict:
     """Normalisiert ein Chefkoch-API-Ergebnis."""
     item = raw.get("recipe", raw.get("item", raw))
     rid = item.get("id", "")
+    direct_url = (item.get("previewImageUrlTemplate") or "").replace("<format>", "crop-400x300")
     return {
         "chefkoch_id": str(rid),
         "title": item.get("title", ""),
-        "image_url": (item.get("previewImageUrlTemplate") or "").replace("<format>", "crop-400x300"),
+        "image_url": _to_proxy_url(direct_url),
         "prep_time": item.get("preparationTime") or 0,
         "cook_time": item.get("cookingTime") or 0,
         "difficulty": {1: "Einfach", 2: "Normal", 3: "Anspruchsvoll", 4: "Profi"}.get(item.get("difficulty", 0), ""),
@@ -133,6 +148,42 @@ async def delete_saved(
         if not rec:
             raise HTTPException(status_code=404, detail="Rezept nicht gefunden.")
         session.delete(rec)
+
+
+@router.get("/img-proxy/{path:path}")
+@limiter.limit("60/minute")
+async def image_proxy(request: Request, path: str):
+    """Proxied Chefkoch-CDN-Bilder um Hotlinking-Schutz zu umgehen."""
+    if not re.match(r"^rezepte/\d+/bilder/\d+/crop-\d+x\d+", path):
+        raise HTTPException(status_code=400, detail="Ungültiger Bildpfad.")
+
+    upstream = f"{_CHEFKOCH_CDN}/{path}"
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/131.0.0.0 Safari/537.36"
+        ),
+        "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
+        "Referer": "https://www.chefkoch.de/",
+    }
+    try:
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+            resp = await client.get(upstream, headers=headers)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail="Bild nicht verfügbar.")
+        ct = resp.headers.get("content-type", "image/jpeg")
+        etag = hashlib.md5(path.encode()).hexdigest()  # noqa: S324
+        return Response(
+            content=resp.content,
+            media_type=ct,
+            headers={
+                "Cache-Control": "public, max-age=86400",
+                "ETag": f'"{etag}"',
+            },
+        )
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Chefkoch-CDN nicht erreichbar.")
 
 
 @router.get("/{chefkoch_id}")
