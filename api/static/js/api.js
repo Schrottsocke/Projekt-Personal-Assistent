@@ -344,9 +344,9 @@ const Api = (() => {
   }
 
   // GitHub Issues
-  function getGitHubLabels() { return request('/github/labels'); }
-  function getGitHubIssues() { return request('/github/issues'); }
-  function createGitHubIssue(data) { return request('/github/issues', { method: 'POST', body: data }); }
+  function getGitHubLabels() { return request('/github/labels', { timeoutMs: 10000 }); }
+  function getGitHubIssues() { return request('/github/issues', { timeoutMs: 10000 }); }
+  function createGitHubIssue(data) { return request('/github/issues', { method: 'POST', body: data, timeoutMs: 15000 }); }
 
   // Shifts / Dienstplan
   function getShiftTypes(all = false) {
