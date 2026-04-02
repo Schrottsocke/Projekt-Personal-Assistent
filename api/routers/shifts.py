@@ -154,11 +154,7 @@ async def delete_shift_type(
         if not row:
             raise HTTPException(status_code=404, detail="Diensttyp nicht gefunden.")
         # Soft-Delete wenn Eintraege existieren
-        has_entries = (
-            session.query(ShiftEntry)
-            .filter_by(shift_type_id=type_id, user_key=user_key)
-            .first()
-        )
+        has_entries = session.query(ShiftEntry).filter_by(shift_type_id=type_id, user_key=user_key).first()
         if has_entries:
             row.is_active = False
             session.flush()
@@ -203,11 +199,7 @@ async def create_shift_entry(
 
     with get_db()() as session:
         # Pruefen ob ShiftType existiert und dem User gehoert
-        stype = (
-            session.query(ShiftType)
-            .filter_by(id=body.shift_type_id, user_key=user_key, is_active=True)
-            .first()
-        )
+        stype = session.query(ShiftType).filter_by(id=body.shift_type_id, user_key=user_key, is_active=True).first()
         if not stype:
             raise HTTPException(status_code=404, detail="Diensttyp nicht gefunden oder inaktiv.")
 
