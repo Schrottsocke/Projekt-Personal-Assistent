@@ -25,6 +25,12 @@
   Router.register('#/focus', (c) => FocusView.render(c));
   Router.register('#/inbox', (c) => InboxView.render(c));
   Router.register('#/automation', (c) => AutomationView.render(c));
+  Router.register('#/documents', (c) => DocumentsView.render(c));
+  Router.register('#/templates', (c) => TemplatesView.render(c));
+  Router.register('#/contacts', (c) => ContactsView.render(c));
+  Router.register('#/followups', (c) => FollowUpsView.render(c));
+  Router.register('#/weather', (c) => WeatherView.render(c));
+  Router.register('#/mobility', (c) => MobilityView.render(c));
 
   // ── Default Nav (vor Preferences-Load) ──
   const DEFAULT_NAV = [
@@ -49,9 +55,15 @@
     shifts: { route: '#/shifts', icon: 'work', label: 'Dienste' },
     issues: { route: '#/issues', icon: 'bug_report', label: 'Issues' },
     focus: { route: '#/focus', icon: 'center_focus_strong', label: 'Fokus' },
+    documents: { route: '#/documents', icon: 'scanner', label: 'Dokumente' },
+    templates: { route: '#/templates', icon: 'library_books', label: 'Vorlagen' },
     notifications: { route: '#/notifications', icon: 'notifications', label: 'Alerts' },
     inbox: { route: '#/inbox', icon: 'inbox', label: 'Inbox' },
     automation: { route: '#/automation', icon: 'smart_toy', label: 'Automation' },
+    contacts: { route: '#/contacts', icon: 'contacts', label: 'Kontakte' },
+    followups: { route: '#/followups', icon: 'reply_all', label: 'Follow-ups' },
+    weather: { route: '#/weather', icon: 'cloud', label: 'Wetter' },
+    mobility: { route: '#/mobility', icon: 'route', label: 'Mobilität' },
   };
 
   // ── Cached Preferences ──

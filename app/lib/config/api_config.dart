@@ -67,4 +67,18 @@ class ApiConfig {
   static const String inboxPath = '/inbox';
   static const String inboxCountPath = '/inbox/count';
   static const String automationPath = '/automation';
+  static const String documentsPath = '/documents';
+  static const String documentsUploadPath = '/documents/upload';
+  static const String templatesPath = '/templates';
+  static const String contactsPath = '/contacts';
+  static const String followupsPath = '/followups';
+  static const String followupsDuePath = '/followups/due';
+  static const String weatherCurrentPath = '/weather/current';
+  static const String weatherForecastPath = '/weather/forecast';
+  static const String weatherSimplePath = '/weather/simple';
+  static const String mobilityTravelTimePath = '/mobility/travel-time';
+  static const String mobilityDepartureTimePath = '/mobility/departure-time';
+  static const String mobilityDailyFlowPath = '/mobility/daily-flow';
+  static const String syncStatusPath = '/sync/status';
+  static const String syncBatchPath = '/sync/batch';
 }

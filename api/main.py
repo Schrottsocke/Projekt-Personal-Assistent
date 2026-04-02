@@ -36,6 +36,7 @@ from api.routers import (
     recipes,
     mealplan,
     drive,
+    documents,
     features,
     github,
     notifications,
@@ -45,6 +46,12 @@ from api.routers import (
     preferences,
     inbox,
     automation,
+    templates,
+    contacts,
+    followups,
+    weather,
+    mobility,
+    sync,
 )
 
 logger = structlog.get_logger(__name__)
@@ -211,6 +218,8 @@ app.include_router(shopping.router, prefix="/shopping", tags=["Einkauf"])
 app.include_router(recipes.router, prefix="/recipes", tags=["Rezepte"])
 app.include_router(mealplan.router, prefix="/meal-plan", tags=["Wochenplan"])
 app.include_router(drive.router, prefix="/drive", tags=["Drive"])
+app.include_router(documents.router, prefix="/documents", tags=["Dokumente"])
+app.include_router(templates.router, prefix="/templates", tags=["Vorlagen"])
 app.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 app.include_router(shifts.router, prefix="/shifts", tags=["Dienstplan"])
 app.include_router(features.router)
@@ -219,6 +228,11 @@ app.include_router(search.router, prefix="/search", tags=["Suche"])
 app.include_router(preferences.router, prefix="/preferences", tags=["Preferences"])
 app.include_router(inbox.router, prefix="/inbox", tags=["Inbox"])
 app.include_router(automation.router, prefix="/automation", tags=["Automation"])
+app.include_router(contacts.router, prefix="/contacts", tags=["Kontakte"])
+app.include_router(followups.router, prefix="/followups", tags=["Follow-ups"])
+app.include_router(weather.router, prefix="/weather", tags=["Wetter"])
+app.include_router(mobility.router, prefix="/mobility", tags=["Mobilität"])
+app.include_router(sync.router, prefix="/sync", tags=["Sync"])
 app.include_router(status.router)
 
 
