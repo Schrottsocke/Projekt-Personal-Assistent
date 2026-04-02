@@ -6,11 +6,46 @@ Spezialisierungen (Bot/API) erben und erweitern diese Klasse.
 """
 
 import asyncio
+import hashlib
 import logging
 import threading
+import time
+
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
+
+
+class _TTLCache:
+    """Einfacher In-Memory TTL-Cache fuer Memory-Suchergebnisse."""
+
+    def __init__(self, ttl_seconds: int = 300):
+        self._store: dict[str, tuple] = {}  # key -> (value, expires_at)
+        self._ttl = ttl_seconds
+
+    def _make_key(self, user_id: str, query: str, limit: int) -> str:
+        q_hash = hashlib.md5(f"{query.strip().lower()}:{limit}".encode()).hexdigest()[:12]
+        return f"{user_id}:{q_hash}"
+
+    def get(self, user_id: str, query: str, limit: int):
+        key = self._make_key(user_id, query, limit)
+        entry = self._store.get(key)
+        if entry and time.monotonic() < entry[1]:
+            return entry[0]
+        if entry:
+            del self._store[key]
+        return None
+
+    def set(self, user_id: str, query: str, limit: int, value) -> None:
+        key = self._make_key(user_id, query, limit)
+        self._store[key] = (value, time.monotonic() + self._ttl)
+
+    def invalidate_user(self, user_id: str) -> None:
+        """Alle Cache-Eintraege fuer einen User loeschen (nach Memory-Write)."""
+        prefix = f"{user_id}:"
+        keys_to_delete = [k for k in self._store if k.startswith(prefix)]
+        for k in keys_to_delete:
+            del self._store[k]
 
 
 class BaseMemoryService:
@@ -22,6 +57,7 @@ class BaseMemoryService:
     def __init__(self):
         self._memory = None
         self._available = False
+        self._search_cache = _TTLCache(ttl_seconds=settings.MEMORY_CACHE_TTL_MINUTES * 60)
 
     async def initialize(self):
         """Initialisiert mem0. Kann in Subklassen erweitert werden."""
@@ -96,6 +132,7 @@ class BaseMemoryService:
                 user_id=user_key,
             )
             logger.debug("Memory hinzugefuegt fuer %s: %s...", user_key, content[:50])
+            self._search_cache.invalidate_user(user_key)
         except (OSError, ValueError, RuntimeError) as e:
             logger.error("Memory-Add-Fehler: %s", e)
 
@@ -105,6 +142,7 @@ class BaseMemoryService:
             return []
         try:
             result = await asyncio.to_thread(self._memory.add, messages, user_id=user_key)
+            self._search_cache.invalidate_user(user_key)
             if isinstance(result, dict) and "results" in result:
                 return [r.get("id", "") for r in result["results"]]
             return []
@@ -117,16 +155,26 @@ class BaseMemoryService:
     # ------------------------------------------------------------------
 
     async def search_memories(self, user_key: str, query: str, limit: int = 5) -> list[dict]:
-        """Semantische Suche nach relevanten Erinnerungen."""
+        """Semantische Suche nach relevanten Erinnerungen (mit TTL-Cache)."""
         if not self._available or not self._memory:
             return []
+
+        cached = self._search_cache.get(user_key, query, limit)
+        if cached is not None:
+            logger.info("perf | phase=history_and_memory | result=cache_hit")
+            return cached
+
         try:
             results = await asyncio.to_thread(self._memory.search, query=query, user_id=user_key, limit=limit)
             if isinstance(results, dict) and "results" in results:
-                return results["results"]
-            if isinstance(results, list):
-                return results
-            return []
+                out = results["results"]
+            elif isinstance(results, list):
+                out = results
+            else:
+                out = []
+            self._search_cache.set(user_key, query, limit, out)
+            logger.info("perf | phase=history_and_memory | result=cache_miss")
+            return out
         except (OSError, ValueError, RuntimeError) as e:
             logger.error("Memory-Search-Fehler: %s", e)
             return []
