@@ -327,11 +327,13 @@ def init_db():
                             logger.warning("Migration fehlgeschlagen: %s", e)
                             raise
 
-        # Data-Fix: Chefkoch-Bild-URLs mit fehlendem 'crop-' Prefix reparieren
+        # Data-Fix: Chefkoch-Bild-URLs reparieren (crop-Prefix + Proxy-Umstellung)
         with _engine.connect() as conn:
             for fix_sql in [
-                "UPDATE saved_recipes SET image_url = REPLACE(image_url, '/400x300/', '/crop-400x300/') WHERE image_url LIKE '%/400x300/%'",
-                "UPDATE meal_plan_entries SET recipe_image_url = REPLACE(recipe_image_url, '/400x300/', '/crop-400x300/') WHERE recipe_image_url LIKE '%/400x300/%'",
+                "UPDATE saved_recipes SET image_url = REPLACE(image_url, '/400x300/', '/crop-400x300/') WHERE image_url LIKE '%/400x300/%' AND image_url NOT LIKE '%/crop-400x300/%'",
+                "UPDATE meal_plan_entries SET recipe_image_url = REPLACE(recipe_image_url, '/400x300/', '/crop-400x300/') WHERE recipe_image_url LIKE '%/400x300/%' AND recipe_image_url NOT LIKE '%/crop-400x300/%'",
+                "UPDATE saved_recipes SET image_url = REPLACE(image_url, 'https://img.chefkoch-cdn.de', '/recipes/img-proxy') WHERE image_url LIKE 'https://img.chefkoch-cdn.de%'",
+                "UPDATE meal_plan_entries SET recipe_image_url = REPLACE(recipe_image_url, 'https://img.chefkoch-cdn.de', '/recipes/img-proxy') WHERE recipe_image_url LIKE 'https://img.chefkoch-cdn.de%'",
             ]:
                 result = conn.execute(sa_text(fix_sql))
                 if result.rowcount:
