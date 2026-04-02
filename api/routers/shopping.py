@@ -62,6 +62,8 @@ async def update_item(
             raise HTTPException(status_code=404, detail="Item nicht gefunden.")
         if body.quantity is not None:
             db_item.quantity = body.quantity
+        if body.unit is not None:
+            db_item.unit = body.unit
         if body.checked is not None:
             db_item.checked = body.checked
         result = {c.name: getattr(db_item, c.name) for c in db_item.__table__.columns}
