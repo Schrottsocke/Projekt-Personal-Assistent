@@ -18,6 +18,9 @@
   <div id="app">
     <header class="app-header hidden">
       <h1>DualMind</h1>
+      <button class="header-search-btn" onclick="CommandPalette.open()" title="Suche (Ctrl+K)">
+        <span class="material-symbols-outlined">search</span>
+      </button>
     </header>
 
     <main id="view-container"></main>
@@ -65,6 +68,8 @@
   <script src="/static/js/views/drive.js"></script>
   <script src="/static/js/views/issues.js"></script>
   <script src="/static/js/views/shifts.js"></script>
+  <script src="/static/js/views/commandPalette.js"></script>
+  <script src="/static/js/views/quickCapture.js"></script>
   <!-- App Init -->
   <script src="/static/js/app.js"></script>
   <!-- Service Worker -->
