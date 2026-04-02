@@ -1,6 +1,36 @@
 /**
  * DualMind API Client – JWT Auth, Auto-Refresh, Error Handling
  */
+
+/* ── Global Toast Notifications ─────────────────── */
+const Toast = (() => {
+  let container = null;
+
+  function ensureContainer() {
+    if (container && document.body.contains(container)) return container;
+    container = document.createElement('div');
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+    return container;
+  }
+
+  function show(message, type = 'error') {
+    const c = ensureContainer();
+    const el = document.createElement('div');
+    el.className = `toast toast-${type}`;
+    el.textContent = message;
+    c.appendChild(el);
+    setTimeout(() => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(100%)';
+      el.style.transition = '0.3s ease';
+      setTimeout(() => el.remove(), 300);
+    }, 5000);
+  }
+
+  return { show };
+})();
+
 const Api = (() => {
   const TOKEN_KEY = 'dm_access_token';
   const REFRESH_KEY = 'dm_refresh_token';
@@ -74,8 +104,11 @@ const Api = (() => {
     } catch (err) {
       if (timer) clearTimeout(timer);
       if (err.name === 'AbortError') {
-        throw new Error('Zeitüberschreitung – der Server hat zu lange gebraucht. Bitte versuche es erneut.');
+        const msg = 'Zeitüberschreitung – der Server hat zu lange gebraucht. Bitte versuche es erneut.';
+        Toast.show(msg);
+        throw new Error(msg);
       }
+      Toast.show(err.message || 'Netzwerkfehler');
       throw err;
     }
     if (timer) clearTimeout(timer);
@@ -100,7 +133,9 @@ const Api = (() => {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
-      throw new Error(err.detail || `HTTP ${res.status}`);
+      const msg = err.detail || `HTTP ${res.status}`;
+      Toast.show(msg);
+      throw new Error(msg);
     }
 
     return res.json();
@@ -168,7 +203,7 @@ const Api = (() => {
     return request(`/chat/history?limit=${limit}`);
   }
   function sendMessage(message) {
-    return request('/chat/message', { method: 'POST', body: { message }, timeoutMs: 60000 });
+    return request('/chat/message', { method: 'POST', body: { message }, timeoutMs: 30000 });
   }
 
   // Features
