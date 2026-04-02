@@ -277,6 +277,12 @@ Verfuegbare MCP-Server in diesem Projekt:
   - Nur lesende Ops ohne Rueckfrage. Schreibende Ops: D7-Guardrail beachten.
 - **Slack** (wenn konfiguriert) – Channels, Messages, Canvases
 
+MCP-Startup-Timing: MCP-Server starten im Hintergrund via npx und brauchen ggf. einige Sekunden.
+Vor GitHub-Arbeit zu Sessionbeginn (Issues laden, Triage, Checks) MCP-Readiness pruefen:
+1. Wenn erwartete MCP-Tools noch nicht sichtbar: nicht sofort Defekt annehmen
+2. Einige Sekunden warten, dann ToolSearch erneut versuchen
+3. Erst bei anhaltendem Fehlen unterscheiden: Startup-Timing vs. fehlender Token vs. Konfigurationsproblem
+
 Neue MCP-Integration = Skill-Audit-Trigger.
 
 ## Skill-Audit Trigger
