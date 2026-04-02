@@ -2,11 +2,47 @@
  * Recipes View – Search, Saved, Detail Modal
  */
 const RecipesView = (() => {
+  const SEARCH_STORAGE_KEY = 'recipes_search_state';
+  const SEARCH_TTL_MS = 30 * 60 * 1000; // 30 minutes
+  const PLACEHOLDER_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect fill='%23262626' width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23555' font-family='sans-serif' font-size='48'%3E🍽%3C/text%3E%3C/svg%3E`;
+
   let activeTab = 'search';
   let searchResults = [];
   let savedRecipes = [];
   let searchTimer = null;
   let currentServings = 4;
+
+  function handleImgError(img) {
+    img.onerror = null;
+    img.src = PLACEHOLDER_SVG;
+  }
+
+  function saveSearchState(query, results) {
+    try {
+      sessionStorage.setItem(SEARCH_STORAGE_KEY, JSON.stringify({
+        query: query,
+        results: results,
+        timestamp: Date.now()
+      }));
+    } catch (_) { /* quota exceeded – ignore */ }
+  }
+
+  function loadSearchState() {
+    try {
+      const raw = sessionStorage.getItem(SEARCH_STORAGE_KEY);
+      if (!raw) return null;
+      const state = JSON.parse(raw);
+      if (Date.now() - state.timestamp > SEARCH_TTL_MS) {
+        sessionStorage.removeItem(SEARCH_STORAGE_KEY);
+        return null;
+      }
+      return state;
+    } catch (_) { return null; }
+  }
+
+  function clearSearchState() {
+    sessionStorage.removeItem(SEARCH_STORAGE_KEY);
+  }
 
   async function render(container) {
     container.innerHTML = `
@@ -34,15 +70,20 @@ const RecipesView = (() => {
 
   function renderSearch() {
     const el = document.getElementById('recipes-content');
+    const saved = loadSearchState();
     el.innerHTML = `
       <div class="input-group mb-16">
         <input type="search" id="recipe-search" placeholder="Rezept suchen…"
-               oninput="RecipesView.onSearch(this.value)">
+               oninput="RecipesView.onSearch(this.value)" value="${saved ? escapeHtml(saved.query) : ''}">
       </div>
       <div id="recipe-results">
         <div class="empty-state">Suchbegriff eingeben, um Rezepte zu finden</div>
       </div>
     `;
+    if (saved && saved.results && saved.results.length > 0) {
+      searchResults = saved.results;
+      renderRecipeGrid(document.getElementById('recipe-results'), searchResults, false);
+    }
   }
 
   function onSearch(query) {
@@ -66,6 +107,7 @@ const RecipesView = (() => {
         return;
       }
       renderRecipeGrid(el, searchResults, false);
+      saveSearchState(query, searchResults);
     } catch (err) {
       el.innerHTML = `<div class="error-state"><p>${err.message}</p></div>`;
     }
@@ -94,7 +136,7 @@ const RecipesView = (() => {
       const time = (r.prep_time || 0) + (r.cook_time || 0);
       html += `
         <div class="recipe-card" onclick="RecipesView.showDetail(${idx}, ${isSaved})">
-          ${imgSrc ? `<img class="recipe-img" src="${escapeHtml(imgSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '<div class="recipe-img"></div>'}
+          ${imgSrc ? `<img class="recipe-img" src="${escapeHtml(imgSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${PLACEHOLDER_SVG}'">` : '<div class="recipe-img"></div>'}
           <div class="recipe-info">
             <div class="recipe-title">${escapeHtml(r.title)}</div>
             <div class="recipe-meta">
@@ -131,7 +173,7 @@ const RecipesView = (() => {
           <h2 style="font-size:1.1rem;font-weight:600">${escapeHtml(r.title)}</h2>
           <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><span class="material-symbols-outlined">close</span></button>
         </div>
-        ${r.image_url ? `<img class="modal-img" src="${escapeHtml(r.image_url)}" alt="" referrerpolicy="no-referrer">` : ''}
+        ${r.image_url ? `<img class="modal-img" src="${escapeHtml(r.image_url)}" alt="" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${PLACEHOLDER_SVG}'">` : ''}
         <div class="recipe-meta mb-16">
           ${r.prep_time ? `<span><span class="material-symbols-outlined mi-sm">schedule</span> ${r.prep_time} Min. Vorbereitung</span>` : ''}
           ${r.cook_time ? `<span><span class="material-symbols-outlined mi-sm">skillet</span> ${r.cook_time} Min. Kochen</span>` : ''}

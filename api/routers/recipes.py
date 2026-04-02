@@ -96,6 +96,9 @@ async def list_saved(
     with get_db()() as session:
         rows = session.query(SavedRecipe).filter_by(user_key=user_key).all()
         result = [{c.name: getattr(r, c.name) for c in r.__table__.columns} for r in rows]
+    for item in result:
+        if item.get("image_url"):
+            item["image_url"] = _to_proxy_url(item["image_url"])
     return result
 
 
