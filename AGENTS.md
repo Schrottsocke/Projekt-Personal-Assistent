@@ -1,85 +1,61 @@
-# AGENTS.md — Projektkontext für Claude Code
-
-Diese Datei wird von Claude Code beim Start automatisch gelesen.
-Sie definiert die Umsetzungsreihenfolge der offenen UX-Issues sowie technische Leitplanken, die für alle Sessions gelten.
-
----
-
-## UX-Roadmap — Reihenfolge einhalten
-
-Die Reihenfolge ist durch technische Abhängigkeiten vorgegeben.
-Issue #439 legt das Preferences-Datenmodell an, das alle nachfolgenden Issues nutzen.
-
-1. **#439** `feat(profile)` — Profil / Preferences-Layer  
-   _Zuerst umsetzen. Alle anderen Issues nutzen dasselbe serverseitige Preferences-Modell._
-
-2. **#435** `feat(app)` — Konfigurierbare Navigation  
-   _Baut direkt auf dem Preferences-Modell aus #439 auf._
-
-3. **#434** `feat(app)` — Konfigurierbares Dashboard  
-   _Nutzt Preferences und die neue Navigation._
-
-4. **#436** `feat(app)` — Tasks & Kalender  
-   _Eigenständige Screens, keine harten Voraussetzungen aus den oberen Issues._
-
-5. **#437** `feat(chat)` — Chat (P1-high)  
-   _Keine strukturellen Voraussetzungen, aber hohe Priorität._
-
-6. **#438** `feat(meal-plan)` — Meal Plan  
-   _Schließt den Flow Rezepte → Wochenplan → Einkauf ab._
-
----
-
-## Technische Leitplanken
-
-### Allgemein
-- **Preferences-Modell**: Das in #439 definierte serverseitige Preferences-Modell wiederverwenden — nicht neu erfinden
-- **Riverpod**: Bestehende Provider-Struktur beibehalten, keine Migration auf andere State-Management-Lösungen
-- **Plattformkompatibilität**: Alle Screens müssen auf WebApp, iOS und Android funktionieren — kein Web-Only-Code
-- **API-Erweiterungen**: Erlaubt, wenn sauber und wiederverwendbar modelliert
-
-### Preferences
-- Serverseitig speichern als Primärspeicher
-- Lokal cachen als Fallback — nicht als Primärquelle
-- Dasselbe Modell für Dashboard-Widgets, Navigation-Tabs und Profil-Settings verwenden
-
-### UI-Qualität (Pflicht bei jedem Screen)
-- **Skeleton Loader** während Daten laden
-- **Empty State** mit beschreibendem Text und primärer Aktion
-- **Error State** mit Retry-Möglichkeit
-- **Offline-Indikator** bei fehlender API-Verbindung
-
----
-
-## Arbeitsweise
-
-- Pro Session **ein Issue** vollständig abarbeiten
-- Akzeptanzkriterien im Issue als Checkliste verwenden und abhaken
-- Keine übergreifenden Refactorings ohne Rückfrage beim Nutzer
-- Wenn ein Issue Backend-Erweiterungen erfordert, diese im selben Branch umsetzen
-- Kein Feature als "fertig" markieren, solange Skeleton/Empty/Error States fehlen
-
----
-
-## Projektstruktur (Kurzreferenz)
-
-```
-/app          → Flutter WebApp (Screens, Widgets, Provider, Services, Models)
-/api          → FastAPI Backend (Router, Services, Models)
-/bot          → Telegram Bot
-/config       → Konfigurationsdateien
-/docs         → Dokumentation
-```
-
-### Relevante API-Endpunkte für die UX-Roadmap
-
-| Bereich | Endpunkte |
-|---|---|
-| Dashboard | `GET /dashboard/today` |
-| Tasks | `GET/POST/PATCH/DELETE /tasks` |
-| Kalender | `GET /calendar/today`, `GET /calendar/week`, `POST /calendar/events` |
-| Shopping | `GET/POST/DELETE /shopping/items` |
-| Rezepte | `GET /recipes/search`, `GET /recipes/saved` |
-| Meal Plan | `GET /meal-plan/week`, `POST /meal-plan/entries` |
-| Chat | `POST /chat/message` |
-| Preferences | Ggf. neu anlegen als Teil von #439 |
+AGENTS.md — Produktkontext und Architekturleitplanken
+Diese Datei beschreibt den fachlichen Kontext des Projekts sowie produktbezogene Leitplanken fuer Coding Agents.
+Arbeitsmodus, Sessionregeln, GitHub-Flow, Stop-Regeln und Claude-spezifisches Verhalten stehen ausschliesslich in `CLAUDE.md`.
+Produktverstaendnis
+DualMind ist ein produktiv nutzbarer persoenlicher Assistent, keine Demo-Oberflaeche.
+Neue Features sollen alltagstauglich, robust und plattformuebergreifend nutzbar sein.
+WebApp, iOS und Android sollen moeglichst dieselbe fachliche Logik und dieselben Nutzerpraeferenzen verwenden.
+Der Nutzer soll zentrale Assistentenfunktionen nicht nur im Chat, sondern auch ueber eine klare App-Oberflaeche steuern koennen.
+Informationsarchitektur
+Home ist das Dashboard.
+Das Dashboard ist modular und widget-basiert.
+Navigation ist nutzerkonfigurierbar.
+Tasks, Kalender und Meal Plan sind standardmaessig aktiviert.
+Auf kleinen Screens duerfen nicht beliebig viele Haupt-Tabs gleichzeitig sichtbar sein; zusaetzliche aktive Bereiche sollen ueber Overflow oder „Mehr“ erreichbar sein.
+Fokus-/Heute-Ansichten sind reduzierte Varianten des Dashboards und kein separates zweites Dashboard-System.
+Produktregeln nach Bereich
+Dashboard
+Widgets sollen aktivierbar, deaktivierbar und umsortierbar sein.
+Kompakte Fokus-/Heute-Ansichten sollen nur die wichtigsten Tagespunkte priorisieren.
+Dashboard-Varianten sollen auf denselben Daten- und Preference-Strukturen aufbauen.
+Chat
+Text ist das kanonische Nachrichtenformat.
+Voice ist ein alternativer Eingabekanal und wird zu Text transkribiert.
+Chat-Logik soll nicht plattformabhaengig auseinanderlaufen.
+Telegram, WebApp und spaetere Mobile-Apps sollen dieselben fachlichen Chat-Faehigkeiten verwenden.
+Inbox und Notifications
+Inbox ist fuer pruef- und uebernehmbare Vorschlaege.
+Notifications sind fuer Hinweise, Warnungen, Erinnerungen und Statusaenderungen.
+Diese beiden Konzepte duerfen fachlich nicht vermischt werden.
+Dokumente
+Dokumentverarbeitung ist ein echter Nutzerfluss: neu -> analysiert -> Aktion vorgeschlagen -> abgelegt.
+Dokumente sollen nachvollziehbare Status, Extraktionen und Folgeaktionen haben.
+Dokumente sind keine reine Debug- oder Admin-Ansicht.
+Kontakte und Follow-ups
+Kontakte dienen als leichte Kontextschicht fuer E-Mail, Kalender, Erinnerungen und Vorschlaege.
+Kein vollwertiges CRM aufbauen.
+Follow-ups sollen offene Rueckmeldungen und Zusagen unterstuetzen, nicht komplexe Sales-Prozesse.
+Wetter und Mobility
+Wetter ist Kontext fuer Tagesplanung, nicht nur eine isolierte Einzelabfrage.
+Mobility soll proaktiv mit Kalender- und Wetterkontext zusammenarbeiten.
+Das Ziel ist Assistenz im Alltag, nicht der Bau einer vollstaendigen Navigations- oder Wetter-App.
+Preferences
+Nutzerpraeferenzen sind plattformuebergreifend zu denken.
+Theme, Schriftgroesse, Navigation, Fokus, Quiet Hours, TTS und aehnliche Einstellungen sollen als zusammenhaengendes Preferences-Modell behandelt werden.
+Serverseitige Speicherung ist die bevorzugte Richtung; lokaler Cache ist nur Fallback.
+UX-Leitplanken
+Jede produktive Ansicht braucht Loading-, Empty- und Error-States.
+Keine toten Platzhalter oder rein visuellen Demo-Elemente in produktiven Flows.
+Mobile Nutzbarkeit immer mitdenken.
+Bestehende Muster konsistent halten, statt fuer jedes neue Feature eine neue Interaktionslogik einzufuehren.
+Architekturleitplanken
+Bestehende Models, Services, Provider und API-Vertraege bevorzugt wiederverwenden.
+Neue Strukturen nur einfuehren, wenn vorhandene Strukturen fachlich nicht passen.
+Neue Features sollen nach Moeglichkeit an bestehende Bausteine andocken, insbesondere Dashboard, Inbox, Notifications, Preferences, Kontakte und Dokumente.
+Backend-Erweiterungen sollen generisch und wiederverwendbar modelliert werden.
+Relevante Bereiche im Repo
+`app/` — Flutter-App / WebApp-Client
+`api/` — FastAPI-Backend und REST-Endpunkte
+`src/` — Kernlogik und Services
+`memory/` — projektbezogene Dokumentation und Erkenntnisse
+`docs/` — Playbooks und ergänzende Projektdokumentation
