@@ -232,7 +232,12 @@ class AIService:
         intent_data = await self._detect_intent(message, user_key)
         intent = intent_data.get("intent", INTENT_CHAT)
         t_intent = time.perf_counter() - t0
-        logger.info("perf | phase=intent_detection | duration_ms=%d | intent=%s | user=%s", int(t_intent * 1000), intent, user_key)
+        logger.info(
+            "perf | phase=intent_detection | duration_ms=%d | intent=%s | user=%s",
+            int(t_intent * 1000),
+            intent,
+            user_key,
+        )
 
         # Feature-Gate: Deaktivierte Features fallen auf Chat zurück
         if not self._feature_enabled(intent, user_key):
@@ -271,7 +276,9 @@ class AIService:
         t_handler = time.perf_counter() - t0
         t_total = time.perf_counter() - t_start
 
-        logger.info("perf | phase=handler | duration_ms=%d | intent=%s | user=%s", int(t_handler * 1000), intent, user_key)
+        logger.info(
+            "perf | phase=handler | duration_ms=%d | intent=%s | user=%s", int(t_handler * 1000), intent, user_key
+        )
         logger.info("perf | phase=total | duration_ms=%d | intent=%s | user=%s", int(t_total * 1000), intent, user_key)
         return result
 
