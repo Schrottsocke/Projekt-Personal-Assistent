@@ -5,6 +5,7 @@ Entscheidet ob Kalender, Notiz, Erinnerung oder normaler Chat gemeint ist.
 
 import json
 import logging
+import re
 import time
 from datetime import datetime, timedelta
 from typing import Optional
@@ -50,6 +51,40 @@ INTENT_EMAIL_COMPOSE = "email_compose"
 INTENT_MOBILITY = "mobility"
 INTENT_WEATHER = "weather"
 
+# --- Intent-Detection Pre-Filter (Issue #473) ---
+_SIMPLE_CHAT_PATTERN = re.compile(
+    r"^"
+    r"(?:"
+    r"hallo|hi|hey|moin|guten\s+(morgen|tag|abend|nacht)|servus|"
+    r"ok|okay|danke|bitte|super|cool|gut|toll|prima|jawohl|jo|ja|nein|ne|nope|"
+    r"wie\s+geht.{0,20}|was\s+machst.{0,30}|alles\s+klar.{0,10}|"
+    r"tschuess|bye|ciao|auf\s+wiedersehen"
+    r")\s*[!?.]*$",
+    re.IGNORECASE | re.UNICODE,
+)
+
+_INTENT_KEYWORD_PATTERN = re.compile(
+    r"\b("
+    r"termin|kalender|meeting|treffen|erinnerung|reminder|event|"
+    r"aufgabe|task|todo|erledigen|frist|deadline|"
+    r"einkauf|einkaufen|liste|produkt|kaufen|"
+    r"rezept|kochen|zubereiten|zutaten|"
+    r"wetter|regen|temperatur|vorhersage"
+    r")\b",
+    re.IGNORECASE | re.UNICODE,
+)
+
+
+def _should_skip_intent_detection(message: str) -> bool:
+    """Prüft ob Intent-Detection übersprungen werden kann (Smalltalk / kurze Nachrichten)."""
+    stripped = message.strip()
+    word_count = len(stripped.split())
+    if word_count <= 4 and not _INTENT_KEYWORD_PATTERN.search(stripped):
+        return True
+    if _SIMPLE_CHAT_PATTERN.match(stripped):
+        return True
+    return False
+
 
 class AIService:
     """
@@ -63,8 +98,9 @@ class AIService:
             base_url=settings.OPENROUTER_BASE_URL,
             timeout=httpx.Timeout(90.0, connect=10.0),
         )
-        self._model = settings.AI_MODEL
-        self._fallback_model = settings.AI_MODEL_FALLBACK
+        self._model_intent = settings.AI_MODEL_INTENT
+        self._model_chat = settings.AI_MODEL_CHAT
+        self._fallback_nvidia = settings.AI_MODEL_FALLBACK_NVIDIA
         self.tz = pytz.timezone(settings.TIMEZONE)
         self._intelligence = None  # Lazy init
         self._web_search = None  # Lazy init
@@ -176,7 +212,7 @@ class AIService:
         _start: int = 0,
     ) -> str:
         """Führt einen API-Call durch mit linearem Fallback (kein rekursiver Aufruf)."""
-        models = [self._model, self._fallback_model]
+        models = [model or self._model_chat, self._fallback_nvidia]
         kwargs_base = {
             "messages": messages,
             "max_tokens": 1024,
@@ -188,7 +224,7 @@ class AIService:
         last_exc: Exception = RuntimeError("Alle AI-Modelle fehlgeschlagen")
         for m in models[_start:]:
             try:
-                if m == "nvidia_fallback" and self._nvidia_client:
+                if m == self._fallback_nvidia and self._nvidia_client:
                     kw = {k: v for k, v in kwargs_base.items() if k != "response_format"}
                     kw["model"] = self._nvidia_model
                     response = await self._nvidia_client.chat.completions.create(**kw)
@@ -287,6 +323,10 @@ class AIService:
         Erkennt den Intent einer Nachricht via KI.
         Gibt (intent_type, extracted_data) zurück.
         """
+        if _should_skip_intent_detection(message):
+            logger.info("perf | phase=intent_detection | result=skipped_by_prefilter")
+            return {"intent": INTENT_CHAT, "confidence": 1.0, "skipped": True}
+
         active_intents = set(get_enabled_intents(user_key))
         now = datetime.now(self.tz)
 
@@ -422,6 +462,7 @@ Details je nach Intent:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
             ],
+            model=self._model_intent,
             json_mode=True,
         )
 
