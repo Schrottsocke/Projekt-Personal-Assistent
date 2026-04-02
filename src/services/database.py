@@ -295,6 +295,17 @@ def init_db():
                             logger.warning("Migration fehlgeschlagen: %s", e)
                             raise
 
+        # Data-Fix: Chefkoch-Bild-URLs mit fehlendem 'crop-' Prefix reparieren
+        with _engine.connect() as conn:
+            for fix_sql in [
+                "UPDATE saved_recipes SET image_url = REPLACE(image_url, '/400x300/', '/crop-400x300/') WHERE image_url LIKE '%/400x300/%'",
+                "UPDATE meal_plan_entries SET recipe_image_url = REPLACE(recipe_image_url, '/400x300/', '/crop-400x300/') WHERE recipe_image_url LIKE '%/400x300/%'",
+            ]:
+                result = conn.execute(sa_text(fix_sql))
+                if result.rowcount:
+                    logger.info("Bild-URL-Fix: %d Zeilen aktualisiert (%s)", result.rowcount, fix_sql.split()[1])
+            conn.commit()
+
         logger.info(f"Datenbank initialisiert: {settings.DATABASE_URL}")
 
 
