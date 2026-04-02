@@ -23,22 +23,23 @@ const DriveView = (() => {
   }
 
   function fileIcon(mimeType) {
-    if (!mimeType) return '&#128196;';
-    if (mimeType.startsWith('image/')) return '&#128247;';
-    if (mimeType.startsWith('video/')) return '&#127910;';
-    if (mimeType.startsWith('audio/')) return '&#127925;';
-    if (mimeType.includes('pdf')) return '&#128212;';
-    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return '&#128202;';
-    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return '&#128202;';
-    if (mimeType.includes('document') || mimeType.includes('word')) return '&#128196;';
-    if (mimeType.includes('folder')) return '&#128193;';
-    return '&#128196;';
+    const mi = (name) => `<span class="material-symbols-outlined">${name}</span>`;
+    if (!mimeType) return mi('draft');
+    if (mimeType.startsWith('image/')) return mi('image');
+    if (mimeType.startsWith('video/')) return mi('videocam');
+    if (mimeType.startsWith('audio/')) return mi('audio_file');
+    if (mimeType.includes('pdf')) return mi('picture_as_pdf');
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return mi('table_chart');
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return mi('slideshow');
+    if (mimeType.includes('document') || mimeType.includes('word')) return mi('description');
+    if (mimeType.includes('folder')) return mi('folder');
+    return mi('draft');
   }
 
   async function render(container) {
     container.innerHTML = `
-      <a class="view-back" href="#/dashboard">&#8592; Dashboard</a>
-      <div class="section-header"><span class="section-icon">&#128193;</span> Drive</div>
+      <a class="view-back" href="#/dashboard"><span class="material-symbols-outlined mi-sm">arrow_back</span> Dashboard</a>
+      <div class="section-header"><span class="section-icon material-symbols-outlined">folder</span> Drive</div>
       <div id="drive-status"></div>
       <div class="input-group mb-8">
         <input type="search" id="drive-search" placeholder="Dateien suchen…"
@@ -48,7 +49,7 @@ const DriveView = (() => {
         <div class="upload-area">
           <input type="file" id="drive-file-input" class="hidden" onchange="DriveView.handleFileSelect()">
           <button class="btn btn-sm btn-secondary" onclick="document.getElementById('drive-file-input').click()" id="upload-btn">
-            &#128228; Datei hochladen
+            <span class="material-symbols-outlined mi-sm">upload</span> Datei hochladen
           </button>
           <span id="upload-status" class="card-subtitle" style="margin-left:8px"></span>
         </div>
@@ -80,7 +81,7 @@ const DriveView = (() => {
     if (!connected) {
       el.innerHTML = `<div class="card" style="border-color:var(--warning)">
         <div class="flex-between">
-          <span>&#9888; Google Drive nicht verbunden</span>
+          <span><span class="material-symbols-outlined mi-sm">warning</span> Google Drive nicht verbunden</span>
           <span class="badge badge-warning">Nicht verbunden</span>
         </div>
       </div>`;
@@ -117,7 +118,7 @@ const DriveView = (() => {
             ${f.modified_time ? ' &middot; ' + formatDate(f.modified_time) : ''}
           </div>
         </div>
-        ${f.web_view_link ? `<a href="${escapeHtml(f.web_view_link)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" title="Oeffnen">&#128279;</a>` : ''}
+        ${f.web_view_link ? `<a href="${escapeHtml(f.web_view_link)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" title="Oeffnen"><span class="material-symbols-outlined mi-sm">open_in_new</span></a>` : ''}
       </div>
     `).join('');
   }

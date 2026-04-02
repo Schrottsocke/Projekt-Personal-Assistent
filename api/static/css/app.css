@@ -1,6 +1,7 @@
-/* DualMind Web App – Dark Theme */
+/* DualMind Web App – Themes */
 
-:root {
+:root,
+[data-theme="dark"] {
   --bg-primary: #121212;
   --bg-secondary: #1e1e1e;
   --bg-card: #252525;
@@ -48,6 +49,43 @@
   --bg-elevated: #2a2a2a;
   --accent-subtle: rgba(124, 77, 255, 0.08);
   --accent-border: rgba(124, 77, 255, 0.35);
+}
+
+[data-theme="light"] {
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #f0f0f2;
+  --bg-hover: #e8e8ec;
+  --bg-elevated: #ffffff;
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #999999;
+  --accent: #6c3ce0;
+  --accent-hover: #5a2dc5;
+  --accent-light: rgba(108, 60, 224, 0.1);
+  --accent-subtle: rgba(108, 60, 224, 0.06);
+  --accent-border: rgba(108, 60, 224, 0.25);
+  --border: #e0e0e4;
+  --shadow: rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.04);
+  --success: #2e7d32;
+  --warning: #e65100;
+  --error: #c62828;
+}
+
+[data-theme="light"] .bottom-nav {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="light"] .app-header {
+  background: rgba(255, 255, 255, 0.95);
+}
+
+[data-theme="light"] .chat-bubble.user .chat-time {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -126,7 +164,28 @@ html, body {
   position: relative;
 }
 
-.nav-item .nav-icon { font-size: 1.5rem; }
+.nav-item .nav-icon { font-size: 1.5rem; line-height: 1; }
+
+/* Material Symbols base */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+}
+
+.nav-item.active .material-symbols-outlined {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.section-icon.material-symbols-outlined {
+  font-size: 1.25rem;
+  vertical-align: -3px;
+}
+
+/* Inline icon helper for small Material icons in text */
+.mi { font-size: 1.125rem !important; vertical-align: -4px; }
+.mi-sm { font-size: 1rem !important; vertical-align: -3px; }
+
+/* Delete button with Material icon */
+.item-delete .material-symbols-outlined { font-size: 1.25rem; }
 
 .nav-item:hover { color: var(--text-secondary); }
 
@@ -942,8 +1001,73 @@ textarea { resize: vertical; min-height: 80px; }
 }
 
 @media (min-width: 1024px) {
+  #app {
+    flex-direction: row;
+  }
+
+  .app-header {
+    display: none !important;
+  }
+
+  .bottom-nav {
+    flex-direction: column;
+    justify-content: flex-start;
+    width: 220px;
+    min-width: 220px;
+    border-top: none;
+    border-right: 1px solid var(--border);
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
+    padding: var(--space-5) 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    order: -1;
+    gap: var(--space-1);
+    overflow-y: auto;
+  }
+
+  .bottom-nav::before {
+    content: 'DualMind';
+    display: block;
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--accent);
+    padding: var(--space-4) var(--space-5);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-item {
+    flex-direction: row;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-5);
+    border-radius: 0;
+    font-size: var(--text-base);
+    justify-content: flex-start;
+  }
+
+  .nav-item .nav-icon {
+    font-size: 1.3rem;
+  }
+
+  .nav-item.active {
+    background: var(--accent-subtle);
+  }
+
+  .nav-item.active::after {
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 24px;
+    border-radius: 0 3px 3px 0;
+  }
+
   #view-container {
     max-width: 900px;
+    margin: 0 auto;
+    flex: 1;
+    min-width: 0;
   }
 }
 

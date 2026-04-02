@@ -36,8 +36,8 @@ const MealPlanView = (() => {
   async function render(container) {
     showForm = false;
     container.innerHTML = `
-      <a class="view-back" href="#/dashboard">&#8592; Dashboard</a>
-      <div class="section-header"><span class="section-icon">&#127869;</span> Wochenplan</div>
+      <a class="view-back" href="#/dashboard"><span class="material-symbols-outlined mi-sm">arrow_back</span> Dashboard</a>
+      <div class="section-header"><span class="section-icon material-symbols-outlined">restaurant</span> Wochenplan</div>
       <div class="week-nav">
         <button class="btn btn-sm btn-secondary" onclick="MealPlanView.prevWeek()">&#8592; Vorherige</button>
         <span id="week-label" class="week-label">KW ${getWeekNumber(weekStart)}</span>
@@ -112,7 +112,7 @@ const MealPlanView = (() => {
                 <div class="meal-title">${escapeHtml(m.recipe_title)}</div>
                 ${m.servings ? `<div class="meal-meta">${m.servings} Portionen</div>` : ''}
                 ${m.notes ? `<div class="meal-meta">${escapeHtml(m.notes)}</div>` : ''}
-                <button class="item-delete" onclick="MealPlanView.deleteEntry(${m.id})" title="Löschen">&#128465;</button>
+                <button class="item-delete" onclick="MealPlanView.deleteEntry(${m.id})" title="Löschen"><span class="material-symbols-outlined">delete</span></button>
               </div>
             `;
           });
