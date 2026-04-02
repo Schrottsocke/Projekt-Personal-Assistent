@@ -94,7 +94,7 @@ const RecipesView = (() => {
       const time = (r.prep_time || 0) + (r.cook_time || 0);
       html += `
         <div class="recipe-card" onclick="RecipesView.showDetail(${idx}, ${isSaved})">
-          ${imgSrc ? `<img class="recipe-img" src="${escapeHtml(imgSrc)}" alt="" loading="lazy">` : '<div class="recipe-img"></div>'}
+          ${imgSrc ? `<img class="recipe-img" src="${escapeHtml(imgSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : '<div class="recipe-img"></div>'}
           <div class="recipe-info">
             <div class="recipe-title">${escapeHtml(r.title)}</div>
             <div class="recipe-meta">
@@ -131,7 +131,7 @@ const RecipesView = (() => {
           <h2 style="font-size:1.1rem;font-weight:600">${escapeHtml(r.title)}</h2>
           <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><span class="material-symbols-outlined">close</span></button>
         </div>
-        ${r.image_url ? `<img class="modal-img" src="${escapeHtml(r.image_url)}" alt="">` : ''}
+        ${r.image_url ? `<img class="modal-img" src="${escapeHtml(r.image_url)}" alt="" referrerpolicy="no-referrer">` : ''}
         <div class="recipe-meta mb-16">
           ${r.prep_time ? `<span><span class="material-symbols-outlined mi-sm">schedule</span> ${r.prep_time} Min. Vorbereitung</span>` : ''}
           ${r.cook_time ? `<span><span class="material-symbols-outlined mi-sm">skillet</span> ${r.cook_time} Min. Kochen</span>` : ''}
