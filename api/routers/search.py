@@ -48,7 +48,7 @@ async def global_search(
                     id=t.id,
                     title=t.title,
                     subtitle=f"Status: {t.status or 'offen'} · Priorität: {t.priority or 'normal'}",
-                    route=f"#/tasks",
+                    route="#/tasks",
                 )
             )
 
