@@ -37,10 +37,10 @@ const ShiftsView = (() => {
           <h2 style="margin:0">Dienstplan</h2>
         </div>
       </div>
-      <div class="tabs mb-8">
-        <button class="tab ${activeTab === 'types' ? 'active' : ''}"
+      <div class="tabs mb-8" id="shifts-tabs">
+        <button class="tab ${activeTab === 'types' ? 'active' : ''}" data-tab="types"
                 onclick="ShiftsView.switchTab('types')">Diensttypen</button>
-        <button class="tab ${activeTab === 'calendar' ? 'active' : ''}"
+        <button class="tab ${activeTab === 'calendar' ? 'active' : ''}" data-tab="calendar"
                 onclick="ShiftsView.switchTab('calendar')">Kalender</button>
       </div>
       <div id="shifts-content"><div class="loading"><div class="spinner"></div></div></div>
@@ -49,11 +49,18 @@ const ShiftsView = (() => {
     await loadData();
   }
 
-  function switchTab(tab) {
+  async function switchTab(tab) {
     activeTab = tab;
     showTypeForm = false;
     editingType = null;
-    renderContent();
+    updateTabButtons();
+    await renderContent();
+  }
+
+  function updateTabButtons() {
+    document.querySelectorAll('#shifts-tabs .tab').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.tab === activeTab);
+    });
   }
 
   async function loadData() {
@@ -62,16 +69,16 @@ const ShiftsView = (() => {
     } catch (e) {
       shiftTypes = [];
     }
-    renderContent();
+    await renderContent();
   }
 
-  function renderContent() {
+  async function renderContent() {
     const el = document.getElementById('shifts-content');
     if (!el) return;
     if (activeTab === 'types') {
       renderTypes(el);
     } else {
-      renderCalendar(el);
+      await renderCalendar(el);
     }
   }
 
@@ -260,6 +267,9 @@ const ShiftsView = (() => {
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
     const monthName = currentMonth.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' });
+
+    // Show loading state
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
     // Load entries for this month
     const firstDay = `${year}-${String(month + 1).padStart(2, '0')}-01`;
