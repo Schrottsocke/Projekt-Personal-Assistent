@@ -64,6 +64,9 @@ class ApiConfig {
   static const String driveUploadPath = '/drive/upload';
   static const String preferencesPath = '/preferences';
   static const String preferencesRegistryPath = '/preferences/registry';
+  static const String inboxPath = '/inbox';
+  static const String inboxCountPath = '/inbox/count';
+  static const String automationPath = '/automation';
   static const String documentsPath = '/documents';
   static const String documentsUploadPath = '/documents/upload';
   static const String templatesPath = '/templates';
