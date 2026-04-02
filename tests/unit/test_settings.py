@@ -6,8 +6,9 @@ from config.settings import Settings
 class TestSettingsDefaults:
     """Prüft ob Defaults korrekt gesetzt sind."""
 
-    def test_default_ai_model(self):
-        assert "llama" in Settings.AI_MODEL or Settings.AI_MODEL != ""
+    def test_default_ai_models(self):
+        assert Settings.AI_MODEL_INTENT != ""
+        assert Settings.AI_MODEL_CHAT != ""
 
     def test_default_timezone(self, settings_fresh):
         assert settings_fresh.TIMEZONE == "Europe/Berlin"
