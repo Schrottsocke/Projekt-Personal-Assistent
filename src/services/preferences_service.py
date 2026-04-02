@@ -101,6 +101,14 @@ NAV_ITEMS_REGISTRY = [
         "default_pinned": False,
         "default_order": 10,
     },
+    {
+        "id": "focus",
+        "label": "Fokus",
+        "icon": "center_focus_strong",
+        "route": "#/focus",
+        "default_pinned": False,
+        "default_order": 11,
+    },
 ]
 
 # Alle verfuegbaren Dashboard-Widgets mit Defaults

@@ -34,7 +34,11 @@ const CalendarView = (() => {
         <button class="tab ${activeTab === 'week' ? 'active' : ''}" data-tab="week" onclick="CalendarView.switchTab('week')">Woche</button>
       </div>
       <div id="calendar-toolbar"></div>
-      <div id="calendar-content"><div class="loading"><div class="spinner"></div> Laden…</div></div>
+      <div id="calendar-content">
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+      </div>
     `;
     await loadData();
   }
@@ -43,7 +47,7 @@ const CalendarView = (() => {
     activeTab = tab;
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
     showForm = false;
-    document.getElementById('calendar-content').innerHTML = '<div class="loading"><div class="spinner"></div> Laden…</div>';
+    document.getElementById('calendar-content').innerHTML = '<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>';
     loadData();
   }
 
@@ -141,7 +145,11 @@ const CalendarView = (() => {
     if (!el) return;
 
     if (events.length === 0) {
-      el.innerHTML = `<div class="empty-state">Keine Termine ${activeTab === 'today' ? 'heute' : 'diese Woche'}</div>`;
+      el.innerHTML = `<div class="empty-state">
+        <span class="material-symbols-outlined" style="font-size:40px;color:var(--text-muted);display:block;margin-bottom:8px">calendar_month</span>
+        Keine Termine ${activeTab === 'today' ? 'heute' : 'diese Woche'}
+        <br><button class="btn btn-sm btn-primary mt-8" onclick="CalendarView.toggleForm()">+ Termin erstellen</button>
+      </div>`;
       return;
     }
 
