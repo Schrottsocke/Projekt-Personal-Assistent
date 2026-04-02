@@ -30,7 +30,7 @@ const LoginView = (() => {
             </button>
           </div>
           <div class="login-error hidden" id="login-error"></div>
-          <button class="btn btn-primary" style="width:100%" onclick="LoginView.doLogin()" id="login-btn">
+          <button class="btn btn-primary btn-full" onclick="LoginView.doLogin()" id="login-btn">
             Anmelden
           </button>
         </div>

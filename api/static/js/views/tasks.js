@@ -132,12 +132,12 @@ const TasksView = (() => {
         <input type="text" id="task-title" placeholder="Aufgabe" class="mb-8">
         <input type="text" id="task-desc" placeholder="Beschreibung (optional)" class="mb-8">
         <div class="input-group mb-8">
-          <select id="task-priority" style="width:100%;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:0.9rem">
+          <select id="task-priority">
             <option value="medium">Mittel</option>
             <option value="high">Hoch</option>
             <option value="low">Niedrig</option>
           </select>
-          <input type="date" id="task-due" style="background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px;font-size:0.9rem">
+          <input type="date" id="task-due">
         </div>
         <div class="flex-between">
           <button class="btn btn-sm btn-secondary" onclick="TasksView.toggleForm()">Abbrechen</button>
@@ -149,7 +149,7 @@ const TasksView = (() => {
 
   async function createTask() {
     const title = document.getElementById('task-title').value.trim();
-    if (!title) { document.getElementById('task-title').style.border = '2px solid #e74c3c'; return; }
+    if (!title) { document.getElementById('task-title').classList.add('input-error'); return; }
 
     const desc = document.getElementById('task-desc').value.trim();
     const priority = document.getElementById('task-priority').value;
