@@ -1,9 +1,11 @@
-"""POST /chat/message, GET /chat/history"""
+"""POST /chat/message, POST /chat/message/stream, GET /chat/history"""
 
+import json
 import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
+from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -40,6 +42,38 @@ async def send_message(
             response="Entschuldigung, ich konnte deine Nachricht nicht verarbeiten.",
             user_message=body.message,
         )
+
+
+@router.post("/message/stream")
+@limiter.limit(settings.RATE_LIMIT_CHAT)
+async def send_message_stream(
+    request: Request,
+    body: ChatMessageIn,
+    user_key: Annotated[str, Depends(get_current_user)],
+    ai_svc=Depends(get_ai_service),
+):
+    """SSE-Streaming endpoint for chat messages."""
+    intelligence = ai_svc.intelligence
+
+    async def event_generator():
+        try:
+            async for chunk in intelligence.process_with_memory_stream(
+                body.message, user_key
+            ):
+                yield f"data: {json.dumps({'token': chunk})}\n\n"
+            yield f"data: {json.dumps({'done': True})}\n\n"
+        except Exception as e:
+            logger.error("Streaming-Fehler für '%s': %s", user_key, e)
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/history", response_model=list[ChatMessageOut])
