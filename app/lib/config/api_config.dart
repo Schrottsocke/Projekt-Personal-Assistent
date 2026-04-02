@@ -62,4 +62,6 @@ class ApiConfig {
   static const String mealPlanPath = '/meal-plan';
   static const String driveFilesPath = '/drive/files';
   static const String driveUploadPath = '/drive/upload';
+  static const String preferencesPath = '/preferences';
+  static const String preferencesRegistryPath = '/preferences/registry';
 }

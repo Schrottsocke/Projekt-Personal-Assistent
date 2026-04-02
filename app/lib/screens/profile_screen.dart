@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/features_provider.dart';
+import '../providers/preferences_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -15,7 +16,7 @@ class ProfileScreen extends ConsumerWidget {
     final dashState = ref.watch(dashboardProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profil')),
+      appBar: AppBar(title: const Text('Einstellungen')),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -45,6 +46,22 @@ class ProfileScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 32),
+
+          // Navigation Config
+          Text('Navigation', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text('Bereiche aktivieren und in die Navbar pinnen (max. 5).', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+          const SizedBox(height: 8),
+          const _NavConfigSection(),
+          const SizedBox(height: 24),
+
+          // Dashboard Widgets
+          Text('Dashboard-Widgets', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text('Widgets auf dem Home-Screen ein-/ausblenden.', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+          const SizedBox(height: 8),
+          const _WidgetConfigSection(),
+          const SizedBox(height: 24),
 
           // Feature-Marketplace
           Row(
@@ -81,8 +98,8 @@ class ProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 32),
 
-          // Einstellungen (Platzhalter)
-          Text('Einstellungen', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          // Sonstige Einstellungen
+          Text('Sonstige Einstellungen', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           const ListTile(
             leading: Icon(Icons.schedule),
@@ -127,6 +144,155 @@ class ProfileScreen extends ConsumerWidget {
   }
 }
 
+// ── Nav Configuration Section ──
+
+class _NavConfigSection extends ConsumerWidget {
+  const _NavConfigSection();
+
+  static const _navMeta = {
+    'dashboard': {'label': 'Home', 'icon': Icons.home},
+    'shopping': {'label': 'Einkauf', 'icon': Icons.shopping_cart},
+    'recipes': {'label': 'Rezepte', 'icon': Icons.restaurant_menu},
+    'chat': {'label': 'Chat', 'icon': Icons.chat_bubble},
+    'profile': {'label': 'Profil', 'icon': Icons.person},
+    'calendar': {'label': 'Kalender', 'icon': Icons.calendar_today},
+    'tasks': {'label': 'Aufgaben', 'icon': Icons.check_circle},
+    'mealplan': {'label': 'Wochenplan', 'icon': Icons.restaurant},
+    'drive': {'label': 'Drive', 'icon': Icons.folder},
+    'shifts': {'label': 'Dienste', 'icon': Icons.work},
+    'issues': {'label': 'Issues', 'icon': Icons.bug_report},
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(preferencesProvider);
+    return state.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => const Text('Nicht abrufbar', style: TextStyle(color: Colors.grey)),
+      data: (prefs) {
+        final nav = prefs['nav'] as Map<String, dynamic>? ?? {};
+        final items = (nav['items'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+        final maxPinned = nav['maxPinned'] as int? ?? 5;
+        items.sort((a, b) => ((a['order'] as int?) ?? 0).compareTo((b['order'] as int?) ?? 0));
+
+        final pinnedCount = items.where((i) => i['enabled'] == true && i['pinned'] == true).length;
+
+        return Column(
+          children: items.map((item) {
+            final id = item['id'] as String;
+            final meta = _navMeta[id];
+            final label = meta?['label'] as String? ?? id;
+            final icon = meta?['icon'] as IconData? ?? Icons.circle;
+            final enabled = item['enabled'] as bool? ?? true;
+            final pinned = item['pinned'] as bool? ?? false;
+
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 2),
+              child: ListTile(
+                dense: true,
+                leading: Icon(icon, size: 20, color: enabled ? null : Colors.grey),
+                title: Text(label, style: TextStyle(color: enabled ? null : Colors.grey)),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Pin toggle
+                    IconButton(
+                      icon: Icon(
+                        pinned ? Icons.push_pin : Icons.push_pin_outlined,
+                        color: pinned ? Theme.of(context).colorScheme.primary : Colors.grey,
+                        size: 20,
+                      ),
+                      tooltip: pinned ? 'Aus Navbar entfernen' : 'In Navbar pinnen',
+                      onPressed: enabled && (pinned || pinnedCount < maxPinned)
+                          ? () => _toggleItem(ref, items, id, 'pinned', !pinned)
+                          : null,
+                    ),
+                    // Enable toggle
+                    Switch(
+                      value: enabled,
+                      onChanged: (val) => _toggleItem(ref, items, id, 'enabled', val),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Future<void> _toggleItem(WidgetRef ref, List<Map<String, dynamic>> items, String id, String field, bool value) async {
+    final updated = items.map((i) {
+      if (i['id'] != id) return Map<String, dynamic>.from(i);
+      final copy = Map<String, dynamic>.from(i);
+      copy[field] = value;
+      if (field == 'enabled' && !value) copy['pinned'] = false;
+      return copy;
+    }).toList();
+
+    await ref.read(preferencesProvider.notifier).update({'nav': {'items': updated}});
+  }
+}
+
+// ── Dashboard Widget Configuration Section ──
+
+class _WidgetConfigSection extends ConsumerWidget {
+  const _WidgetConfigSection();
+
+  static const _widgetMeta = {
+    'emails': {'label': 'E-Mails', 'icon': Icons.mail},
+    'shifts': {'label': 'Dienste heute', 'icon': Icons.work},
+    'events': {'label': 'Termine heute', 'icon': Icons.calendar_today},
+    'tasks': {'label': 'Offene Aufgaben', 'icon': Icons.check_circle},
+    'shopping': {'label': 'Einkaufsliste', 'icon': Icons.shopping_cart},
+    'mealplan': {'label': 'Wochenplan', 'icon': Icons.restaurant},
+    'drive': {'label': 'Drive', 'icon': Icons.folder},
+  };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(preferencesProvider);
+    return state.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => const Text('Nicht abrufbar', style: TextStyle(color: Colors.grey)),
+      data: (prefs) {
+        final dashboard = prefs['dashboard'] as Map<String, dynamic>? ?? {};
+        final widgets = (dashboard['widgets'] as List<dynamic>? ?? []).cast<Map<String, dynamic>>();
+        widgets.sort((a, b) => ((a['order'] as int?) ?? 0).compareTo((b['order'] as int?) ?? 0));
+
+        return Column(
+          children: widgets.map((w) {
+            final id = w['id'] as String;
+            final meta = _widgetMeta[id];
+            final label = meta?['label'] as String? ?? id;
+            final icon = meta?['icon'] as IconData? ?? Icons.widgets;
+            final enabled = w['enabled'] as bool? ?? true;
+
+            return SwitchListTile(
+              dense: true,
+              secondary: Icon(icon, size: 20),
+              title: Text(label),
+              value: enabled,
+              onChanged: (val) async {
+                final updated = widgets.map((item) {
+                  if (item['id'] != id) return Map<String, dynamic>.from(item);
+                  final copy = Map<String, dynamic>.from(item);
+                  copy['enabled'] = val;
+                  return copy;
+                }).toList();
+                await ref.read(preferencesProvider.notifier).update({'dashboard': {'widgets': updated}});
+              },
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+}
+
+// ── Features Section (unchanged) ──
+
 class _FeaturesSection extends ConsumerWidget {
   const _FeaturesSection();
 
@@ -160,6 +326,8 @@ class _FeaturesSection extends ConsumerWidget {
     );
   }
 }
+
+// ── Service Status Tile ──
 
 class _ServiceTile extends StatelessWidget {
   final IconData icon;
