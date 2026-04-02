@@ -18,24 +18,23 @@ limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger(__name__)
 
 
+def _normalize_dt(val) -> str:
+    """Extrahiert ISO-String aus Google Calendar start/end Dicts."""
+    if isinstance(val, dict):
+        return val.get("dateTime", val.get("date", ""))
+    return val or ""
+
+
 def _to_out(event: dict) -> dict:
     return {
         "id": event.get("id"),
         "summary": event.get("summary", ""),
-        "start": event.get("start", ""),
-        "end": event.get("end", ""),
+        "start": _normalize_dt(event.get("start")),
+        "end": _normalize_dt(event.get("end")),
         "description": event.get("description", ""),
         "location": event.get("location", ""),
         "source": "google",
     }
-
-
-def _sort_key(event: dict) -> str:
-    """Sortier-Key: ISO-Datetime-String aus start extrahieren."""
-    start = event.get("start", "")
-    if isinstance(start, dict):
-        return start.get("dateTime", start.get("date", ""))
-    return str(start)
 
 
 @router.get("/today")
@@ -53,7 +52,7 @@ async def calendar_today(
     today_str = datetime.now().strftime("%Y-%m-%d")
     try:
         shift_events = get_shift_events_for_range(user_key, today_str, today_str)
-        events = sorted(events + shift_events, key=_sort_key)
+        events = sorted(events + shift_events, key=lambda e: e.get("start", ""))
     except Exception as e:
         logger.warning("Shift-Events fuer heute konnten nicht geladen werden: %s", e)
 
@@ -78,7 +77,7 @@ async def calendar_week(
     end_str = (today + timedelta(days=days)).strftime("%Y-%m-%d")
     try:
         shift_events = get_shift_events_for_range(user_key, start_str, end_str)
-        events = sorted(events + shift_events, key=_sort_key)
+        events = sorted(events + shift_events, key=lambda e: e.get("start", ""))
     except Exception as e:
         logger.warning("Shift-Events fuer Woche konnten nicht geladen werden: %s", e)
 
