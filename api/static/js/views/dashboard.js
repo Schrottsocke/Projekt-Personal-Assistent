@@ -108,7 +108,7 @@ const DashboardView = (() => {
       html += `<div class="empty-state">Einkaufsliste ist leer</div>`;
     } else {
       html += `
-        <div class="card" style="cursor:pointer" onclick="Router.navigate('#/shopping')">
+        <div class="card" class="card-clickable" onclick="Router.navigate('#/shopping')">
           <div class="flex-between mb-8">
             <span>${pending} offen</span>
             <span class="card-subtitle">${checked}/${total} erledigt</span>
@@ -147,7 +147,7 @@ const DashboardView = (() => {
           todayMeals.forEach(m => {
             const typeLabels = { breakfast: 'Fruehstueck', lunch: 'Mittagessen', dinner: 'Abendessen' };
             extraHtml += `
-              <div class="card" style="cursor:pointer" onclick="Router.navigate('#/mealplan')">
+              <div class="card" class="card-clickable" onclick="Router.navigate('#/mealplan')">
                 <div class="card-subtitle">${typeLabels[m.meal_type] || m.meal_type}</div>
                 <div class="card-title">${escapeHtml(m.recipe_title)}</div>
               </div>
@@ -171,7 +171,7 @@ const DashboardView = (() => {
         } else {
           driveData.files.forEach(f => {
             extraHtml += `
-              <div class="card" style="cursor:pointer" onclick="Router.navigate('#/drive')">
+              <div class="card" class="card-clickable" onclick="Router.navigate('#/drive')">
                 <div class="card-title">${escapeHtml(f.name)}</div>
                 ${f.modified_time ? `<div class="card-subtitle">${new Date(f.modified_time).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</div>` : ''}
               </div>

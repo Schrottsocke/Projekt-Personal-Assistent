@@ -28,7 +28,7 @@ const ChatView = (() => {
     try {
       const messages = await Api.getChatHistory(50);
       if (messages.length === 0) {
-        el.innerHTML = '<div class="empty-state" style="margin-top:40%">Schreib mir etwas!</div>';
+        el.innerHTML = '<div class="empty-state chat-empty">Schreib mir etwas!</div>';
         return;
       }
       renderMessages(messages);

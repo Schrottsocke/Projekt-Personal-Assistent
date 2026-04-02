@@ -135,17 +135,15 @@ const MealPlanView = (() => {
       <div class="card event-create-form">
         <input type="text" id="meal-title" placeholder="Rezeptname" class="mb-8">
         <div class="input-group mb-8">
-          <input type="date" id="meal-date" value="${today}" style="flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px;font-size:0.9rem">
-          <select id="meal-type" style="flex:1;padding:10px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);font-size:0.9rem">
+          <input type="date" id="meal-date" value="${today}" style="flex:1">
+          <select id="meal-type" style="flex:1">
             <option value="breakfast">Fruehstueck</option>
             <option value="lunch">Mittagessen</option>
             <option value="dinner" selected>Abendessen</option>
           </select>
         </div>
         <div class="input-group mb-8">
-          <label for="meal-servings" style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:2px">Portionen</label>
-          <input type="number" id="meal-servings" value="4" min="1" max="20" placeholder="Portionen"
-                 style="flex:1;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text-primary);padding:10px;font-size:0.9rem">
+          <input type="number" id="meal-servings" value="4" min="1" max="20" placeholder="Portionen" style="flex:1">
           <input type="text" id="meal-notes" placeholder="Notizen (optional)" style="flex:2">
         </div>
         <div class="flex-between">

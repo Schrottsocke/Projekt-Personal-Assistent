@@ -113,9 +113,9 @@ const CalendarView = (() => {
     const location = document.getElementById('event-location').value.trim();
 
     if (!summary || !start || !end) {
-      if (!summary) document.getElementById('event-summary').style.border = '2px solid #e74c3c';
-      if (!start) document.getElementById('event-start').style.border = '2px solid #e74c3c';
-      if (!end) document.getElementById('event-end').style.border = '2px solid #e74c3c';
+      if (!summary) document.getElementById('event-summary').classList.add('input-error');
+      if (!start) document.getElementById('event-start').classList.add('input-error');
+      if (!end) document.getElementById('event-end').classList.add('input-error');
       return;
     }
 
