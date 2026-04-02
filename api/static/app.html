@@ -18,9 +18,15 @@
   <div id="app">
     <header class="app-header hidden">
       <h1>DualMind</h1>
-      <button class="header-search-btn" onclick="CommandPalette.open()" title="Suche (Ctrl+K)">
-        <span class="material-symbols-outlined">search</span>
-      </button>
+      <div class="header-actions">
+        <button class="header-btn notification-bell hidden" onclick="window.location.hash='#/notifications'" title="Benachrichtigungen">
+          <span class="material-symbols-outlined">notifications</span>
+          <span id="notification-badge" class="notification-badge hidden">0</span>
+        </button>
+        <button class="header-btn header-search-btn" onclick="CommandPalette.open()" title="Suche (Ctrl+K)">
+          <span class="material-symbols-outlined">search</span>
+        </button>
+      </div>
     </header>
 
     <main id="view-container"></main>
@@ -47,6 +53,7 @@
   <script src="/static/js/views/drive.js"></script>
   <script src="/static/js/views/issues.js"></script>
   <script src="/static/js/views/shifts.js"></script>
+  <script src="/static/js/views/notifications.js"></script>
   <script src="/static/js/views/focus.js"></script>
   <script src="/static/js/views/commandPalette.js"></script>
   <script src="/static/js/views/quickCapture.js"></script>

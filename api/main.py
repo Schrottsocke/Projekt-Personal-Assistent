@@ -38,6 +38,7 @@ from api.routers import (
     drive,
     features,
     github,
+    notifications,
     shifts,
     status,
     search,
@@ -208,6 +209,7 @@ app.include_router(shopping.router, prefix="/shopping", tags=["Einkauf"])
 app.include_router(recipes.router, prefix="/recipes", tags=["Rezepte"])
 app.include_router(mealplan.router, prefix="/meal-plan", tags=["Wochenplan"])
 app.include_router(drive.router, prefix="/drive", tags=["Drive"])
+app.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 app.include_router(shifts.router, prefix="/shifts", tags=["Dienstplan"])
 app.include_router(features.router)
 app.include_router(github.router, prefix="/github", tags=["GitHub"])

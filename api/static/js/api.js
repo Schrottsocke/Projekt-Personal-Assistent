@@ -393,6 +393,30 @@ const Api = (() => {
   function getGitHubIssues() { return request('/github/issues', { timeoutMs: 10000 }); }
   function createGitHubIssue(data) { return request('/github/issues', { method: 'POST', body: data, timeoutMs: 15000 }); }
 
+  // Notifications
+  function getNotifications(params = {}) {
+    const qs = new URLSearchParams();
+    if (params.type) qs.set('type', params.type);
+    if (params.status) qs.set('status', params.status);
+    if (params.limit) qs.set('limit', params.limit);
+    if (params.offset) qs.set('offset', params.offset);
+    const q = qs.toString();
+    return request(`/notifications${q ? '?' + q : ''}`);
+  }
+  function getNotificationCount() { return request('/notifications/count'); }
+  function updateNotification(id, status) {
+    return request(`/notifications/${id}`, { method: 'PATCH', body: { status } });
+  }
+  function bulkUpdateNotifications(ids, status) {
+    return request('/notifications/bulk', { method: 'PATCH', body: { ids, status } });
+  }
+  function markAllNotificationsRead() {
+    return request('/notifications/mark-all-read', { method: 'POST' });
+  }
+  function createNotification(data) {
+    return request('/notifications', { method: 'POST', body: data });
+  }
+
   // Shifts / Dienstplan
   function getShiftTypes(all = false) {
     return request(`/shifts/types${all ? '?all=true' : ''}`);
@@ -428,6 +452,7 @@ const Api = (() => {
     getMealPlanWeek, createMealPlan, deleteMealPlan,
     getDriveFiles, uploadFile,
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
+    getNotifications, getNotificationCount, updateNotification, bulkUpdateNotifications, markAllNotificationsRead, createNotification,
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
     getPreferences, updatePreferences, getPreferencesRegistry,
