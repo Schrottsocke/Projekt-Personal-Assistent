@@ -60,6 +60,7 @@ class AIService:
         self._client = AsyncOpenAI(
             api_key=settings.OPENROUTER_API_KEY,
             base_url=settings.OPENROUTER_BASE_URL,
+            timeout=httpx.Timeout(90.0, connect=10.0),
         )
         self._model = settings.AI_MODEL
         self._fallback_model = settings.AI_MODEL_FALLBACK
@@ -293,7 +294,7 @@ class AIService:
             ),
             (
                 "task_read",
-                '- task_read: Nutzer fragt nach offenen Aufgaben (z.B. "Was steht noch an?", "Zeig meine Todos", "Was muss ich noch tun?")',
+                '- task_read: Nutzer fragt nach offenen Aufgaben (z.B. "Was steht noch an?", "Zeig meine Todos", "Was muss ich noch tun?", "Welche Aufgaben habe ich heute?")',
             ),
             (
                 "task_complete",
