@@ -41,7 +41,7 @@ class ChefkochService:
     # Öffentliche API
     # ------------------------------------------------------------------
 
-    async def search_recipes(self, query: str, limit: int = 3) -> list[dict]:
+    async def search_recipes(self, query: str, limit: int = 3) -> list[dict] | None:
         """
         Sucht Rezepte auf Chefkoch.de.
 
@@ -50,10 +50,10 @@ class ChefkochService:
             limit: Maximale Anzahl an Ergebnissen (Standard: 3).
 
         Returns:
-            Liste von Such-Ergebnis-Dicts. Jedes enthält einen ``item``-Key
-            mit den eigentlichen Rezeptdaten. Bei Fehler leere Liste.
+            Liste von Such-Ergebnis-Dicts. Jedes enthält einen ``recipe``-Key
+            mit den eigentlichen Rezeptdaten. None bei API-Fehler.
         """
-        url = f"{CHEFKOCH_API_BASE}/search/recipes"
+        url = f"{CHEFKOCH_API_BASE}/search-gateway/recipes"
         params = {"query": query, "limit": limit, "offset": 0}
 
         try:
@@ -70,7 +70,7 @@ class ChefkochService:
             )
         except Exception as e:
             logger.error("Chefkoch search Fehler für '%s': %s", query, e)
-        return []
+        return None
 
     async def get_recipe(self, recipe_id: str) -> dict | None:
         """
@@ -243,7 +243,7 @@ class ChefkochService:
         recipe_blocks: list[str] = []
 
         for result in results:
-            item = result.get("item", {})
+            item = result.get("recipe", result.get("item", {}))
             if item:
                 recipe_blocks.append(self.format_recipe_short(item))
 
