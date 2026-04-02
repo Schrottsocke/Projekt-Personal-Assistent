@@ -64,4 +64,6 @@ class ApiConfig {
   static const String driveUploadPath = '/drive/upload';
   static const String preferencesPath = '/preferences';
   static const String preferencesRegistryPath = '/preferences/registry';
+  static const String syncStatusPath = '/sync/status';
+  static const String syncBatchPath = '/sync/batch';
 }
