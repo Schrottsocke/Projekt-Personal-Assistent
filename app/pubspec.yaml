@@ -41,6 +41,10 @@ dependencies:
   # Icons
   cupertino_icons: ^1.0.6
 
+  # Offline & Sync
+  connectivity_plus: ^6.0.3
+  shared_preferences: ^2.2.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
