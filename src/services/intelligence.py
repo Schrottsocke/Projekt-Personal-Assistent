@@ -5,8 +5,10 @@ Smarte Gedächtnis-Extraktion, Cross-User Awareness.
 Wird vom Scheduler periodisch aufgerufen und läuft im Hintergrund.
 """
 
+import asyncio
 import json
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import Optional
 import pytz
@@ -37,53 +39,72 @@ class IntelligenceEngine:
         """
         from src.services.database import ConversationHistory, get_db
 
-        # 1. Letzte Nachrichten als Kontext laden
-        try:
-            with get_db()() as session:
-                recent = (
-                    session.query(ConversationHistory)
-                    .filter_by(user_key=user_key)
-                    .order_by(ConversationHistory.created_at.desc())
-                    .limit(10)
-                    .all()
-                )
-            history = [{"role": r.role, "content": r.content} for r in reversed(recent)]
-        except Exception:
-            history = []
+        t_start = time.perf_counter()
 
-        # 2. Memory-Kontext laden (relevante Erinnerungen zur Nachricht)
-        memory_context = ""
-        try:
-            from api.dependencies import _svc
+        # 1. History und Memory-Kontext PARALLEL laden
+        async def _load_history() -> list[dict]:
+            try:
+                def _query():
+                    with get_db()() as session:
+                        recent = (
+                            session.query(ConversationHistory)
+                            .filter_by(user_key=user_key)
+                            .order_by(ConversationHistory.created_at.desc())
+                            .limit(10)
+                            .all()
+                        )
+                        return [{"role": r.role, "content": r.content} for r in reversed(recent)]
+                return await asyncio.to_thread(_query)
+            except Exception:
+                return []
 
-            mem_svc = _svc.get("memory")
-            if mem_svc:
-                memories = await mem_svc.search_memories(user_key=user_key, query=message, limit=5)
-                if memories:
-                    memory_context = "\n\nWas du über den Nutzer weißt:\n" + "\n".join(
-                        f"- {m.get('memory', '')}" for m in memories
-                    )
-        except Exception as e:
-            logger.debug(f"Memory-Lookup fehlgeschlagen: {e}")
+        async def _load_memory() -> str:
+            try:
+                from api.dependencies import _svc
 
-        # 3. System-Prompt mit Memory bauen
+                mem_svc = _svc.get("memory")
+                if mem_svc:
+                    memories = await mem_svc.search_memories(user_key=user_key, query=message, limit=5)
+                    if memories:
+                        return "\n\nWas du über den Nutzer weißt:\n" + "\n".join(
+                            f"- {m.get('memory', '')}" for m in memories
+                        )
+            except Exception as e:
+                logger.debug(f"Memory-Lookup fehlgeschlagen: {e}")
+            return ""
+
+        t0 = time.perf_counter()
+        history, memory_context = await asyncio.gather(_load_history(), _load_memory())
+        t_context = time.perf_counter() - t0
+        logger.info("perf | phase=history_and_memory | duration_ms=%d | user=%s", int(t_context * 1000), user_key)
+
+        # 2. System-Prompt mit Memory bauen
         system_prompt = self._ai._get_system_prompt(user_key) + memory_context
 
-        # 4. Messages zusammenbauen
+        # 3. Messages zusammenbauen
         messages = [{"role": "system", "content": system_prompt}]
         messages.extend(history)
         messages.append({"role": "user", "content": message})
 
-        # 5. AI-Antwort generieren
+        # 4. AI-Antwort generieren
+        t0 = time.perf_counter()
         response = await self._ai._complete(messages)
+        t_llm = time.perf_counter() - t0
+        logger.info("perf | phase=llm_completion | duration_ms=%d | user=%s", int(t_llm * 1000), user_key)
 
-        # 6. Nachricht und Antwort in DB speichern
-        try:
-            with get_db()() as session:
-                session.add(ConversationHistory(user_key=user_key, role="user", content=message))
-                session.add(ConversationHistory(user_key=user_key, role="assistant", content=response))
-        except Exception as e:
-            logger.warning(f"Chat-History speichern fehlgeschlagen: {e}")
+        # 5. Nachricht und Antwort non-blocking in DB speichern
+        def _save_history():
+            try:
+                with get_db()() as session:
+                    session.add(ConversationHistory(user_key=user_key, role="user", content=message))
+                    session.add(ConversationHistory(user_key=user_key, role="assistant", content=response))
+            except Exception as e:
+                logger.warning(f"Chat-History speichern fehlgeschlagen: {e}")
+
+        asyncio.create_task(asyncio.to_thread(_save_history))
+
+        t_total = time.perf_counter() - t_start
+        logger.info("perf | phase=process_with_memory_total | duration_ms=%d | user=%s", int(t_total * 1000), user_key)
 
         return response
 
