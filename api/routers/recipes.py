@@ -29,7 +29,7 @@ def _parse_recipe(raw: dict) -> dict:
     return {
         "chefkoch_id": str(rid),
         "title": item.get("title", ""),
-        "image_url": (item.get("previewImageUrlTemplate") or "").replace("<format>", "400x300"),
+        "image_url": (item.get("previewImageUrlTemplate") or "").replace("<format>", "crop-400x300"),
         "prep_time": item.get("preparationTime") or 0,
         "cook_time": item.get("cookingTime") or 0,
         "difficulty": {1: "Einfach", 2: "Normal", 3: "Anspruchsvoll", 4: "Profi"}.get(item.get("difficulty", 0), ""),
