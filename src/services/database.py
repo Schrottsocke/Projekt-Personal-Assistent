@@ -54,6 +54,8 @@ class UserProfile(Base):
     spotify_token_json = Column(Text, nullable=True)
     # Feature-Marketplace: aktivierte/deaktivierte Features als JSON {"calendar": true, ...}
     enabled_features = Column(Text, nullable=True)
+    # User Preferences: JSON-Blob fuer Nav, Dashboard-Widgets, Appearance etc.
+    preferences_json = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
@@ -316,6 +318,7 @@ def init_db():
                     "ALTER TABLE user_profiles ADD COLUMN tts_enabled BOOLEAN DEFAULT 0",
                     "ALTER TABLE user_profiles ADD COLUMN spotify_token_json TEXT",
                     "ALTER TABLE user_profiles ADD COLUMN enabled_features TEXT",
+                    "ALTER TABLE user_profiles ADD COLUMN preferences_json TEXT",
                 ]:
                     try:
                         conn.execute(sa_text(col_sql))

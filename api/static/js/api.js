@@ -376,6 +376,13 @@ const Api = (() => {
     return res.json();
   }
 
+  // Preferences
+  function getPreferences() { return request('/preferences'); }
+  function updatePreferences(data) {
+    return request('/preferences', { method: 'PATCH', body: data });
+  }
+  function getPreferencesRegistry() { return request('/preferences/registry'); }
+
   // Search
   function searchGlobal(query, limit = 20) {
     return request(`/search?q=${encodeURIComponent(query)}&limit=${limit}`);
@@ -423,6 +430,7 @@ const Api = (() => {
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
+    getPreferences, updatePreferences, getPreferencesRegistry,
     searchGlobal,
   };
 })();

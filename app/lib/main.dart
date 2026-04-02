@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'providers/auth_provider.dart';
+import 'providers/preferences_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/shopping_screen.dart';
@@ -38,12 +39,45 @@ void main() {
   );
 }
 
+/// Registry of all navigable areas with their metadata.
+class NavArea {
+  final String id;
+  final String path;
+  final String label;
+  final IconData icon;
+  final IconData selectedIcon;
+  final Widget screen;
+
+  const NavArea({
+    required this.id,
+    required this.path,
+    required this.label,
+    required this.icon,
+    required this.selectedIcon,
+    required this.screen,
+  });
+}
+
+/// All available nav areas. Order here is irrelevant – preferences control the order.
+final List<NavArea> allNavAreas = [
+  NavArea(id: 'dashboard', path: '/home', label: 'Home', icon: Icons.home_outlined, selectedIcon: Icons.home, screen: const HomeScreen()),
+  NavArea(id: 'shopping', path: '/shopping', label: 'Einkauf', icon: Icons.shopping_cart_outlined, selectedIcon: Icons.shopping_cart, screen: const ShoppingScreen()),
+  NavArea(id: 'recipes', path: '/recipes', label: 'Rezepte', icon: Icons.restaurant_menu_outlined, selectedIcon: Icons.restaurant_menu, screen: const RecipesScreen()),
+  NavArea(id: 'chat', path: '/chat', label: 'Chat', icon: Icons.chat_bubble_outline, selectedIcon: Icons.chat_bubble, screen: const ChatScreen()),
+  NavArea(id: 'profile', path: '/profile', label: 'Profil', icon: Icons.person_outline, selectedIcon: Icons.person, screen: const ProfileScreen()),
+];
+
+/// Default pinned nav IDs (used before preferences load).
+const List<String> defaultPinnedIds = ['dashboard', 'shopping', 'recipes', 'chat', 'profile'];
+
 class DualMindApp extends ConsumerWidget {
   const DualMindApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final router = _buildRouter(ref);
+    final prefsState = ref.watch(preferencesProvider);
+    final pinnedIds = _getPinnedIds(prefsState);
+    final router = _buildRouter(ref, pinnedIds);
 
     return MaterialApp.router(
       title: 'DualMind',
@@ -59,7 +93,43 @@ class DualMindApp extends ConsumerWidget {
     );
   }
 
-  GoRouter _buildRouter(WidgetRef ref) {
+  /// Extracts the ordered list of pinned nav area IDs from preferences.
+  List<String> _getPinnedIds(AsyncValue<Map<String, dynamic>> prefsState) {
+    return prefsState.when(
+      data: (prefs) {
+        final nav = prefs['nav'] as Map<String, dynamic>?;
+        if (nav == null) return defaultPinnedIds;
+        final items = nav['items'] as List<dynamic>?;
+        if (items == null || items.isEmpty) return defaultPinnedIds;
+
+        final pinned = items
+            .where((i) => i['enabled'] == true && i['pinned'] == true)
+            .toList()
+          ..sort((a, b) => ((a['order'] as int?) ?? 0).compareTo((b['order'] as int?) ?? 0));
+
+        final ids = pinned.map((i) => i['id'] as String).toList();
+        return ids.isNotEmpty ? ids : defaultPinnedIds;
+      },
+      loading: () => defaultPinnedIds,
+      error: (_, __) => defaultPinnedIds,
+    );
+  }
+
+  GoRouter _buildRouter(WidgetRef ref, List<String> pinnedIds) {
+    // Build branches from pinned IDs, matching against allNavAreas
+    final navAreas = <NavArea>[];
+    for (final id in pinnedIds) {
+      final area = allNavAreas.where((a) => a.id == id).firstOrNull;
+      if (area != null) navAreas.add(area);
+    }
+    // Ensure at least defaults if nothing matched
+    if (navAreas.isEmpty) {
+      for (final id in defaultPinnedIds) {
+        final area = allNavAreas.where((a) => a.id == id).firstOrNull;
+        if (area != null) navAreas.add(area);
+      }
+    }
+
     return GoRouter(
       initialLocation: '/home',
       redirect: (context, state) {
@@ -79,24 +149,10 @@ class DualMindApp extends ConsumerWidget {
         ),
         StatefulShellRoute.indexedStack(
           builder: (context, state, navigationShell) =>
-              _ScaffoldWithBottomNav(navigationShell: navigationShell),
-          branches: [
-            StatefulShellBranch(routes: [
-              GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(path: '/shopping', builder: (_, __) => const ShoppingScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(path: '/recipes', builder: (_, __) => const RecipesScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(path: '/chat', builder: (_, __) => const ChatScreen()),
-            ]),
-            StatefulShellBranch(routes: [
-              GoRoute(path: '/profile', builder: (_, __) => const ProfileScreen()),
-            ]),
-          ],
+              _ScaffoldWithBottomNav(navigationShell: navigationShell, navAreas: navAreas),
+          branches: navAreas.map((area) => StatefulShellBranch(routes: [
+            GoRoute(path: area.path, builder: (_, __) => area.screen),
+          ])).toList(),
         ),
       ],
     );
@@ -111,7 +167,8 @@ class _AuthListenable extends ChangeNotifier {
 
 class _ScaffoldWithBottomNav extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
-  const _ScaffoldWithBottomNav({required this.navigationShell});
+  final List<NavArea> navAreas;
+  const _ScaffoldWithBottomNav({required this.navigationShell, required this.navAreas});
 
   @override
   Widget build(BuildContext context) {
@@ -123,13 +180,11 @@ class _ScaffoldWithBottomNav extends StatelessWidget {
           i,
           initialLocation: i == navigationShell.currentIndex,
         ),
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.shopping_cart_outlined), selectedIcon: Icon(Icons.shopping_cart), label: 'Einkauf'),
-          NavigationDestination(icon: Icon(Icons.restaurant_menu_outlined), selectedIcon: Icon(Icons.restaurant_menu), label: 'Rezepte'),
-          NavigationDestination(icon: Icon(Icons.chat_bubble_outline), selectedIcon: Icon(Icons.chat_bubble), label: 'Chat'),
-          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Profil'),
-        ],
+        destinations: navAreas.map((area) => NavigationDestination(
+          icon: Icon(area.icon),
+          selectedIcon: Icon(area.selectedIcon),
+          label: area.label,
+        )).toList(),
       ),
     );
   }

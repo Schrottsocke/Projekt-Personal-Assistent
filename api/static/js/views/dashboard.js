@@ -1,5 +1,8 @@
 /**
- * Dashboard View – Greeting, Events, Tasks, Shopping Preview
+ * Dashboard View – Configurable widget-based layout.
+ *
+ * Widgets werden aus den User-Preferences geladen.
+ * Jedes Widget hat eine eigene Render-Funktion.
  */
 const DashboardView = (() => {
   function getGreeting() {
@@ -23,6 +26,112 @@ const DashboardView = (() => {
     const map = { high: 'badge-error', medium: 'badge-warning', low: 'badge-success' };
     return `<span class="badge ${map[p] || 'badge-accent'} task-priority">${p || 'normal'}</span>`;
   }
+
+  // ── Widget Renderers ──
+  // Each returns an HTML string (or empty string to skip)
+
+  function renderEmailsWidget(data) {
+    const emails = data.unread_emails || 0;
+    if (emails <= 0) return '';
+    return `<div class="mb-16"><span class="badge badge-accent email-badge"><span class="material-symbols-outlined mi-sm">mail</span> ${emails} ungelesene E-Mail${emails > 1 ? 's' : ''}</span></div>`;
+  }
+
+  function renderShiftsWidget(data) {
+    const shifts = (data.shifts_today || []).slice(0, 3);
+    if (shifts.length === 0) return '';
+    let html = `<a class="section-header section-link" href="#/shifts"><span class="section-icon material-symbols-outlined">work</span> Dienste heute <span class="section-arrow">Verwalten &#8594;</span></a>`;
+    shifts.forEach(s => {
+      const color = s.shift_color || 'var(--accent)';
+      html += `
+        <div class="card" style="border-left:4px solid ${color}">
+          <div class="event-time">${formatTime(s.start)}${s.end ? ' – ' + formatTime(s.end) : ''}</div>
+          <div class="card-title"><span class="shift-badge" style="background:${color}22;color:${color}">${escapeHtml(s.shift_short_name || '')}</span> ${escapeHtml(s.summary || '')}</div>
+          ${s.description ? `<div class="card-subtitle">${escapeHtml(s.description)}</div>` : ''}
+        </div>
+      `;
+    });
+    return html;
+  }
+
+  function renderEventsWidget(data) {
+    const events = (data.events_today || []).slice(0, 3);
+    let html = `<a class="section-header section-link" href="#/calendar"><span class="section-icon material-symbols-outlined">calendar_month</span> Termine heute <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+    if (events.length === 0) {
+      html += `<div class="empty-state">Keine Termine heute</div>`;
+    } else {
+      events.forEach(e => {
+        html += `
+          <div class="card">
+            <div class="event-time">${formatTime(e.start)}${e.end ? ' – ' + formatTime(e.end) : ''}</div>
+            <div class="card-title">${escapeHtml(e.summary)}</div>
+            ${e.location ? `<div class="card-subtitle">${escapeHtml(e.location)}</div>` : ''}
+          </div>
+        `;
+      });
+    }
+    return html;
+  }
+
+  function renderTasksWidget(data) {
+    const tasks = (data.open_tasks || []).slice(0, 3);
+    let html = `<a class="section-header section-link" href="#/tasks"><span class="section-icon material-symbols-outlined">check_circle</span> Offene Aufgaben <span class="badge badge-accent">${data.task_count || tasks.length}</span> <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+    if (tasks.length === 0) {
+      html += `<div class="empty-state">Keine offenen Aufgaben</div>`;
+    } else {
+      tasks.forEach(t => {
+        html += `
+          <div class="card">
+            <div class="flex-between">
+              <div class="card-title">${escapeHtml(t.title)}</div>
+              ${priorityBadge(t.priority)}
+            </div>
+            ${t.description ? `<div class="card-subtitle">${escapeHtml(t.description)}</div>` : ''}
+          </div>
+        `;
+      });
+    }
+    return html;
+  }
+
+  function renderShoppingWidget(data) {
+    const shop = data.shopping_preview || {};
+    const total = shop.total || 0;
+    const checked = shop.checked || 0;
+    const pending = shop.pending || (total - checked);
+    const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
+
+    let html = `<a class="section-header section-link" href="#/shopping"><span class="section-icon material-symbols-outlined">shopping_cart</span> Einkaufsliste <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+    if (total === 0) {
+      html += `<div class="empty-state">Einkaufsliste ist leer</div>`;
+    } else {
+      html += `
+        <div class="card card-clickable" onclick="Router.navigate('#/shopping')">
+          <div class="flex-between mb-8">
+            <span>${pending} offen</span>
+            <span class="card-subtitle">${checked}/${total} erledigt</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+          <div class="progress-text">${pct}%</div>
+        </div>
+      `;
+    }
+    return html;
+  }
+
+  // Widget registry: maps widget ID to render function
+  const WIDGET_RENDERERS = {
+    emails: renderEmailsWidget,
+    shifts: renderShiftsWidget,
+    events: renderEventsWidget,
+    tasks: renderTasksWidget,
+    shopping: renderShoppingWidget,
+  };
+
+  // Async widget renderers (loaded after initial render)
+  const ASYNC_WIDGET_RENDERERS = {
+    mealplan: renderMealplanWidget,
+    drive: renderDriveWidget,
+  };
 
   async function render(container) {
     const user = capitalize(Api.getUserKey());
@@ -55,161 +164,113 @@ const DashboardView = (() => {
     }
   }
 
+  function getWidgetConfig() {
+    const prefs = window.AppPreferences ? window.AppPreferences.getCached() : null;
+    if (prefs && prefs.dashboard && prefs.dashboard.widgets) {
+      return prefs.dashboard.widgets
+        .filter(w => w.enabled !== false)
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+    }
+    // Default widget order
+    return [
+      { id: 'emails', enabled: true, order: 0 },
+      { id: 'shifts', enabled: true, order: 1 },
+      { id: 'events', enabled: true, order: 2 },
+      { id: 'tasks', enabled: true, order: 3 },
+      { id: 'shopping', enabled: true, order: 4 },
+      { id: 'mealplan', enabled: true, order: 5 },
+      { id: 'drive', enabled: true, order: 6 },
+    ];
+  }
+
   function renderContent(data) {
     const el = document.getElementById('dashboard-content');
     if (!el) return;
 
-    const events = (data.events_today || []).slice(0, 3);
-    const tasks = (data.open_tasks || []).slice(0, 3);
-    const shop = data.shopping_preview || {};
-    const emails = data.unread_emails || 0;
-
+    const widgets = getWidgetConfig();
     let html = '';
 
-    // Email badge
-    if (emails > 0) {
-      html += `<div class="mb-16"><span class="badge badge-accent email-badge"><span class="material-symbols-outlined mi-sm">mail</span> ${emails} ungelesene E-Mail${emails > 1 ? 's' : ''}</span></div>`;
-    }
-
-    // Shifts today
-    const shifts = (data.shifts_today || []).slice(0, 3);
-    if (shifts.length > 0) {
-      html += `<a class="section-header section-link" href="#/shifts"><span class="section-icon material-symbols-outlined">work</span> Dienste heute <span class="section-arrow">Verwalten &#8594;</span></a>`;
-      shifts.forEach(s => {
-        const color = s.shift_color || 'var(--accent)';
-        html += `
-          <div class="card" style="border-left:4px solid ${color}">
-            <div class="event-time">${formatTime(s.start)}${s.end ? ' – ' + formatTime(s.end) : ''}</div>
-            <div class="card-title"><span class="shift-badge" style="background:${color}22;color:${color}">${escapeHtml(s.shift_short_name || '')}</span> ${escapeHtml(s.summary || '')}</div>
-            ${s.description ? `<div class="card-subtitle">${escapeHtml(s.description)}</div>` : ''}
-          </div>
-        `;
-      });
-    }
-
-    // Events
-    html += `<a class="section-header section-link" href="#/calendar"><span class="section-icon material-symbols-outlined">calendar_month</span> Termine heute <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
-    if (events.length === 0) {
-      html += `<div class="empty-state">Keine Termine heute</div>`;
-    } else {
-      events.forEach(e => {
-        html += `
-          <div class="card">
-            <div class="event-time">${formatTime(e.start)}${e.end ? ' – ' + formatTime(e.end) : ''}</div>
-            <div class="card-title">${escapeHtml(e.summary)}</div>
-            ${e.location ? `<div class="card-subtitle">${escapeHtml(e.location)}</div>` : ''}
-          </div>
-        `;
-      });
-    }
-
-    // Tasks
-    html += `<a class="section-header section-link" href="#/tasks"><span class="section-icon material-symbols-outlined">check_circle</span> Offene Aufgaben <span class="badge badge-accent">${data.task_count || tasks.length}</span> <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
-    if (tasks.length === 0) {
-      html += `<div class="empty-state">Keine offenen Aufgaben</div>`;
-    } else {
-      tasks.forEach(t => {
-        html += `
-          <div class="card">
-            <div class="flex-between">
-              <div class="card-title">${escapeHtml(t.title)}</div>
-              ${priorityBadge(t.priority)}
-            </div>
-            ${t.description ? `<div class="card-subtitle">${escapeHtml(t.description)}</div>` : ''}
-          </div>
-        `;
-      });
-    }
-
-    // Shopping preview
-    const total = shop.total || 0;
-    const checked = shop.checked || 0;
-    const pending = shop.pending || (total - checked);
-    const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
-
-    html += `<a class="section-header section-link" href="#/shopping"><span class="section-icon material-symbols-outlined">shopping_cart</span> Einkaufsliste <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
-    if (total === 0) {
-      html += `<div class="empty-state">Einkaufsliste ist leer</div>`;
-    } else {
-      html += `
-        <div class="card card-clickable" onclick="Router.navigate('#/shopping')">
-          <div class="flex-between mb-8">
-            <span>${pending} offen</span>
-            <span class="card-subtitle">${checked}/${total} erledigt</span>
-          </div>
-          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
-          <div class="progress-text">${pct}%</div>
-        </div>
-      `;
+    // Render sync widgets in order
+    for (const widget of widgets) {
+      const renderer = WIDGET_RENDERERS[widget.id];
+      if (renderer) {
+        html += renderer(data);
+      }
     }
 
     el.innerHTML = html;
 
-    // Load extra previews (MealPlan, Drive) without blocking dashboard
-    loadExtraPreviews(el);
+    // Load async widgets (MealPlan, Drive) without blocking
+    loadAsyncWidgets(el, widgets, data);
   }
 
-  async function loadExtraPreviews(container) {
-    let extraHtml = '';
+  async function loadAsyncWidgets(container, widgets, _data) {
+    const asyncWidgets = widgets.filter(w => ASYNC_WIDGET_RENDERERS[w.id]);
+    if (asyncWidgets.length === 0) return;
 
-    const [mealsResult, driveResult] = await Promise.allSettled([
-      Api.getMealPlanWeek(),
-      Api.getDriveFiles(null, 2),
-    ]);
-
-    // MealPlan preview
-    if (mealsResult.status === 'fulfilled') {
+    const promises = asyncWidgets.map(async (w) => {
+      const renderer = ASYNC_WIDGET_RENDERERS[w.id];
+      if (!renderer) return '';
       try {
-        const meals = mealsResult.value;
-        const today = new Date().toISOString().slice(0, 10);
-        const todayMeals = meals.filter(m => m.planned_date === today);
-
-        extraHtml += `<a class="section-header section-link" href="#/mealplan"><span class="section-icon material-symbols-outlined">restaurant</span> Wochenplan <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
-        if (todayMeals.length === 0) {
-          extraHtml += `<div class="empty-state">Keine Mahlzeiten heute geplant</div>`;
-        } else {
-          todayMeals.forEach(m => {
-            const typeLabels = { breakfast: 'Fruehstueck', lunch: 'Mittagessen', dinner: 'Abendessen' };
-            extraHtml += `
-              <div class="card card-clickable" onclick="Router.navigate('#/mealplan')">
-                <div class="card-subtitle">${typeLabels[m.meal_type] || m.meal_type}</div>
-                <div class="card-title">${escapeHtml(m.recipe_title)}</div>
-              </div>
-            `;
-          });
-        }
+        return await renderer();
       } catch {
-        // Render error – skip silently
+        return '';
       }
-    }
+    });
 
-    // Drive preview
-    if (driveResult.status === 'fulfilled') {
-      try {
-        const driveData = driveResult.value;
-        extraHtml += `<a class="section-header section-link" href="#/drive"><span class="section-icon material-symbols-outlined">folder</span> Drive <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
-        if (driveData.connected === false) {
-          extraHtml += `<div class="empty-state">Drive nicht verbunden</div>`;
-        } else if ((driveData.files || []).length === 0) {
-          extraHtml += `<div class="empty-state">Keine Dateien</div>`;
-        } else {
-          driveData.files.forEach(f => {
-            extraHtml += `
-              <div class="card card-clickable" onclick="Router.navigate('#/drive')">
-                <div class="card-title">${escapeHtml(f.name)}</div>
-                ${f.modified_time ? `<div class="card-subtitle">${new Date(f.modified_time).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</div>` : ''}
-              </div>
-            `;
-          });
-        }
-      } catch {
-        // Render error – skip silently
+    const results = await Promise.allSettled(promises);
+    let extraHtml = '';
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value) {
+        extraHtml += result.value;
       }
     }
 
     if (extraHtml) {
       container.insertAdjacentHTML('beforeend', extraHtml);
     }
+  }
+
+  async function renderMealplanWidget() {
+    const meals = await Api.getMealPlanWeek();
+    const today = new Date().toISOString().slice(0, 10);
+    const todayMeals = meals.filter(m => m.planned_date === today);
+
+    let html = `<a class="section-header section-link" href="#/mealplan"><span class="section-icon material-symbols-outlined">restaurant</span> Wochenplan <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+    if (todayMeals.length === 0) {
+      html += `<div class="empty-state">Keine Mahlzeiten heute geplant</div>`;
+    } else {
+      const typeLabels = { breakfast: 'Fruehstueck', lunch: 'Mittagessen', dinner: 'Abendessen' };
+      todayMeals.forEach(m => {
+        html += `
+          <div class="card card-clickable" onclick="Router.navigate('#/mealplan')">
+            <div class="card-subtitle">${typeLabels[m.meal_type] || m.meal_type}</div>
+            <div class="card-title">${escapeHtml(m.recipe_title)}</div>
+          </div>
+        `;
+      });
+    }
+    return html;
+  }
+
+  async function renderDriveWidget() {
+    const driveData = await Api.getDriveFiles(null, 2);
+    let html = `<a class="section-header section-link" href="#/drive"><span class="section-icon material-symbols-outlined">folder</span> Drive <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+    if (driveData.connected === false) {
+      html += `<div class="empty-state">Drive nicht verbunden</div>`;
+    } else if ((driveData.files || []).length === 0) {
+      html += `<div class="empty-state">Keine Dateien</div>`;
+    } else {
+      driveData.files.forEach(f => {
+        html += `
+          <div class="card card-clickable" onclick="Router.navigate('#/drive')">
+            <div class="card-title">${escapeHtml(f.name)}</div>
+            ${f.modified_time ? `<div class="card-subtitle">${new Date(f.modified_time).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</div>` : ''}
+          </div>
+        `;
+      });
+    }
+    return html;
   }
 
   return { render };
