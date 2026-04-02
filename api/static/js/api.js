@@ -259,6 +259,39 @@ const Api = (() => {
     }
   }
 
+  // Voice transcription
+  async function transcribeVoice(audioBlob) {
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'voice.webm');
+
+    const headers = {};
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    let res = await fetch('/chat/voice', { method: 'POST', headers, body: formData });
+
+    if (res.status === 401 && getRefreshToken()) {
+      if (!_refreshing) {
+        _refreshing = refreshToken().finally(() => { _refreshing = null; });
+      }
+      try {
+        const newToken = await _refreshing;
+        headers['Authorization'] = `Bearer ${newToken}`;
+        res = await fetch('/chat/voice', { method: 'POST', headers, body: formData });
+      } catch {
+        clearAuth();
+        window.location.hash = '#/login';
+        throw new Error('Session abgelaufen');
+      }
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
   // Features
   function getFeatures() { return request('/features'); }
   function toggleFeature(featureId) {
@@ -376,7 +409,7 @@ const Api = (() => {
     getDashboard,
     getShoppingItems, addShoppingItem, toggleShoppingItem, updateShoppingItem, deleteShoppingItem, clearCheckedItems,
     searchRecipes, getSavedRecipes, saveRecipe, deleteRecipe, toggleFavorite, addRecipeToShopping,
-    getChatHistory, sendMessage, sendMessageStream,
+    getChatHistory, sendMessage, sendMessageStream, transcribeVoice,
     getFeatures, toggleFeature,
     getCalendarToday, getCalendarWeek, createCalendarEvent,
     getTasks, createTask, updateTaskStatus, deleteTask,

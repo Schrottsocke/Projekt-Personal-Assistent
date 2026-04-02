@@ -1,11 +1,27 @@
 /**
- * Chat View – History, Send, Auto-Scroll
+ * Chat View – History, Send, Voice Input, Quick Actions, Message States
  */
 const ChatView = (() => {
   let sending = false;
   let lastMessage = '';
+  let lastUserBubble = null;
   let pendingController = null;
   let slowTimer = null;
+
+  // Voice recording state
+  let mediaRecorder = null;
+  let audioChunks = [];
+  let recording = false;
+  let recordingTimer = null;
+  let recordingSeconds = 0;
+  const MAX_RECORDING_SECONDS = 120;
+
+  const QUICK_ACTIONS = [
+    { label: 'Briefing', msg: 'Gib mir ein Briefing' },
+    { label: 'Offene Aufgaben', msg: 'Zeig mir offene Aufgaben' },
+    { label: 'Tagesplan', msg: 'Was steht heute an?' },
+    { label: 'Einkaufsliste', msg: 'Zeig die Einkaufsliste' },
+  ];
 
   async function render(container) {
     container.innerHTML = `
@@ -13,15 +29,27 @@ const ChatView = (() => {
         <div class="chat-messages" id="chat-messages">
           <div class="loading"><div class="spinner"></div> Nachrichten laden…</div>
         </div>
+        <div class="chat-quick-actions" id="chat-quick-actions">
+          ${QUICK_ACTIONS.map(a => `<button class="chip quick-action" data-msg="${escapeHtml(a.msg)}">${escapeHtml(a.label)}</button>`).join('')}
+        </div>
         <div class="chat-input-area">
           <input type="text" id="chat-input" placeholder="Nachricht schreiben…"
                  onkeydown="if(event.key==='Enter' && !event.shiftKey) ChatView.send()">
+          <button class="btn btn-icon" id="chat-mic-btn" onclick="ChatView.toggleRecording()" title="Sprachnachricht">
+            <span class="material-symbols-outlined">mic</span>
+          </button>
           <button class="btn btn-primary btn-icon" onclick="ChatView.send()" id="chat-send-btn">
             <span class="material-symbols-outlined">send</span>
           </button>
         </div>
       </div>
     `;
+
+    // Quick action click handler
+    document.getElementById('chat-quick-actions').addEventListener('click', (e) => {
+      const chip = e.target.closest('.quick-action');
+      if (chip && !sending) send(chip.dataset.msg);
+    });
 
     await loadHistory();
   }
@@ -59,15 +87,18 @@ const ChatView = (() => {
       else if (sameAsNext) groupClass = 'group-start';
 
       const hideTime = sameAsNext;
+      const content = escapeHtml(m.content);
 
       return `
-        <div class="chat-bubble ${m.role} ${groupClass}">
-          ${escapeHtml(m.content)}
+        <div class="chat-bubble ${m.role} ${groupClass} msg-sent">
+          <div class="bubble-content">${content}</div>
           ${time ? `<div class="chat-time${hideTime ? ' grouped-time' : ''}">${time}</div>` : ''}
         </div>
       `;
     }).join('');
 
+    // Apply expandable to long history messages
+    el.querySelectorAll('.chat-bubble.assistant').forEach(applyExpandable);
     scrollToBottom();
   }
 
@@ -85,15 +116,21 @@ const ChatView = (() => {
     if (el) el.scrollTop = el.scrollHeight;
   }
 
+  function setQuickActionsVisible(visible) {
+    const qa = document.getElementById('chat-quick-actions');
+    if (qa) qa.style.display = visible ? '' : 'none';
+  }
+
   async function send(retryMsg) {
     if (sending) return;
     const input = document.getElementById('chat-input');
-    const message = retryMsg || input.value.trim();
+    const message = retryMsg || (input ? input.value.trim() : '');
     if (!message) return;
 
     if (!retryMsg) input.value = '';
     lastMessage = message;
     sending = true;
+    setQuickActionsVisible(false);
 
     const messagesEl = document.getElementById('chat-messages');
 
@@ -101,25 +138,34 @@ const ChatView = (() => {
     const empty = messagesEl.querySelector('.empty-state');
     if (empty) empty.remove();
 
-    // Add user message (only if not a retry – retry already has the bubble)
+    // Add user message with sending state (only if not a retry)
+    let userBubble;
     if (!retryMsg) {
-      const userBubble = document.createElement('div');
-      userBubble.className = 'chat-bubble user';
-      userBubble.textContent = message;
+      userBubble = document.createElement('div');
+      userBubble.className = 'chat-bubble user msg-sending';
+      userBubble.innerHTML = `<div class="bubble-content">${escapeHtml(message)}</div><span class="msg-status"><span class="spinner-tiny"></span></span>`;
       messagesEl.appendChild(userBubble);
+      lastUserBubble = userBubble;
+    } else {
+      userBubble = lastUserBubble;
+      if (userBubble) {
+        userBubble.className = 'chat-bubble user msg-sending';
+        const statusEl = userBubble.querySelector('.msg-status');
+        if (statusEl) statusEl.innerHTML = '<span class="spinner-tiny"></span>';
+      }
     }
 
-    // Add typing indicator
+    // Add typing indicator with animated dots
     const typing = document.createElement('div');
     typing.className = 'typing-indicator';
-    typing.textContent = 'Denkt nach…';
+    typing.innerHTML = '<span class="typing-dots"><span></span><span></span><span></span></span> Denkt nach\u2026';
     messagesEl.appendChild(typing);
     scrollToBottom();
 
     // Slow-response hint after 15s
     slowTimer = setTimeout(() => {
       if (typing.parentNode) {
-        typing.innerHTML = 'Dauert länger als erwartet… <button class="btn btn-sm" onclick="ChatView.cancelPending()">Abbrechen</button>';
+        typing.innerHTML = 'Dauert l\u00e4nger als erwartet\u2026 <button class="btn btn-sm" onclick="ChatView.cancelPending()">Abbrechen</button>';
       }
     }, 15000);
 
@@ -130,6 +176,7 @@ const ChatView = (() => {
       // Streaming response
       const responseBubble = document.createElement('div');
       responseBubble.className = 'chat-bubble assistant';
+      responseBubble.innerHTML = '<div class="bubble-content"></div>';
       let firstToken = true;
       let fullResponse = '';
       let streamDone = false;
@@ -144,87 +191,255 @@ const ChatView = (() => {
             firstToken = false;
           }
           fullResponse += token;
-          responseBubble.textContent = fullResponse;
+          responseBubble.querySelector('.bubble-content').textContent = fullResponse;
           scrollToBottom();
         },
         () => {
           streamDone = true;
-          // Finalize: re-set as escaped text
           if (!firstToken) {
-            responseBubble.textContent = fullResponse;
+            responseBubble.querySelector('.bubble-content').textContent = fullResponse;
+            applyExpandable(responseBubble);
           }
+          // Mark user bubble as sent
+          markUserBubble(userBubble, 'sent');
         },
         (error) => {
-          // Stream error: fall back to non-streaming
           if (firstToken) {
-            // No tokens received yet — try non-streaming fallback
-            typing.textContent = 'Streaming fehlgeschlagen, versuche erneut…';
+            typing.textContent = 'Streaming fehlgeschlagen, versuche erneut\u2026';
             Api.sendMessage(message).then((result) => {
               typing.remove();
               const assistantBubble = document.createElement('div');
               assistantBubble.className = 'chat-bubble assistant';
-              assistantBubble.textContent = result.response;
+              assistantBubble.innerHTML = `<div class="bubble-content">${escapeHtml(result.response)}</div>`;
               messagesEl.appendChild(assistantBubble);
+              applyExpandable(assistantBubble);
+              markUserBubble(userBubble, 'sent');
               scrollToBottom();
             }).catch((fallbackErr) => {
               typing.remove();
-              const errorBubble = document.createElement('div');
-              errorBubble.className = 'chat-bubble assistant';
-              errorBubble.innerHTML = `<span style="color:var(--error)">Fehler: ${escapeHtml(fallbackErr.message)}</span>
-                <button class="btn btn-sm" onclick="ChatView.retry()" style="margin-top:6px">Erneut versuchen</button>`;
-              messagesEl.appendChild(errorBubble);
+              markUserBubble(userBubble, 'failed');
               scrollToBottom();
             });
           } else {
-            // Partial response received — show error after partial text
-            responseBubble.innerHTML = escapeHtml(fullResponse) +
+            responseBubble.querySelector('.bubble-content').innerHTML = escapeHtml(fullResponse) +
               `<br><span style="color:var(--error)">Stream abgebrochen: ${escapeHtml(error)}</span>`;
+            markUserBubble(userBubble, 'sent');
           }
         }
       );
 
-      // If stream ended without any tokens and no error handler fired, show empty response
       if (firstToken && !streamDone) {
         typing.remove();
       }
     } catch (err) {
-      typing.remove();
-      const errorBubble = document.createElement('div');
-      errorBubble.className = 'chat-bubble assistant';
-      errorBubble.innerHTML = `<span style="color:var(--error)">Fehler: ${escapeHtml(err.message)}</span>
-        <button class="btn btn-sm" onclick="ChatView.retry()" style="margin-top:6px">Erneut versuchen</button>`;
-      messagesEl.appendChild(errorBubble);
+      const typingEl = document.querySelector('.typing-indicator');
+      if (typingEl) typingEl.remove();
+      markUserBubble(userBubble, 'failed');
       scrollToBottom();
     } finally {
       if (slowTimer) { clearTimeout(slowTimer); slowTimer = null; }
       sending = false;
       pendingController = null;
       sendBtn.disabled = false;
-      input.focus();
+      setQuickActionsVisible(true);
+      if (input) input.focus();
     }
   }
 
+  function markUserBubble(bubble, state) {
+    if (!bubble) return;
+    bubble.className = `chat-bubble user msg-${state}`;
+    const statusEl = bubble.querySelector('.msg-status');
+    if (!statusEl) return;
+    if (state === 'sent') {
+      statusEl.innerHTML = '<span class="material-symbols-outlined msg-check">done</span>';
+    } else if (state === 'failed') {
+      statusEl.innerHTML = '<span class="material-symbols-outlined msg-error-icon">error</span> <button class="btn btn-sm msg-retry-btn" onclick="ChatView.retry()">Erneut senden</button>';
+    }
+  }
+
+  function applyExpandable(bubble) {
+    if (!bubble) return;
+    // Defer to next frame so layout is computed
+    requestAnimationFrame(() => {
+      const content = bubble.querySelector('.bubble-content');
+      if (content && content.scrollHeight > 200) {
+        bubble.classList.add('expandable', 'collapsed');
+        const toggle = document.createElement('button');
+        toggle.className = 'btn btn-sm expand-toggle';
+        toggle.textContent = 'Mehr anzeigen';
+        toggle.onclick = () => {
+          bubble.classList.toggle('collapsed');
+          toggle.textContent = bubble.classList.contains('collapsed') ? 'Mehr anzeigen' : 'Weniger';
+          scrollToBottom();
+        };
+        bubble.appendChild(toggle);
+      }
+    });
+  }
+
   function cancelPending() {
-    // The AbortController lives inside Api.request; we signal cancellation
-    // by setting sending = false so the UI cleans up on the resulting error.
-    // Since we can't reach the internal controller, we rely on the timeout
-    // to eventually fire. For immediate UX, remove the indicator now.
     const typing = document.querySelector('.typing-indicator');
     if (typing) typing.remove();
     sending = false;
     const sendBtn = document.getElementById('chat-send-btn');
     if (sendBtn) sendBtn.disabled = false;
     if (slowTimer) { clearTimeout(slowTimer); slowTimer = null; }
+    setQuickActionsVisible(true);
   }
 
   function retry() {
     if (!lastMessage) return;
-    // Remove the error bubble that contains the retry button
-    const bubbles = document.querySelectorAll('.chat-bubble.assistant');
-    const last = bubbles[bubbles.length - 1];
-    if (last && last.querySelector('.btn')) last.remove();
+    // Remove retry button from failed bubble, keep the bubble
+    if (lastUserBubble) {
+      const retryBtn = lastUserBubble.querySelector('.msg-retry-btn');
+      if (retryBtn) retryBtn.remove();
+      const errIcon = lastUserBubble.querySelector('.msg-error-icon');
+      if (errIcon) errIcon.remove();
+    }
     send(lastMessage);
   }
 
-  return { render, send, cancelPending, retry };
+  // ── Voice Recording ──────────────────────────────────
+
+  async function toggleRecording() {
+    if (recording) {
+      stopRecording();
+    } else {
+      await startRecording();
+    }
+  }
+
+  async function startRecording() {
+    const micBtn = document.getElementById('chat-mic-btn');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Choose best available MIME type
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+          ? 'audio/webm'
+          : '';
+
+      const options = mimeType ? { mimeType } : {};
+      mediaRecorder = new MediaRecorder(stream, options);
+      audioChunks = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        // Stop all tracks
+        stream.getTracks().forEach(t => t.stop());
+        clearRecordingTimer();
+        setRecordingUI(false);
+
+        if (audioChunks.length === 0) return;
+
+        const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+        audioChunks = [];
+
+        // Show transcription status
+        const input = document.getElementById('chat-input');
+        const origPlaceholder = input.placeholder;
+        input.placeholder = 'Wird transkribiert\u2026';
+        input.disabled = true;
+
+        try {
+          const result = await Api.transcribeVoice(blob);
+          input.disabled = false;
+          input.placeholder = origPlaceholder;
+          if (result.transcription) {
+            send(result.transcription);
+          }
+        } catch (err) {
+          input.disabled = false;
+          input.placeholder = origPlaceholder;
+          showToast(err.message || 'Transkription fehlgeschlagen', 'error');
+        }
+      };
+
+      mediaRecorder.start();
+      recording = true;
+      setRecordingUI(true);
+      startRecordingTimer();
+
+    } catch (err) {
+      if (err.name === 'NotAllowedError') {
+        showToast('Mikrofonzugriff verweigert. Bitte erlaube den Zugriff in den Browsereinstellungen.', 'error');
+      } else {
+        showToast('Mikrofon konnte nicht gestartet werden.', 'error');
+      }
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+    }
+    recording = false;
+  }
+
+  function setRecordingUI(isRecording) {
+    const micBtn = document.getElementById('chat-mic-btn');
+    if (!micBtn) return;
+    if (isRecording) {
+      micBtn.classList.add('recording');
+      micBtn.querySelector('.material-symbols-outlined').textContent = 'stop_circle';
+      micBtn.title = 'Aufnahme stoppen';
+    } else {
+      micBtn.classList.remove('recording');
+      micBtn.querySelector('.material-symbols-outlined').textContent = 'mic';
+      micBtn.title = 'Sprachnachricht';
+      // Remove recording indicator
+      const indicator = document.querySelector('.recording-indicator');
+      if (indicator) indicator.remove();
+    }
+  }
+
+  function startRecordingTimer() {
+    recordingSeconds = 0;
+    const micBtn = document.getElementById('chat-mic-btn');
+    // Add timer indicator after mic button
+    const indicator = document.createElement('span');
+    indicator.className = 'recording-indicator';
+    indicator.textContent = '0:00';
+    micBtn.parentNode.insertBefore(indicator, micBtn.nextSibling);
+
+    recordingTimer = setInterval(() => {
+      recordingSeconds++;
+      const mins = Math.floor(recordingSeconds / 60);
+      const secs = String(recordingSeconds % 60).padStart(2, '0');
+      indicator.textContent = `${mins}:${secs}`;
+      if (recordingSeconds >= MAX_RECORDING_SECONDS) {
+        stopRecording();
+      }
+    }, 1000);
+  }
+
+  function clearRecordingTimer() {
+    if (recordingTimer) {
+      clearInterval(recordingTimer);
+      recordingTimer = null;
+    }
+    recordingSeconds = 0;
+  }
+
+  function showToast(message, type) {
+    // Use existing toast if available, otherwise alert
+    if (typeof window.showToast === 'function') {
+      window.showToast(message, type);
+    } else {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type || 'info'}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => { toast.classList.remove('show'); setTimeout(() => toast.remove(), 300); }, 3000);
+    }
+  }
+
+  return { render, send, cancelPending, retry, toggleRecording };
 })();
