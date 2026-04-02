@@ -376,6 +376,11 @@ const Api = (() => {
     return res.json();
   }
 
+  // Search
+  function searchGlobal(query, limit = 20) {
+    return request(`/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+  }
+
   // GitHub Issues
   function getGitHubLabels() { return request('/github/labels', { timeoutMs: 10000 }); }
   function getGitHubIssues() { return request('/github/issues', { timeoutMs: 10000 }); }
@@ -418,5 +423,6 @@ const Api = (() => {
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
+    searchGlobal,
   };
 })();

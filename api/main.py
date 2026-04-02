@@ -40,6 +40,7 @@ from api.routers import (
     github,
     shifts,
     status,
+    search,
 )
 
 logger = structlog.get_logger(__name__)
@@ -209,6 +210,7 @@ app.include_router(drive.router, prefix="/drive", tags=["Drive"])
 app.include_router(shifts.router, prefix="/shifts", tags=["Dienstplan"])
 app.include_router(features.router)
 app.include_router(github.router, prefix="/github", tags=["GitHub"])
+app.include_router(search.router, prefix="/search", tags=["Suche"])
 app.include_router(status.router)
 
 

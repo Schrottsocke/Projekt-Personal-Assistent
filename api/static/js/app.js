@@ -16,10 +16,23 @@
   Router.register('#/issues', (c) => IssuesView.render(c));
   Router.register('#/shifts', (c) => ShiftsView.render(c));
 
-  // Init router on DOM ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => Router.init());
-  } else {
+  // Global keyboard shortcut: Ctrl+K / Cmd+K for Command Palette
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      CommandPalette.toggle();
+    }
+  });
+
+  // Init router on DOM ready, then init Quick Capture FAB
+  function startup() {
     Router.init();
+    QuickCapture.init();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startup);
+  } else {
+    startup();
   }
 })();
