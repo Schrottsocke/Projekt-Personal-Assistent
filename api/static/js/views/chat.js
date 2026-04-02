@@ -14,7 +14,7 @@ const ChatView = (() => {
           <input type="text" id="chat-input" placeholder="Nachricht schreiben…"
                  onkeydown="if(event.key==='Enter' && !event.shiftKey) ChatView.send()">
           <button class="btn btn-primary btn-icon" onclick="ChatView.send()" id="chat-send-btn">
-            &#10148;
+            <span class="material-symbols-outlined">send</span>
           </button>
         </div>
       </div>

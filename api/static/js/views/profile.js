@@ -15,14 +15,22 @@ const ProfileView = (() => {
         <div class="profile-email">${escapeHtml(user)}@dualmind.app</div>
       </div>
 
-      <div class="section-header"><span class="section-icon">&#128279;</span> Verbundene Dienste</div>
+      <div class="section-header"><span class="section-icon material-symbols-outlined">link</span> Verbundene Dienste</div>
       <div id="services-list"><div class="loading"><div class="spinner"></div></div></div>
 
-      <div class="section-header"><span class="section-icon">&#9881;</span> Features</div>
+      <div class="section-header"><span class="section-icon material-symbols-outlined">tune</span> Features</div>
       <div id="features-list"><div class="loading"><div class="spinner"></div></div></div>
 
-      <div class="section-header"><span class="section-icon">&#9881;</span> Einstellungen</div>
+      <div class="section-header"><span class="section-icon material-symbols-outlined">settings</span> Einstellungen</div>
       <div class="settings-list">
+        <div class="settings-item">
+          <span><span class="material-symbols-outlined mi-sm">dark_mode</span> Design</span>
+          <label class="toggle">
+            <input type="checkbox" id="theme-toggle" ${ProfileView.getTheme() === 'light' ? 'checked' : ''}
+                   onchange="ProfileView.toggleTheme(this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
         <div class="settings-item">
           <span>Briefing-Zeit</span>
           <span class="card-subtitle">08:00 Uhr</span>
@@ -33,11 +41,11 @@ const ProfileView = (() => {
         </div>
       </div>
 
-      <div class="section-header"><span class="section-icon">&#128187;</span> Entwickler</div>
+      <div class="section-header"><span class="section-icon material-symbols-outlined">code</span> Entwickler</div>
       <div class="settings-list">
         <a href="#/issues" class="settings-item" style="text-decoration:none;color:inherit">
-          <span>&#128196; GitHub Issues</span>
-          <span class="card-subtitle">&#8594;</span>
+          <span><span class="material-symbols-outlined mi-sm">bug_report</span> GitHub Issues</span>
+          <span class="card-subtitle"><span class="material-symbols-outlined mi-sm">chevron_right</span></span>
         </a>
       </div>
 
@@ -57,14 +65,14 @@ const ProfileView = (() => {
         <div class="service-list">
           <div class="service-item">
             <div class="service-info">
-              <span class="service-icon">&#128197;</span>
+              <span class="service-icon material-symbols-outlined">calendar_month</span>
               <span class="service-name">Google Calendar</span>
             </div>
             <div class="status-dot ${data.calendar_connected ? 'connected' : 'disconnected'}"></div>
           </div>
           <div class="service-item">
             <div class="service-info">
-              <span class="service-icon">&#9993;</span>
+              <span class="service-icon material-symbols-outlined">mail</span>
               <span class="service-name">Gmail</span>
             </div>
             <div class="status-dot ${data.email_connected ? 'connected' : 'disconnected'}"></div>
@@ -114,11 +122,34 @@ const ProfileView = (() => {
     }
   }
 
+  function getTheme() {
+    return localStorage.getItem('dualmind-theme') || 'dark';
+  }
+
+  function toggleTheme(isLight) {
+    const theme = isLight ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('dualmind-theme', theme);
+    // Update meta theme-color
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = isLight ? '#f5f5f7' : '#7c4dff';
+  }
+
   function confirmLogout() {
     if (confirm('Moechtest du dich wirklich abmelden?')) {
       Api.logout();
     }
   }
 
-  return { render, toggleFeature, confirmLogout };
+  // Apply saved theme on load
+  (function initTheme() {
+    const saved = localStorage.getItem('dualmind-theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+      const meta = document.querySelector('meta[name="theme-color"]');
+      if (meta) meta.content = saved === 'light' ? '#f5f5f7' : '#7c4dff';
+    }
+  })();
+
+  return { render, toggleFeature, confirmLogout, getTheme, toggleTheme };
 })();

@@ -68,11 +68,11 @@ const DashboardView = (() => {
 
     // Email badge
     if (emails > 0) {
-      html += `<div class="mb-16"><span class="badge badge-accent email-badge">&#9993; ${emails} ungelesene E-Mail${emails > 1 ? 's' : ''}</span></div>`;
+      html += `<div class="mb-16"><span class="badge badge-accent email-badge"><span class="material-symbols-outlined mi-sm">mail</span> ${emails} ungelesene E-Mail${emails > 1 ? 's' : ''}</span></div>`;
     }
 
     // Events
-    html += `<a class="section-header section-link" href="#/calendar"><span class="section-icon">&#128197;</span> Termine heute <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+    html += `<a class="section-header section-link" href="#/calendar"><span class="section-icon material-symbols-outlined">calendar_month</span> Termine heute <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
     if (events.length === 0) {
       html += `<div class="empty-state">Keine Termine heute</div>`;
     } else {
@@ -88,7 +88,7 @@ const DashboardView = (() => {
     }
 
     // Tasks
-    html += `<a class="section-header section-link" href="#/tasks"><span class="section-icon">&#9745;</span> Offene Aufgaben <span class="badge badge-accent">${data.task_count || tasks.length}</span> <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+    html += `<a class="section-header section-link" href="#/tasks"><span class="section-icon material-symbols-outlined">check_circle</span> Offene Aufgaben <span class="badge badge-accent">${data.task_count || tasks.length}</span> <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
     if (tasks.length === 0) {
       html += `<div class="empty-state">Keine offenen Aufgaben</div>`;
     } else {
@@ -111,7 +111,7 @@ const DashboardView = (() => {
     const pending = shop.pending || (total - checked);
     const pct = total > 0 ? Math.round((checked / total) * 100) : 0;
 
-    html += `<a class="section-header section-link" href="#/shopping"><span class="section-icon">&#128722;</span> Einkaufsliste <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+    html += `<a class="section-header section-link" href="#/shopping"><span class="section-icon material-symbols-outlined">shopping_cart</span> Einkaufsliste <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
     if (total === 0) {
       html += `<div class="empty-state">Einkaufsliste ist leer</div>`;
     } else {
@@ -148,7 +148,7 @@ const DashboardView = (() => {
         const today = new Date().toISOString().slice(0, 10);
         const todayMeals = meals.filter(m => m.planned_date === today);
 
-        extraHtml += `<a class="section-header section-link" href="#/mealplan"><span class="section-icon">&#127869;</span> Wochenplan <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+        extraHtml += `<a class="section-header section-link" href="#/mealplan"><span class="section-icon material-symbols-outlined">restaurant</span> Wochenplan <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
         if (todayMeals.length === 0) {
           extraHtml += `<div class="empty-state">Keine Mahlzeiten heute geplant</div>`;
         } else {
@@ -171,7 +171,7 @@ const DashboardView = (() => {
     if (driveResult.status === 'fulfilled') {
       try {
         const driveData = driveResult.value;
-        extraHtml += `<a class="section-header section-link" href="#/drive"><span class="section-icon">&#128193;</span> Drive <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+        extraHtml += `<a class="section-header section-link" href="#/drive"><span class="section-icon material-symbols-outlined">folder</span> Drive <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
         if (driveData.connected === false) {
           extraHtml += `<div class="empty-state">Drive nicht verbunden</div>`;
         } else if ((driveData.files || []).length === 0) {

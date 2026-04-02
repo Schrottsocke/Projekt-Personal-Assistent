@@ -7,10 +7,10 @@ const IssuesView = (() => {
 
   async function render(container) {
     container.innerHTML = `
-      <a class="view-back" href="#/profile">&#8592; Profil</a>
-      <div class="section-header"><span class="section-icon">&#128196;</span> Offene Issues</div>
+      <a class="view-back" href="#/profile"><span class="material-symbols-outlined mi-sm">arrow_back</span> Profil</a>
+      <div class="section-header"><span class="section-icon material-symbols-outlined">bug_report</span> Offene Issues</div>
       <div id="issue-list"><div class="loading"><div class="spinner"></div> Issues laden&hellip;</div></div>
-      <div class="section-header mt-16"><span class="section-icon">&#10133;</span> Neues Issue erstellen</div>
+      <div class="section-header mt-16"><span class="section-icon material-symbols-outlined">add_circle</span> Neues Issue erstellen</div>
       <div id="issue-form-area"><div class="loading"><div class="spinner"></div> Labels laden&hellip;</div></div>
       <div id="issue-result"></div>
     `;
@@ -188,7 +188,7 @@ const IssuesView = (() => {
           <p style="margin: 8px 0">${escapeHtml(issue.title)}</p>
           ${issue.labels.length ? `<div style="margin-bottom:8px">${issue.labels.map(l => `<span class="badge badge-accent">${escapeHtml(l)}</span>`).join(' ')}</div>` : ''}
           <a href="${escapeHtml(issue.html_url)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary">
-            Auf GitHub oeffnen &#8599;
+            Auf GitHub oeffnen <span class="material-symbols-outlined mi-sm">open_in_new</span>
           </a>
         </div>
       `;
