@@ -1,9 +1,10 @@
 /**
- * Shopping View – CRUD, Toggle, Categories
+ * Shopping View – CRUD, Toggle, Categories, Inline Quantity Edit
  */
 const ShoppingView = (() => {
   let showChecked = true;
   let items = [];
+  let editingId = null;
 
   async function render(container) {
     container.innerHTML = `
@@ -30,6 +31,9 @@ const ShoppingView = (() => {
     `;
 
     await loadItems();
+    // #459: Ensure input has focus after render
+    const input = document.getElementById('shopping-input');
+    if (input) input.focus();
   }
 
   async function loadItems() {
@@ -86,13 +90,29 @@ const ShoppingView = (() => {
       html += `<div class="category-header">${escapeHtml(cat)}</div>`;
       groups[cat].forEach(item => {
         const detail = [item.quantity, item.unit].filter(Boolean).join(' ');
+        const isEditing = editingId === item.id;
         html += `
           <div class="shopping-item ${item.checked ? 'checked' : ''}">
             <input type="checkbox" class="shopping-checkbox"
                    ${item.checked ? 'checked' : ''}
                    onchange="ShoppingView.toggleItem(${item.id}, this.checked)">
             <span class="item-name">${escapeHtml(item.name)}</span>
-            ${detail ? `<span class="item-detail">${escapeHtml(detail)}</span>` : ''}
+            ${isEditing ? `
+              <span class="item-detail-edit">
+                <input type="text" id="edit-qty-${item.id}" value="${escapeHtml(item.quantity || '')}"
+                       placeholder="Menge" size="4"
+                       onkeydown="if(event.key==='Enter') ShoppingView.saveQuantity(${item.id})">
+                <input type="text" id="edit-unit-${item.id}" value="${escapeHtml(item.unit || '')}"
+                       placeholder="Einheit" size="5"
+                       onkeydown="if(event.key==='Enter') ShoppingView.saveQuantity(${item.id})">
+                <button class="btn btn-sm btn-primary" onclick="ShoppingView.saveQuantity(${item.id})">&#10003;</button>
+                <button class="btn btn-sm btn-secondary" onclick="ShoppingView.cancelEdit()">&#10005;</button>
+              </span>
+            ` : `
+              <span class="item-detail" onclick="ShoppingView.editQuantity(${item.id})" title="Menge bearbeiten" style="cursor:pointer">
+                ${detail ? escapeHtml(detail) : '<span style="opacity:0.4;font-size:0.8rem">+ Menge</span>'}
+              </span>
+            `}
             <button class="item-delete" onclick="ShoppingView.deleteItem(${item.id})" title="Löschen"><span class="material-symbols-outlined">delete</span></button>
           </div>
         `;
@@ -100,6 +120,12 @@ const ShoppingView = (() => {
     });
 
     listEl.innerHTML = html;
+
+    // Focus first edit input if editing
+    if (editingId) {
+      const qtyInput = document.getElementById(`edit-qty-${editingId}`);
+      if (qtyInput) qtyInput.focus();
+    }
 
     // Update toggle button text
     const btn = document.getElementById('toggle-checked-btn');
@@ -118,6 +144,39 @@ const ShoppingView = (() => {
       renderList();
     } catch (err) {
       alert('Fehler: ' + err.message);
+    }
+    // #459: Restore focus to input after adding
+    input.focus();
+  }
+
+  function editQuantity(id) {
+    editingId = id;
+    renderList();
+  }
+
+  function cancelEdit() {
+    editingId = null;
+    renderList();
+  }
+
+  async function saveQuantity(id) {
+    const qtyInput = document.getElementById(`edit-qty-${id}`);
+    const unitInput = document.getElementById(`edit-unit-${id}`);
+    if (!qtyInput || !unitInput) return;
+
+    const quantity = qtyInput.value.trim() || null;
+    const unit = unitInput.value.trim() || null;
+
+    editingId = null;
+
+    try {
+      const updated = await Api.updateShoppingItem(id, { quantity, unit });
+      const idx = items.findIndex(i => i.id === id);
+      if (idx !== -1) items[idx] = updated;
+      renderList();
+    } catch (err) {
+      alert('Fehler beim Speichern: ' + err.message);
+      await loadItems();
     }
   }
 
@@ -164,5 +223,5 @@ const ShoppingView = (() => {
     renderList();
   }
 
-  return { render, addItem, toggleItem, deleteItem, clearChecked, toggleShowChecked };
+  return { render, addItem, toggleItem, deleteItem, clearChecked, toggleShowChecked, editQuantity, saveQuantity, cancelEdit };
 })();
