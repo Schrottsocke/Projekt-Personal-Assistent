@@ -58,12 +58,13 @@ async def get_history(
             .limit(limit)
             .all()
         )
-    return [
-        ChatMessageOut(
-            id=r.id,
-            role=r.role,
-            content=r.content,
-            created_at=r.created_at,
-        )
-        for r in reversed(rows)
-    ]
+        result = [
+            ChatMessageOut(
+                id=r.id,
+                role=r.role,
+                content=r.content,
+                created_at=r.created_at,
+            )
+            for r in reversed(rows)
+        ]
+    return result

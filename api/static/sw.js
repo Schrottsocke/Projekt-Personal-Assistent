@@ -1,10 +1,21 @@
-const CACHE_NAME = 'dualmind-v1';
+const CACHE_NAME = 'dualmind-v2';
 const SHELL_ASSETS = [
   '/app',
   '/static/css/app.css',
   '/static/js/utils.js',
   '/static/js/api.js',
   '/static/js/router.js',
+  '/static/js/views/login.js',
+  '/static/js/views/dashboard.js',
+  '/static/js/views/shopping.js',
+  '/static/js/views/recipes.js',
+  '/static/js/views/chat.js',
+  '/static/js/views/profile.js',
+  '/static/js/views/calendar.js',
+  '/static/js/views/tasks.js',
+  '/static/js/views/mealplan.js',
+  '/static/js/views/drive.js',
+  '/static/js/views/issues.js',
   '/static/js/app.js',
   '/static/favicon.svg'
 ];
