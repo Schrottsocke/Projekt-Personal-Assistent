@@ -55,6 +55,7 @@ class IntelligenceEngine:
         memory_context = ""
         try:
             from api.dependencies import _svc
+
             mem_svc = _svc.get("memory")
             if mem_svc:
                 memories = await mem_svc.search_memories(user_key=user_key, query=message, limit=5)
