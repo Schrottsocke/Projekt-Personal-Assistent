@@ -964,13 +964,11 @@ Formatiere strukturiert und übersichtlich."""
             return "❌ Fahrzeit konnte nicht berechnet werden."
 
     async def _handle_weather(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
-        """Ruft Echtzeit-Wetterdaten via WeatherService ab (Open-Meteo, kein API-Key noetig)."""
+        """Ruft Echtzeit-Wetterdaten via WeatherService ab (wttr.in, kein API-Key noetig)."""
         from src.services.weather_service import WeatherService
 
         details = intent_data.get("details", {})
         location = details.get("location", "")
-        weather_type = details.get("type", "current")
-        days = int(details.get("days", 3))
 
         if not location:
             home = getattr(settings, "HOME_ADDRESS", "")
@@ -978,16 +976,12 @@ Formatiere strukturiert und übersichtlich."""
 
         try:
             weather_svc = WeatherService()
-            if weather_type == "forecast":
-                data = await weather_svc.get_forecast(location, days=days)
-                if not data:
-                    return f"Wettervorhersage fuer {location} konnte nicht abgerufen werden."
-                return weather_svc.format_forecast(data)
-            else:
-                data = await weather_svc.get_current(location)
-                if not data:
-                    return f"Wetter fuer {location} konnte nicht abgerufen werden."
-                return weather_svc.format_current(data)
+            result = await weather_svc.get_weather(location)
+            if not result:
+                result = await weather_svc.get_weather_simple(location)
+            if not result:
+                return f"Wetter fuer {location} konnte nicht abgerufen werden."
+            return result
         except Exception as e:
             logger.error(f"Wetter-Handler-Fehler: {e}")
             return "Wetterdaten konnten nicht abgerufen werden."
