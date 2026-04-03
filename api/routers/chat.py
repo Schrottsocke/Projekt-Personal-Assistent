@@ -51,8 +51,39 @@ async def send_message_stream(
     body: ChatMessageIn,
     user_key: Annotated[str, Depends(get_current_user)],
     ai_svc=Depends(get_ai_service),
+    bot_shim=Depends(get_bot_shim),
 ):
     """SSE-Streaming endpoint for chat messages."""
+
+    # Intent-Pre-Check: bei erkanntem Service-Intent den Handler-Pfad nutzen
+    intent_data = await ai_svc._detect_intent(body.message, user_key)
+    intent = intent_data.get("intent", "chat")
+
+    if intent != "chat":
+        async def handler_generator():
+            try:
+                result = await ai_svc.process_message(
+                    message=body.message,
+                    user_key=user_key,
+                    chat_id=0,
+                    bot=bot_shim,
+                )
+                yield f"data: {json.dumps({'token': result})}\n\n"
+                yield f"data: {json.dumps({'done': True})}\n\n"
+            except Exception as e:
+                logger.error("Handler-Fehler für '%s' (intent=%s): %s", user_key, intent, e)
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+        return StreamingResponse(
+            handler_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    # Standard-Streaming-Pfad für reinen Chat
     intelligence = ai_svc.intelligence
 
     async def event_generator():
