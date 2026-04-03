@@ -137,13 +137,15 @@ async def daily_flow(
             weather_text = await weather_svc.get_weather_simple("Schwerin")
             if weather_text:
                 weather_summary = weather_text
-                entries.append(DailyFlowEntry(
-                    time="06:00",
-                    type="weather_warning",
-                    title="Wetter heute",
-                    detail=weather_text,
-                    icon="\u2601\ufe0f",
-                ))
+                entries.append(
+                    DailyFlowEntry(
+                        time="06:00",
+                        type="weather_warning",
+                        title="Wetter heute",
+                        detail=weather_text,
+                        icon="\u2601\ufe0f",
+                    )
+                )
         except Exception as e:
             logger.warning("Wetter fuer Tagesfluss nicht verfuegbar: %s", e)
 
@@ -151,7 +153,7 @@ async def daily_flow(
     if calendar_svc:
         try:
             events = await calendar_svc.get_todays_events(user_key)
-            for event in (events or []):
+            for event in events or []:
                 start = event.get("start", "")
                 summary = event.get("summary", "Termin")
                 location = event.get("location", "")
@@ -163,13 +165,15 @@ async def daily_flow(
                 elif isinstance(start, dict) and "dateTime" in start:
                     event_time = start["dateTime"].split("T")[1][:5]
 
-                entries.append(DailyFlowEntry(
-                    time=event_time or "ganztaegig",
-                    type="event",
-                    title=summary,
-                    detail=location or None,
-                    icon="\U0001f4c5",
-                ))
+                entries.append(
+                    DailyFlowEntry(
+                        time=event_time or "ganztaegig",
+                        type="event",
+                        title=summary,
+                        detail=location or None,
+                        icon="\U0001f4c5",
+                    )
+                )
 
                 # 3. Abfahrtszeit berechnen, wenn Location vorhanden
                 if location and event_time and mobility_svc.available:
@@ -185,13 +189,15 @@ async def daily_flow(
                         )
                         if dep_result:
                             dep_time = dep_result["departure_time"].strftime("%H:%M")
-                            entries.append(DailyFlowEntry(
-                                time=dep_time,
-                                type="departure",
-                                title=f"Losfahren nach {location}",
-                                detail=f"{dep_result['duration_minutes']} Min. Fahrzeit + 10 Min. Puffer",
-                                icon="\U0001f697",
-                            ))
+                            entries.append(
+                                DailyFlowEntry(
+                                    time=dep_time,
+                                    type="departure",
+                                    title=f"Losfahren nach {location}",
+                                    detail=f"{dep_result['duration_minutes']} Min. Fahrzeit + 10 Min. Puffer",
+                                    icon="\U0001f697",
+                                )
+                            )
                     except Exception as e:
                         logger.debug("Abfahrtszeit fuer '%s' nicht berechenbar: %s", summary, e)
 

@@ -20,11 +20,7 @@ def _parse_weather_json(data: dict, location: str) -> WeatherResponse:
     current_raw = data["current_condition"][0]
     weather_today = data["weather"][0]
 
-    desc = (
-        current_raw["lang_de"][0]["value"]
-        if "lang_de" in current_raw
-        else current_raw["weatherDesc"][0]["value"]
-    )
+    desc = current_raw["lang_de"][0]["value"] if "lang_de" in current_raw else current_raw["weatherDesc"][0]["value"]
 
     current = WeatherCurrent(
         location=location,

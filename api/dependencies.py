@@ -78,7 +78,19 @@ async def startup():
             _svc[name] = pending[name]
             logger.info("API Service '%s' registriert (sync).", name)
 
-    for name in ("memory", "calendar", "notes", "reminder", "task", "email", "drive", "notification", "template", "contacts", "followup"):
+    for name in (
+        "memory",
+        "calendar",
+        "notes",
+        "reminder",
+        "task",
+        "email",
+        "drive",
+        "notification",
+        "template",
+        "contacts",
+        "followup",
+    ):
         if name not in pending:
             continue
         try:

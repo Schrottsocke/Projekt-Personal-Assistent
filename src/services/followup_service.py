@@ -22,9 +22,7 @@ class FollowUpService:
         self._data_dir.mkdir(parents=True, exist_ok=True)
         logger.info("FollowUpService initialisiert.")
 
-    async def list_followups(
-        self, user_key: str, status: str = "open", limit: int = 50, offset: int = 0
-    ) -> list[dict]:
+    async def list_followups(self, user_key: str, status: str = "open", limit: int = 50, offset: int = 0) -> list[dict]:
         followups = await self._load(user_key)
         if status:
             followups = [f for f in followups if f.get("status") == status]
@@ -40,9 +38,7 @@ class FollowUpService:
         await self._save(user_key, followups)
         return data
 
-    async def update_followup(
-        self, user_key: str, followup_id: str, updates: dict
-    ) -> Optional[dict]:
+    async def update_followup(self, user_key: str, followup_id: str, updates: dict) -> Optional[dict]:
         followups = await self._load(user_key)
         item = next((f for f in followups if f.get("id") == followup_id), None)
         if not item:
@@ -56,11 +52,7 @@ class FollowUpService:
         """Gibt alle faelligen Follow-ups zurueck (due_date <= heute)."""
         followups = await self._load(user_key)
         today = datetime.now().strftime("%Y-%m-%d")
-        return [
-            f
-            for f in followups
-            if f.get("status") == "open" and f.get("due_date", "9999") <= today
-        ]
+        return [f for f in followups if f.get("status") == "open" and f.get("due_date", "9999") <= today]
 
     async def _load(self, user_key: str) -> list[dict]:
         path = self._data_dir / f"{user_key}.json"

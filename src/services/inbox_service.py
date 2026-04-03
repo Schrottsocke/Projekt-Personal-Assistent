@@ -1,4 +1,5 @@
 """Inbox Service: Zentrale Aktions-Inbox fuer Vorschlaege, Freigaben und Folgeaktionen."""
+
 import json
 import logging
 import uuid
@@ -20,14 +21,16 @@ class InboxService:
         self._data_dir.mkdir(parents=True, exist_ok=True)
         logger.info("InboxService initialisiert.")
 
-    async def list_items(self, user_key: str, status: str = "pending", category: str = None, limit: int = 50, offset: int = 0) -> list[dict]:
+    async def list_items(
+        self, user_key: str, status: str = "pending", category: str = None, limit: int = 50, offset: int = 0
+    ) -> list[dict]:
         items = await self._load(user_key)
         if status:
             items = [i for i in items if i.get("status") == status]
         if category:
             items = [i for i in items if i.get("category") == category]
         items.sort(key=lambda x: x.get("priority", 99))
-        return items[offset:offset + limit]
+        return items[offset : offset + limit]
 
     async def add_item(self, user_key: str, data: dict) -> dict:
         items = await self._load(user_key)

@@ -53,9 +53,7 @@ async def update_followup(
     user_key: Annotated[str, Depends(get_current_user)],
     followup_svc=Depends(get_followup_service),
 ):
-    result = await followup_svc.update_followup(
-        user_key, followup_id, body.model_dump(exclude_unset=True)
-    )
+    result = await followup_svc.update_followup(user_key, followup_id, body.model_dump(exclude_unset=True))
     if not result:
         raise HTTPException(status_code=404, detail="Follow-up nicht gefunden.")
     return result

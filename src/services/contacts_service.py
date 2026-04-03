@@ -21,18 +21,12 @@ class ContactsService:
         self._data_dir.mkdir(parents=True, exist_ok=True)
         logger.info("ContactsService initialisiert.")
 
-    async def list_contacts(
-        self, user_key: str, query: str = "", limit: int = 50, offset: int = 0
-    ) -> list[dict]:
+    async def list_contacts(self, user_key: str, query: str = "", limit: int = 50, offset: int = 0) -> list[dict]:
         """Liste aller bekannten Kontakte mit optionalem Suchfilter."""
         contacts = await self._load_contacts(user_key)
         if query:
             q = query.lower()
-            contacts = [
-                c
-                for c in contacts
-                if q in c.get("name", "").lower() or q in c.get("email", "").lower()
-            ]
+            contacts = [c for c in contacts if q in c.get("name", "").lower() or q in c.get("email", "").lower()]
         return contacts[offset : offset + limit]
 
     async def get_contact(self, user_key: str, contact_id: str) -> Optional[dict]:
@@ -41,9 +35,7 @@ class ContactsService:
 
     async def upsert_contact(self, user_key: str, contact_data: dict) -> dict:
         contacts = await self._load_contacts(user_key)
-        existing = next(
-            (c for c in contacts if c.get("id") == contact_data.get("id")), None
-        )
+        existing = next((c for c in contacts if c.get("id") == contact_data.get("id")), None)
         if existing:
             existing.update(contact_data)
             result = existing

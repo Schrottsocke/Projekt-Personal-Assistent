@@ -1,4 +1,5 @@
 """Template Service: Wiederverwendbare Inhaltsbausteine (Vorlagen & Routinen)."""
+
 import json
 import logging
 import uuid
@@ -21,9 +22,7 @@ class TemplateService:
         self._data_dir.mkdir(parents=True, exist_ok=True)
         logger.info("TemplateService initialisiert.")
 
-    async def list_templates(
-        self, user_key: str, category: str = None, limit: int = 50, offset: int = 0
-    ) -> list[dict]:
+    async def list_templates(self, user_key: str, category: str = None, limit: int = 50, offset: int = 0) -> list[dict]:
         templates = await self._load(user_key)
         if category:
             templates = [t for t in templates if t.get("category") == category]
@@ -42,9 +41,7 @@ class TemplateService:
         await self._save(user_key, templates)
         return data
 
-    async def update_template(
-        self, user_key: str, template_id: str, updates: dict
-    ) -> Optional[dict]:
+    async def update_template(self, user_key: str, template_id: str, updates: dict) -> Optional[dict]:
         templates = await self._load(user_key)
         tpl = next((t for t in templates if t.get("id") == template_id), None)
         if not tpl:
@@ -56,9 +53,7 @@ class TemplateService:
         await self._save(user_key, templates)
         return tpl
 
-    async def apply_template(
-        self, user_key: str, template_id: str
-    ) -> Optional[dict]:
+    async def apply_template(self, user_key: str, template_id: str) -> Optional[dict]:
         """Wendet eine Vorlage an und erhoeht den Nutzungszaehler."""
         templates = await self._load(user_key)
         tpl = next((t for t in templates if t.get("id") == template_id), None)

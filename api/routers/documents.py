@@ -26,18 +26,11 @@ async def list_documents(
 
     db = get_db()
     with db() as session:
-        query = session.query(ScannedDocument).filter(
-            ScannedDocument.user_key == user_key
-        )
+        query = session.query(ScannedDocument).filter(ScannedDocument.user_key == user_key)
         if doc_type:
             query = query.filter(ScannedDocument.doc_type == doc_type)
         total = query.count()
-        items = (
-            query.order_by(ScannedDocument.scanned_at.desc())
-            .offset(offset)
-            .limit(limit)
-            .all()
-        )
+        items = query.order_by(ScannedDocument.scanned_at.desc()).offset(offset).limit(limit).all()
         return DocumentListResponse(
             items=[DocumentOut.model_validate(d) for d in items],
             total=total,
@@ -84,10 +77,7 @@ async def upload_document(
     # OCR via AI Vision
     ocr_text = ""
     try:
-        prompt = (
-            "Extrahiere den vollstaendigen Text aus diesem Dokument-Bild zeichengenau. "
-            "Antworte NUR mit dem Text."
-        )
+        prompt = "Extrahiere den vollstaendigen Text aus diesem Dokument-Bild zeichengenau. Antworte NUR mit dem Text."
         ocr_text = await ai_service.analyze_image(image_bytes, prompt)
     except Exception:
         pass

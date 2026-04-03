@@ -51,29 +51,35 @@ async def sync_batch(
         try:
             # Validierung: nur bekannte Methoden
             if op.method not in ("POST", "PATCH", "DELETE"):
-                results.append(SyncOperationResult(
-                    index=i,
-                    success=False,
-                    error=f"Unbekannte Methode: {op.method}",
-                ))
+                results.append(
+                    SyncOperationResult(
+                        index=i,
+                        success=False,
+                        error=f"Unbekannte Methode: {op.method}",
+                    )
+                )
                 failed += 1
                 continue
 
             # Hinweis: Die eigentliche Ausfuehrung der gepufferten Ops
             # wuerde hier gegen die internen Services dispatched werden.
             # Fuer Phase 1 akzeptieren wir den Batch und loggen ihn.
-            results.append(SyncOperationResult(
-                index=i,
-                success=True,
-                status_code=200,
-            ))
+            results.append(
+                SyncOperationResult(
+                    index=i,
+                    success=True,
+                    status_code=200,
+                )
+            )
             processed += 1
         except Exception as e:
-            results.append(SyncOperationResult(
-                index=i,
-                success=False,
-                error=str(e),
-            ))
+            results.append(
+                SyncOperationResult(
+                    index=i,
+                    success=False,
+                    error=str(e),
+                )
+            )
             failed += 1
 
     return SyncBatchResponse(

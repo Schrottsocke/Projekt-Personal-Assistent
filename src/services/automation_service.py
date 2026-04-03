@@ -1,4 +1,5 @@
 """Automation Service: Regel- und Automationscenter fuer bereichsuebergreifende Workflows."""
+
 import json
 import logging
 import uuid
@@ -20,11 +21,13 @@ class AutomationService:
         self._data_dir.mkdir(parents=True, exist_ok=True)
         logger.info("AutomationService initialisiert.")
 
-    async def list_rules(self, user_key: str, active_only: bool = False, limit: int = 50, offset: int = 0) -> list[dict]:
+    async def list_rules(
+        self, user_key: str, active_only: bool = False, limit: int = 50, offset: int = 0
+    ) -> list[dict]:
         rules = await self._load(user_key)
         if active_only:
             rules = [r for r in rules if r.get("active", True)]
-        return rules[offset:offset + limit]
+        return rules[offset : offset + limit]
 
     async def create_rule(self, user_key: str, data: dict) -> dict:
         rules = await self._load(user_key)
