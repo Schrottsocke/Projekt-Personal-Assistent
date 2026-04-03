@@ -27,6 +27,25 @@ CHEFKOCH_BASE = "https://www.chefkoch.de/rezepte"
 _CHEFKOCH_CDN = "https://img.chefkoch-cdn.de"
 _ALLOWED_CDN_RE = re.compile(r"^https://img\.chefkoch-cdn\.de/")
 
+# NOTE: Update Chrome version periodically to avoid CDN rejection.
+_CDN_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/135.0.0.0 Safari/537.36"
+    ),
+    "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+    "Accept-Language": "de-DE,de;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Referer": "https://www.chefkoch.de/",
+    "Sec-Fetch-Dest": "image",
+    "Sec-Fetch-Mode": "no-cors",
+    "Sec-Fetch-Site": "cross-site",
+    "Sec-Ch-Ua": '"Chromium";v="135", "Google Chrome";v="135", "Not-A.Brand";v="8"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+}
+
 
 def _to_proxy_url(original_url: str) -> str:
     """Wandelt eine Chefkoch-CDN-URL in eine lokale Proxy-URL um."""
@@ -161,19 +180,15 @@ async def image_proxy(request: Request, path: str):
         raise HTTPException(status_code=400, detail="Ungültiger Bildpfad.")
 
     upstream = f"{_CHEFKOCH_CDN}/{path}"
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/131.0.0.0 Safari/537.36"
-        ),
-        "Accept": "image/webp,image/apng,image/*,*/*;q=0.8",
-        "Referer": "https://www.chefkoch.de/",
-    }
+    logger.debug("Image proxy fetch: %s", upstream)
     try:
         async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
-            resp = await client.get(upstream, headers=headers)
+            resp = await client.get(upstream, headers=_CDN_HEADERS)
         if resp.status_code != 200:
+            logger.warning(
+                "CDN returned %s for %s – body: %s",
+                resp.status_code, upstream, resp.content[:200],
+            )
             raise HTTPException(status_code=resp.status_code, detail="Bild nicht verfügbar.")
         ct = resp.headers.get("content-type", "image/jpeg")
         etag = hashlib.md5(path.encode()).hexdigest()  # noqa: S324
@@ -185,7 +200,8 @@ async def image_proxy(request: Request, path: str):
                 "ETag": f'"{etag}"',
             },
         )
-    except httpx.HTTPError:
+    except httpx.HTTPError as exc:
+        logger.warning("CDN request failed for %s: %s", upstream, exc)
         raise HTTPException(status_code=502, detail="Chefkoch-CDN nicht erreichbar.")
 
 
