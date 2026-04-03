@@ -3587,3 +3587,38 @@ select:focus-visible,
 .btn-icon .material-symbols-outlined {
   font-size: 18px;
 }
+
+/* ── Ingredient Preview ────────────────────────────── */
+
+.ingredient-preview-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ingredient-preview-summary {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  padding: 8px 0;
+}
+
+.ingredient-deselected {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+.ingredient-list li {
+  transition: opacity 0.15s;
+}
+
+/* ── Recipe Dropdown Sections (Mealplan Picker) ────── */
+
+.recipe-dropdown-section {
+  padding: 6px 12px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}

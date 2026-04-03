@@ -8,6 +8,7 @@ const MealPlanView = (() => {
   let recipeSearchResults = [];
   let recipeSearchTimer = null;
   let selectedRecipe = null;
+  let savedRecipesCache = [];
 
   const MEAL_TYPES = { breakfast: 'Fruehstueck', lunch: 'Mittagessen', dinner: 'Abendessen' };
   const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
@@ -49,7 +50,9 @@ const MealPlanView = (() => {
         <button class="btn btn-sm btn-secondary" onclick="MealPlanView.nextWeek()">Nächste &#8594;</button>
       </div>
       <div class="flex-between mb-8">
-        <div></div>
+        <button class="btn btn-sm btn-secondary" id="week-shopping-btn" onclick="MealPlanView.weekToShopping()" style="display:none">
+          <span class="material-symbols-outlined mi-sm">shopping_cart</span> Wocheneinkauf
+        </button>
         <button class="btn btn-sm btn-primary" onclick="MealPlanView.toggleForm()">+ Mahlzeit</button>
       </div>
       <div id="mealplan-form-area"></div>
@@ -88,6 +91,7 @@ const MealPlanView = (() => {
     try {
       entries = await Api.getMealPlanWeek(formatDateISO(weekStart));
       renderWeek();
+      _updateWeekShoppingBtn();
     } catch (err) {
       if (el) el.innerHTML = `
         <div class="error-state"><p>${escapeHtml(err.message)}</p>
@@ -151,6 +155,9 @@ const MealPlanView = (() => {
     if (!el) return;
     if (!showForm) { el.innerHTML = ''; return; }
 
+    // Gespeicherte Rezepte im Hintergrund laden
+    Api.getSavedRecipes().then(r => { savedRecipesCache = r || []; }).catch(() => {});
+
     const today = formatDateISO(new Date());
     el.innerHTML = `
       <div class="card event-create-form">
@@ -173,7 +180,7 @@ const MealPlanView = (() => {
         </div>
         <div class="flex-between">
           <button class="btn btn-sm btn-secondary" onclick="MealPlanView.toggleForm()">Abbrechen</button>
-          <button class="btn btn-sm btn-primary" onclick="MealPlanView.createEntry()">Hinzufügen</button>
+          <button class="btn btn-sm btn-primary" onclick="MealPlanView.createEntry()">Hinzufuegen</button>
         </div>
       </div>
     `;
@@ -197,14 +204,46 @@ const MealPlanView = (() => {
     const dropdown = document.getElementById('recipe-search-dropdown');
     if (!dropdown) return;
 
+    const queryLower = query.toLowerCase();
+
+    // Gespeicherte Rezepte client-seitig filtern
+    const savedMatches = savedRecipesCache.filter(r =>
+      r.title && r.title.toLowerCase().includes(queryLower)
+    ).slice(0, 3);
+
     try {
       recipeSearchResults = await Api.searchRecipes(query, 5);
-      if (recipeSearchResults.length === 0) {
-        dropdown.innerHTML = '<div class="recipe-search-item recipe-search-empty">Keine Rezepte gefunden</div>';
-        return;
-      }
+    } catch {
+      recipeSearchResults = [];
+    }
 
-      dropdown.innerHTML = recipeSearchResults.map((r, i) => `
+    if (savedMatches.length === 0 && recipeSearchResults.length === 0) {
+      dropdown.innerHTML = '<div class="recipe-search-item recipe-search-empty">Keine Rezepte gefunden</div>';
+      return;
+    }
+
+    let html = '';
+
+    // Gespeicherte Rezepte Sektion
+    if (savedMatches.length > 0) {
+      html += '<div class="recipe-dropdown-section">Gespeicherte Rezepte</div>';
+      html += savedMatches.map((r, i) => `
+        <div class="recipe-search-item" onclick="MealPlanView.selectSavedRecipe(${i}, '${escapeHtml(queryLower)}')">
+          ${r.image_url ? `<img src="${escapeHtml(r.image_url)}" alt="" class="recipe-search-thumb">` : ''}
+          <div class="recipe-search-info">
+            <div class="recipe-search-name">${escapeHtml(r.title)}</div>
+            <div class="recipe-search-meta"><span class="material-symbols-outlined mi-sm" style="font-size:12px">bookmark</span> Gespeichert${r.difficulty ? ' · ' + escapeHtml(r.difficulty) : ''}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Chefkoch-Suche Sektion
+    if (recipeSearchResults.length > 0) {
+      if (savedMatches.length > 0) {
+        html += '<div class="recipe-dropdown-section">Chefkoch-Suche</div>';
+      }
+      html += recipeSearchResults.map((r, i) => `
         <div class="recipe-search-item" onclick="MealPlanView.selectRecipe(${i})">
           ${r.image_url ? `<img src="${escapeHtml(r.image_url)}" alt="" class="recipe-search-thumb">` : ''}
           <div class="recipe-search-info">
@@ -213,9 +252,42 @@ const MealPlanView = (() => {
           </div>
         </div>
       `).join('');
-    } catch {
-      dropdown.innerHTML = '';
     }
+
+    dropdown.innerHTML = html;
+  }
+
+  function selectSavedRecipe(index, queryLower) {
+    const matches = savedRecipesCache.filter(r =>
+      r.title && r.title.toLowerCase().includes(queryLower)
+    ).slice(0, 3);
+    const r = matches[index];
+    if (!r) return;
+
+    // ingredients_json parsen falls vorhanden
+    let ingredients = [];
+    if (r.ingredients_json) {
+      try { ingredients = JSON.parse(r.ingredients_json); } catch { /* ignore */ }
+    }
+
+    selectedRecipe = {
+      chefkoch_id: r.chefkoch_id,
+      title: r.title,
+      image_url: r.image_url,
+      servings: r.servings || 4,
+      prep_time: r.prep_time,
+      difficulty: r.difficulty,
+      ingredients,
+    };
+
+    const titleInput = document.getElementById('meal-title');
+    if (titleInput) titleInput.value = r.title;
+
+    const servingsInput = document.getElementById('meal-servings');
+    if (servingsInput && r.servings) servingsInput.value = r.servings;
+
+    document.getElementById('recipe-search-dropdown').innerHTML = '';
+    updateSelectedRecipeInfo();
   }
 
   function selectRecipe(index) {
@@ -284,26 +356,70 @@ const MealPlanView = (() => {
     }
   }
 
-  async function toShopping(entryId, chefkochId, servings) {
+  function toShopping(entryId, chefkochId, servings) {
     if (!chefkochId) return;
+    // Rezeptname aus den Entries finden
+    const entry = entries.find(e => e.id === entryId);
+    IngredientPreview.show({
+      title: entry ? entry.recipe_title : 'Rezept',
+      chefkochId,
+      ingredients: null, // Werden via API nachgeladen
+      baseServings: servings || 4,
+      currentServings: servings || 4,
+      onConfirm: async (items) => {
+        try {
+          const result = await Api.addIngredientsToShopping(items);
+          const msg = result.merged > 0
+            ? `${result.added} Zutaten hinzugefuegt, ${result.merged} zusammengefuehrt`
+            : `${result.added} Zutaten zur Einkaufsliste hinzugefuegt`;
+          Toast.show(msg, 'info');
+        } catch (err) {
+          Toast.show('Fehler: ' + err.message, 'error');
+        }
+      }
+    });
+  }
+
+  async function deleteEntry(id) {
+    if (!confirm('Mahlzeit loeschen?')) return;
     try {
-      const result = await Api.addRecipeToShopping(chefkochId, servings);
-      Toast.show(`${result.added} Zutaten zur Einkaufsliste hinzugefuegt`, 'info');
+      await Api.deleteMealPlan(id);
+      entries = entries.filter(e => e.id !== id);
+      renderWeek();
+      _updateWeekShoppingBtn();
+    } catch (err) {
+      alert('Fehler beim Loeschen: ' + err.message);
+    }
+  }
+
+  function _updateWeekShoppingBtn() {
+    const btn = document.getElementById('week-shopping-btn');
+    if (!btn) return;
+    const hasRecipes = entries.some(e => !!e.recipe_chefkoch_id);
+    btn.style.display = hasRecipes ? '' : 'none';
+  }
+
+  async function weekToShopping() {
+    const recipeCount = entries.filter(e => !!e.recipe_chefkoch_id).length;
+    if (recipeCount === 0) return;
+    if (!confirm(`Zutaten von ${recipeCount} Rezept${recipeCount > 1 ? 'en' : ''} zur Einkaufsliste hinzufuegen?`)) return;
+
+    try {
+      const result = await Api.addWeekToShopping(formatDateISO(weekStart));
+      const parts = [];
+      if (result.added > 0) parts.push(`${result.added} hinzugefuegt`);
+      if (result.merged > 0) parts.push(`${result.merged} zusammengefuehrt`);
+      if (result.skipped > 0) parts.push(`${result.skipped} uebersprungen`);
+      Toast.show(
+        parts.length > 0
+          ? `Wocheneinkauf: ${parts.join(', ')}`
+          : 'Keine Zutaten gefunden',
+        parts.length > 0 ? 'info' : 'warning'
+      );
     } catch (err) {
       Toast.show('Fehler: ' + err.message, 'error');
     }
   }
 
-  async function deleteEntry(id) {
-    if (!confirm('Mahlzeit löschen?')) return;
-    try {
-      await Api.deleteMealPlan(id);
-      entries = entries.filter(e => e.id !== id);
-      renderWeek();
-    } catch (err) {
-      alert('Fehler beim Löschen: ' + err.message);
-    }
-  }
-
-  return { render, prevWeek, nextWeek, toggleForm, createEntry, deleteEntry, onTitleInput, selectRecipe, clearRecipe, toShopping };
+  return { render, prevWeek, nextWeek, toggleForm, createEntry, deleteEntry, onTitleInput, selectRecipe, selectSavedRecipe, clearRecipe, toShopping, weekToShopping };
 })();
