@@ -148,9 +148,7 @@ Text:
     if pdf_path:
         try:
             if drive_service.is_connected(user_key):
-                folder_id = await drive_service.get_or_create_document_folder(
-                    user_key, doc_type.lower()
-                )
+                folder_id = await drive_service.get_or_create_document_folder(user_key, doc_type.lower())
                 uploaded = await drive_service.upload_file(user_key, pdf_path, folder_id)
                 if uploaded:
                     drive_link = uploaded.get("webViewLink")
@@ -292,9 +290,7 @@ Text:
     if pdf_path:
         try:
             if drive_service.is_connected(user_key):
-                folder_id = await drive_service.get_or_create_document_folder(
-                    user_key, doc_type.lower()
-                )
+                folder_id = await drive_service.get_or_create_document_folder(user_key, doc_type.lower())
                 uploaded = await drive_service.upload_file(user_key, pdf_path, folder_id)
                 if uploaded:
                     drive_link = uploaded.get("webViewLink")
