@@ -3179,6 +3179,55 @@ select:focus-visible,
   align-self: flex-end;
 }
 
+.quick-capture-chip.suggested {
+  border-color: var(--accent);
+  color: var(--accent);
+  animation: qcSuggestPulse 1.5s ease infinite;
+}
+@keyframes qcSuggestPulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% { box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.15); }
+}
+
+.qc-hotkey-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-left: auto;
+  margin-right: var(--space-3);
+  font-family: inherit;
+}
+
+.qc-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-3);
+}
+
+.qc-save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qc-snackbar-success {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.qc-snackbar-action {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.qc-snackbar-action:hover {
+  text-decoration: underline;
+}
+
 /* ── Snackbar ──────────────────────────────────── */
 .snackbar {
   position: fixed;
@@ -3383,6 +3432,64 @@ select:focus-visible,
 
 .weekly-review-highlight .material-symbols-outlined {
   color: var(--success);
+  font-size: 16px;
+}
+
+/* ── Drive Dashboard Widget ── */
+.drive-widget-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.drive-widget-icon {
+  font-size: 1.3rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.drive-widget-info {
+  flex: 1;
+  min-width: 0;
+}
+.drive-widget-info .card-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Weather Dashboard Widget ── */
+.weather-widget-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.weather-widget-icon {
+  font-size: 2rem;
+  color: var(--accent);
+}
+.weather-widget-temp {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.weather-widget-desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.weather-widget-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.weather-widget-hint .material-symbols-outlined {
+  color: var(--warning);
   font-size: 16px;
 }
 
