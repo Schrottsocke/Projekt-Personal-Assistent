@@ -417,6 +417,32 @@ const Api = (() => {
     return request('/notifications', { method: 'POST', body: data });
   }
 
+  // Automation
+  function getAutomationRules() { return request('/automation'); }
+  function createAutomationRule(data) {
+    return request('/automation', { method: 'POST', body: data });
+  }
+  function toggleAutomationRule(id) {
+    return request(`/automation/${id}/toggle`, { method: 'POST' });
+  }
+  function deleteAutomationRule(id) {
+    return request(`/automation/${id}`, { method: 'DELETE' });
+  }
+
+  // Inbox
+  function getInboxItems(params) {
+    const qs = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => { if (v) qs.set(k, v); });
+    }
+    const q = qs.toString();
+    return request(`/inbox${q ? '?' + q : ''}`);
+  }
+  function getInboxCount() { return request('/inbox/count'); }
+  function actionInboxItem(id, action) {
+    return request(`/inbox/${id}/action`, { method: 'POST', body: { action } });
+  }
+
   // Shifts / Dienstplan
   function getShiftTypes(all = false) {
     return request(`/shifts/types${all ? '?all=true' : ''}`);
@@ -453,6 +479,8 @@ const Api = (() => {
     getDriveFiles, uploadFile,
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
     getNotifications, getNotificationCount, updateNotification, bulkUpdateNotifications, markAllNotificationsRead, createNotification,
+    getAutomationRules, createAutomationRule, toggleAutomationRule, deleteAutomationRule,
+    getInboxItems, getInboxCount, actionInboxItem,
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
     getPreferences, updatePreferences, getPreferencesRegistry,
