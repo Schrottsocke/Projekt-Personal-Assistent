@@ -108,6 +108,13 @@ const Api = (() => {
         Toast.show(msg);
         throw new Error(msg);
       }
+      // Detect offline / network errors – let views decide how to handle
+      const isOffline = !navigator.onLine || err.message === 'Failed to fetch' || err.name === 'TypeError';
+      if (isOffline) {
+        const offlineErr = new Error('Keine Verbindung');
+        offlineErr.isOffline = true;
+        throw offlineErr;
+      }
       Toast.show(err.message || 'Netzwerkfehler');
       throw err;
     }

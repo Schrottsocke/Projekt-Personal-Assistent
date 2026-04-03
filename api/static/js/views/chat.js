@@ -158,6 +158,12 @@ const ChatView = (() => {
     const message = retryMsg || (input ? input.value.trim() : '');
     if (!message) return;
 
+    // Offline check – chat needs a live connection
+    if (typeof OfflineQueue !== 'undefined' && !OfflineQueue.isOnline()) {
+      Toast.show('Du bist offline \u2013 Nachrichten k\u00f6nnen gerade nicht gesendet werden', 'warning');
+      return;
+    }
+
     if (!retryMsg) input.value = '';
     lastMessage = message;
     sending = true;

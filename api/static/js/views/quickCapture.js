@@ -164,7 +164,6 @@ const QuickCapture = (() => {
             showSnackbar('Bitte Startzeit angeben');
             return;
           }
-          // End = start + 1h
           const startDate = new Date(start);
           const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
           await Api.createCalendarEvent({
@@ -177,17 +176,43 @@ const QuickCapture = (() => {
         }
         case 'shopping':
           await Api.addShoppingItem(title);
-          showSnackbar('Artikel hinzugefügt');
+          showSnackbar('Artikel hinzugef\u00fcgt');
           break;
         case 'note':
-          // Use chat as note fallback
           await Api.sendMessage(`Notiz: ${title}`);
           showSnackbar('Notiz gespeichert');
           break;
       }
       close();
     } catch (e) {
-      showSnackbar('Fehler beim Speichern');
+      if (e.isOffline && typeof OfflineQueue !== 'undefined') {
+        // Queue task and shopping captures; events and notes need server
+        if (currentType === 'task') {
+          OfflineQueue.enqueue({
+            type: 'task_create',
+            endpoint: '/tasks',
+            method: 'POST',
+            body: { title, description: '' },
+            label: title,
+          });
+          showSnackbar('Task gespeichert f\u00fcr sp\u00e4ter');
+          close();
+        } else if (currentType === 'shopping') {
+          OfflineQueue.enqueue({
+            type: 'shopping_add',
+            endpoint: '/shopping/items',
+            method: 'POST',
+            body: { name: title },
+            label: title,
+          });
+          showSnackbar('Artikel gespeichert f\u00fcr sp\u00e4ter');
+          close();
+        } else {
+          showSnackbar('Du bist offline \u2013 bitte sp\u00e4ter erneut versuchen');
+        }
+      } else {
+        showSnackbar('Fehler beim Speichern');
+      }
     }
   }
 

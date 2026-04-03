@@ -160,6 +160,10 @@
     buildNav(null);
     Router.init();
     QuickCapture.init();
+    // Init offline queue (status tracking + auto-sync)
+    if (typeof OfflineQueue !== 'undefined') {
+      OfflineQueue.init();
+    }
     // Load preferences in background (updates nav when ready)
     await loadPreferences();
     // Init notification bell (polling + badge)
