@@ -198,7 +198,6 @@ def get_followup_service():
     return _require("followup")
 
 
-
 def get_weather_service():
     return _require("weather")
 
@@ -210,7 +209,6 @@ def get_weather_service_optional():
 
 def get_mobility_service():
     return _require("mobility")
-
 
 
 def get_bot_shim():
