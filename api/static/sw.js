@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dualmind-v3';
+const CACHE_NAME = 'dualmind-v4';
 const SHELL_ASSETS = [
   '/app',
   '/static/css/app.css',
@@ -19,6 +19,7 @@ const SHELL_ASSETS = [
   '/static/js/views/inbox.js',
   '/static/js/views/login.js',
   '/static/js/views/mealplan.js',
+  '/static/js/views/memory.js',
   '/static/js/views/mobility.js',
   '/static/js/views/notifications.js',
   '/static/js/views/profile.js',
@@ -35,6 +36,7 @@ const SHELL_ASSETS = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(SHELL_ASSETS)));
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
@@ -43,6 +45,7 @@ self.addEventListener('activate', (e) => {
       Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
     )
   );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
