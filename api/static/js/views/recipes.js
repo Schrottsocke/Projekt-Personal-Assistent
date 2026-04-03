@@ -1,10 +1,21 @@
 /**
  * Recipes View – Search, Saved, Detail Modal
+ * Improved: robust image fallbacks, quick-filter chips, friendly empty states
  */
 const RecipesView = (() => {
   const SEARCH_STORAGE_KEY = 'recipes_search_state';
   const SEARCH_TTL_MS = 30 * 60 * 1000; // 30 minutes
-  const PLACEHOLDER_SVG = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300' viewBox='0 0 400 300'%3E%3Crect fill='%23262626' width='400' height='300'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23555' font-family='sans-serif' font-size='48'%3E🍽%3C/text%3E%3C/svg%3E`;
+
+  const QUICK_FILTERS = [
+    { label: 'Pasta', icon: 'lunch_dining' },
+    { label: 'Schnell & einfach', icon: 'bolt' },
+    { label: 'Vegetarisch', icon: 'eco' },
+    { label: 'Salat', icon: 'nutrition' },
+    { label: 'Suppe', icon: 'soup_kitchen' },
+    { label: 'Backen', icon: 'bakery_dining' },
+    { label: 'Frühstück', icon: 'egg_alt' },
+    { label: 'Abendessen', icon: 'dinner_dining' },
+  ];
 
   let activeTab = 'search';
   let searchResults = [];
@@ -12,10 +23,36 @@ const RecipesView = (() => {
   let searchTimer = null;
   let currentServings = 4;
 
+  // ── Image fallback helpers ──────────────────────────
+
+  function imgFallbackHtml(title, cssClass) {
+    const cls = cssClass || 'recipe-img-fallback';
+    const initial = (title || '?').charAt(0).toUpperCase();
+    return `<div class="${cls}"><span>${escapeHtml(initial)}</span><span class="material-symbols-outlined">restaurant</span></div>`;
+  }
+
   function handleImgError(img) {
     img.onerror = null;
-    img.src = PLACEHOLDER_SVG;
+    const title = img.dataset.title || '?';
+    const isModal = img.classList.contains('modal-img');
+    const fallback = document.createElement('div');
+    fallback.className = isModal ? 'modal-img-fallback' : 'recipe-img-fallback';
+    const initial = (title || '?').charAt(0).toUpperCase();
+    fallback.innerHTML = `<span>${escapeHtml(initial)}</span><span class="material-symbols-outlined">restaurant</span>`;
+    img.replaceWith(fallback);
   }
+
+  function renderImage(imageUrl, title, cssClass) {
+    if (!imageUrl) {
+      if (title) console.warn('[Recipes] Rezept ohne Bild-URL:', title);
+      return imgFallbackHtml(title, cssClass === 'modal-img' ? 'modal-img-fallback' : 'recipe-img-fallback');
+    }
+    const cls = cssClass || 'recipe-img';
+    const safeTitle = escapeHtml(title || '');
+    return `<img class="${cls}" src="${escapeHtml(imageUrl)}" alt="${safeTitle}" loading="lazy" referrerpolicy="no-referrer" data-title="${safeTitle}" onerror="RecipesView._handleImgError(this)">`;
+  }
+
+  // ── Search state persistence ────────────────────────
 
   function saveSearchState(query, results) {
     try {
@@ -44,6 +81,59 @@ const RecipesView = (() => {
     sessionStorage.removeItem(SEARCH_STORAGE_KEY);
   }
 
+  // ── Quick-filter chips ──────────────────────────────
+
+  function renderChips() {
+    return `<div class="recipe-chips">${QUICK_FILTERS.map(f =>
+      `<button class="recipe-chip" onclick="RecipesView.applyChip('${escapeHtml(f.label)}')" title="${escapeHtml(f.label)}"><span class="material-symbols-outlined mi-sm">${f.icon}</span> ${escapeHtml(f.label)}</button>`
+    ).join('')}</div>`;
+  }
+
+  function applyChip(label) {
+    const input = document.getElementById('recipe-search');
+    if (input) input.value = label;
+    doSearch(label);
+  }
+
+  // ── Empty states ────────────────────────────────────
+
+  function emptyStateHtml(icon, title, text, extras) {
+    return `<div class="recipe-empty-state">
+      <span class="material-symbols-outlined">${icon}</span>
+      <h3>${title}</h3>
+      <p>${text}</p>
+      ${extras || ''}
+    </div>`;
+  }
+
+  function searchEmptyState() {
+    return emptyStateHtml(
+      'search',
+      'Entdecke neue Rezepte',
+      'Tippe einen Begriff ein oder wähle einen Vorschlag.',
+      renderChips()
+    );
+  }
+
+  function noResultsState(query) {
+    return emptyStateHtml(
+      'sentiment_dissatisfied',
+      `Keine Treffer für "${escapeHtml(query)}"`,
+      'Versuch einen anderen Begriff oder stöbere in den Vorschlägen.',
+      renderChips()
+    );
+  }
+
+  function savedEmptyState() {
+    return emptyStateHtml(
+      'bookmark_border',
+      'Noch keine Rezepte gespeichert',
+      'Suche nach Rezepten und speichere deine Favoriten.'
+    );
+  }
+
+  // ── Main render ─────────────────────────────────────
+
   async function render(container) {
     container.innerHTML = `
       <div class="section-header"><span class="section-icon material-symbols-outlined">restaurant</span> Rezepte</div>
@@ -68,16 +158,21 @@ const RecipesView = (() => {
     else renderSaved();
   }
 
+  // ── Search tab ──────────────────────────────────────
+
   function renderSearch() {
     const el = document.getElementById('recipes-content');
     const saved = loadSearchState();
     el.innerHTML = `
+      <div class="recipe-search-header">
+        <h2>Was kochst du heute?</h2>
+      </div>
       <div class="input-group mb-16">
-        <input type="search" id="recipe-search" placeholder="Rezept suchen…"
+        <input type="search" id="recipe-search" placeholder="Suche nach Zutaten, Gerichten oder Kategorien"
                oninput="RecipesView.onSearch(this.value)" value="${saved ? escapeHtml(saved.query) : ''}">
       </div>
       <div id="recipe-results">
-        <div class="empty-state">Suchbegriff eingeben, um Rezepte zu finden</div>
+        ${searchEmptyState()}
       </div>
     `;
     if (saved && saved.results && saved.results.length > 0) {
@@ -89,8 +184,7 @@ const RecipesView = (() => {
   function onSearch(query) {
     clearTimeout(searchTimer);
     if (!query.trim()) {
-      document.getElementById('recipe-results').innerHTML =
-        '<div class="empty-state">Suchbegriff eingeben, um Rezepte zu finden</div>';
+      document.getElementById('recipe-results').innerHTML = searchEmptyState();
       return;
     }
     searchTimer = setTimeout(() => doSearch(query.trim()), 400);
@@ -103,15 +197,17 @@ const RecipesView = (() => {
     try {
       searchResults = await Api.searchRecipes(query);
       if (searchResults.length === 0) {
-        el.innerHTML = '<div class="empty-state">Keine Rezepte gefunden</div>';
+        el.innerHTML = noResultsState(query);
         return;
       }
       renderRecipeGrid(el, searchResults, false);
       saveSearchState(query, searchResults);
     } catch (err) {
-      el.innerHTML = `<div class="error-state"><p>${err.message}</p></div>`;
+      el.innerHTML = `<div class="error-state"><p>${escapeHtml(err.message)}</p></div>`;
     }
   }
+
+  // ── Saved tab ───────────────────────────────────────
 
   async function renderSaved() {
     const el = document.getElementById('recipes-content');
@@ -119,32 +215,48 @@ const RecipesView = (() => {
 
     try {
       savedRecipes = await Api.getSavedRecipes();
+
+      // Update tab label with count
+      const savedTab = document.querySelector('.tab[data-tab="saved"]');
+      if (savedTab) {
+        savedTab.textContent = savedRecipes.length > 0
+          ? `Gespeichert (${savedRecipes.length})`
+          : 'Gespeichert';
+      }
+
       if (savedRecipes.length === 0) {
-        el.innerHTML = '<div class="empty-state">Keine gespeicherten Rezepte</div>';
+        el.innerHTML = savedEmptyState();
         return;
       }
       renderRecipeGrid(el, savedRecipes, true);
     } catch (err) {
-      el.innerHTML = `<div class="error-state"><p>${err.message}</p></div>`;
+      el.innerHTML = `<div class="error-state"><p>${escapeHtml(err.message)}</p></div>`;
     }
   }
+
+  // ── Recipe grid ─────────────────────────────────────
 
   function renderRecipeGrid(el, recipes, isSaved) {
     let html = '<div class="recipe-grid">';
     recipes.forEach((r, idx) => {
-      const imgSrc = r.image_url || '';
       const time = (r.prep_time || 0) + (r.cook_time || 0);
+
       html += `
         <div class="recipe-card" onclick="RecipesView.showDetail(${idx}, ${isSaved})">
-          ${imgSrc ? `<img class="recipe-img" src="${escapeHtml(imgSrc)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${PLACEHOLDER_SVG}'">` : '<div class="recipe-img"></div>'}
+          ${renderImage(r.image_url, r.title, 'recipe-img')}
           <div class="recipe-info">
-            <div class="recipe-title">${escapeHtml(r.title)}</div>
+            <div class="recipe-title">${escapeHtml(r.title || 'Ohne Titel')}</div>
             <div class="recipe-meta">
               ${time > 0 ? `<span><span class="material-symbols-outlined mi-sm">schedule</span> ${time} Min.</span>` : ''}
               ${r.difficulty ? `<span>${escapeHtml(r.difficulty)}</span>` : ''}
               ${isSaved ? `<button class="btn-icon" onclick="event.stopPropagation();RecipesView.toggleFavorite(${idx})" title="${r.is_favorite ? 'Favorit entfernen' : 'Als Favorit markieren'}" style="margin-left:auto">
                 <span class="material-symbols-outlined" style="color:${r.is_favorite ? 'var(--error)' : 'var(--text-secondary)'};font-size:20px">${r.is_favorite ? 'favorite' : 'favorite_border'}</span>
               </button>` : ''}
+            </div>
+            <div class="recipe-meta-detail">
+              ${r.servings ? `<span class="recipe-meta-badge"><span class="material-symbols-outlined">group</span> ${r.servings} Port.</span>` : ''}
+              ${r.difficulty && !time ? `<span class="recipe-meta-badge">${escapeHtml(r.difficulty)}</span>` : ''}
+              ${time > 0 && r.prep_time && r.cook_time ? `<span class="recipe-meta-badge"><span class="material-symbols-outlined">skillet</span> ${r.cook_time} Min.</span>` : ''}
             </div>
           </div>
         </div>
@@ -153,6 +265,8 @@ const RecipesView = (() => {
     html += '</div>';
     el.innerHTML = html;
   }
+
+  // ── Detail modal ────────────────────────────────────
 
   function showDetail(idx, isSaved) {
     const recipes = isSaved ? savedRecipes : searchResults;
@@ -169,18 +283,20 @@ const RecipesView = (() => {
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
     const ingredients = r.ingredients || [];
+    const sourceUrl = r.url || r.source_url || '';
 
     overlay.innerHTML = `
       <div class="modal-content">
         <div class="modal-header">
-          <h2 style="font-size:1.1rem;font-weight:600">${escapeHtml(r.title)}</h2>
+          <h2 style="font-size:1.1rem;font-weight:600">${escapeHtml(r.title || 'Ohne Titel')}</h2>
           <button class="modal-close" onclick="this.closest('.modal-overlay').remove()"><span class="material-symbols-outlined">close</span></button>
         </div>
-        ${r.image_url ? `<img class="modal-img" src="${escapeHtml(r.image_url)}" alt="" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${PLACEHOLDER_SVG}'">` : ''}
+        ${renderImage(r.image_url, r.title, 'modal-img')}
         <div class="recipe-meta mb-16">
           ${r.prep_time ? `<span><span class="material-symbols-outlined mi-sm">schedule</span> ${r.prep_time} Min. Vorbereitung</span>` : ''}
           ${r.cook_time ? `<span><span class="material-symbols-outlined mi-sm">skillet</span> ${r.cook_time} Min. Kochen</span>` : ''}
           ${r.difficulty ? `<span class="badge badge-accent">${escapeHtml(r.difficulty)}</span>` : ''}
+          ${r.servings ? `<span><span class="material-symbols-outlined mi-sm">group</span> ${r.servings} Portionen</span>` : ''}
         </div>
 
         ${ingredients.length > 0 ? `
@@ -197,14 +313,17 @@ const RecipesView = (() => {
         ` : ''}
 
         <div class="modal-actions">
-          ${!isSaved ? `<button class="btn btn-primary" onclick="RecipesView.saveRecipe(${idx})">Speichern</button>` : ''}
-          ${ingredients.length > 0 ? `<button class="btn btn-secondary" onclick="RecipesView.addToShopping('${escapeHtml(r.chefkoch_id || '')}')">Zur Einkaufsliste</button>` : ''}
+          ${!isSaved ? `<button class="btn btn-primary" onclick="RecipesView.saveRecipe(${idx})"><span class="material-symbols-outlined mi-sm">bookmark_add</span> Speichern</button>` : ''}
+          ${ingredients.length > 0 ? `<button class="btn btn-secondary" onclick="RecipesView.addToShopping('${escapeHtml(r.chefkoch_id || '')}')"><span class="material-symbols-outlined mi-sm">add_shopping_cart</span> Zur Einkaufsliste</button>` : ''}
         </div>
+        ${sourceUrl ? `<div style="margin-top:12px;text-align:center"><a href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener noreferrer" style="color:var(--text-muted);font-size:var(--text-xs)">Quelle: Chefkoch.de</a></div>` : ''}
       </div>
     `;
 
     document.body.appendChild(overlay);
   }
+
+  // ── Ingredients ─────────────────────────────────────
 
   function renderIngredients(ingredients, servings, baseServings) {
     const factor = servings / baseServings;
@@ -217,7 +336,7 @@ const RecipesView = (() => {
       } else if (ing.unit) {
         amount = ing.unit;
       }
-      return `<li><span>${escapeHtml(ing.name)}</span><span class="ingredient-amount">${escapeHtml(amount)}</span></li>`;
+      return `<li><span>${escapeHtml(ing.name || '')}</span><span class="ingredient-amount">${escapeHtml(amount)}</span></li>`;
     }).join('');
   }
 
@@ -225,10 +344,8 @@ const RecipesView = (() => {
     currentServings = parseInt(val);
     document.getElementById('servings-display').textContent = currentServings;
     const list = document.getElementById('ingredient-list');
-    // Re-read ingredients from current modal context
     const overlay = document.querySelector('.modal-overlay');
     if (!overlay) return;
-    // Find the recipe via data attributes instead of DOM text matching
     const idx = parseInt(overlay.dataset.recipeIdx, 10);
     const isSaved = overlay.dataset.isSaved === 'true';
     const recipes = isSaved ? savedRecipes : searchResults;
@@ -237,6 +354,8 @@ const RecipesView = (() => {
       list.innerHTML = renderIngredients(recipe.ingredients || [], currentServings, baseServings);
     }
   }
+
+  // ── Actions ─────────────────────────────────────────
 
   async function saveRecipe(idx) {
     const r = searchResults[idx];
@@ -272,12 +391,17 @@ const RecipesView = (() => {
     if (!chefkochId) return;
     try {
       const result = await Api.addRecipeToShopping(chefkochId, currentServings);
-      alert(`${result.added} Zutaten zur Einkaufsliste hinzugefuegt`);
+      alert(`${result.added} Zutaten zur Einkaufsliste hinzugefügt`);
       document.querySelector('.modal-overlay')?.remove();
     } catch (err) {
       alert('Fehler: ' + err.message);
     }
   }
 
-  return { render, switchTab, onSearch, showDetail, updateServings, saveRecipe, addToShopping, toggleFavorite };
+  return {
+    render, switchTab, onSearch, showDetail, updateServings,
+    saveRecipe, addToShopping, toggleFavorite,
+    applyChip,
+    _handleImgError: handleImgError,
+  };
 })();
