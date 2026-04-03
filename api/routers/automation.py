@@ -6,12 +6,30 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from api.dependencies import get_current_user, get_automation_service
-from api.schemas.automation import AutomationRuleCreate, AutomationRuleOut, AutomationRuleUpdate
+from api.dependencies import (
+    get_current_user,
+    get_automation_service,
+)
+from api.schemas.automation import (
+    AutomationRuleCreate,
+    AutomationRuleOut,
+    AutomationRuleUpdate,
+    AutomationMeta,
+    EvaluationResult,
+)
 from config.settings import settings
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
+
+
+@router.get("/meta", response_model=AutomationMeta)
+async def get_meta(
+    user_key: Annotated[str, Depends(get_current_user)],
+    auto_svc=Depends(get_automation_service),
+):
+    """Gibt verfuegbare Trigger und Aktionen mit Labels/Icons zurueck."""
+    return auto_svc.get_meta()
 
 
 @router.get("", response_model=list[AutomationRuleOut])
@@ -77,3 +95,23 @@ async def delete_rule(
     deleted = await auto_svc.delete_rule(user_key, rule_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Regel nicht gefunden.")
+
+
+@router.post("/evaluate", response_model=EvaluationResult)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def evaluate_rules(
+    request: Request,
+    user_key: Annotated[str, Depends(get_current_user)],
+    auto_svc=Depends(get_automation_service),
+):
+    """Wertet alle aktiven Regeln manuell aus (fuer Test/Debug)."""
+    from api.dependencies import _svc
+
+    services = {
+        "task": _svc.get("task"),
+        "calendar": _svc.get("calendar"),
+        "shopping": _svc.get("shopping"),
+        "notification": _svc.get("notification"),
+        "reminder": _svc.get("reminder"),
+    }
+    return await auto_svc.evaluate_rules(user_key, services)
