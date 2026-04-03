@@ -67,6 +67,17 @@ async def startup():
         ("ocr", OcrService),
         ("pdf", PdfService),
     ]
+
+    # AutomationService (JSON-basiert, kein DB-Init noetig)
+    from src.services.automation_service import AutomationService
+
+    try:
+        auto_svc = AutomationService()
+        await auto_svc.initialize()
+        _svc["automation"] = auto_svc
+        logger.info("API Service 'automation' initialisiert.")
+    except Exception as e:
+        logger.warning("API Service 'automation' Init-Fehler: %s", e)
     for name, cls in _constructors:
         try:
             pending[name] = cls()
@@ -223,6 +234,10 @@ def get_ocr_service():
 
 def get_pdf_service():
     return _require("pdf")
+
+
+def get_automation_service():
+    return _require("automation")
 
 
 def get_bot_shim():
