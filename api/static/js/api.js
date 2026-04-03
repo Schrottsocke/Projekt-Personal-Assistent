@@ -466,6 +466,20 @@ const Api = (() => {
     return request(`/shifts/entries/${id}`, { method: 'DELETE' });
   }
 
+  // Generic convenience methods
+  function get(path, opts = {}) {
+    return request(path, { ...opts, method: 'GET' });
+  }
+  function post(path, body, opts = {}) {
+    return request(path, { ...opts, method: 'POST', body });
+  }
+  function patch(path, body, opts = {}) {
+    return request(path, { ...opts, method: 'PATCH', body });
+  }
+  function del(path, opts = {}) {
+    return request(path, { ...opts, method: 'DELETE' });
+  }
+
   return {
     getToken, getUserKey, isLoggedIn, login, logout, clearAuth,
     getDashboard,
@@ -486,5 +500,6 @@ const Api = (() => {
     getPreferences, updatePreferences, getPreferencesRegistry,
     request,
     searchGlobal,
+    get, post, patch, 'delete': del,
   };
 })();
