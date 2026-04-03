@@ -12,6 +12,8 @@ import 'screens/shopping_screen.dart';
 import 'screens/recipes_screen.dart';
 import 'screens/chat_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/tasks_screen.dart';
+import 'screens/calendar_screen.dart';
 
 void main() {
   FlutterError.onError = (details) {
@@ -64,6 +66,8 @@ final List<NavArea> allNavAreas = [
   NavArea(id: 'shopping', path: '/shopping', label: 'Einkauf', icon: Icons.shopping_cart_outlined, selectedIcon: Icons.shopping_cart, screen: const ShoppingScreen()),
   NavArea(id: 'recipes', path: '/recipes', label: 'Rezepte', icon: Icons.restaurant_menu_outlined, selectedIcon: Icons.restaurant_menu, screen: const RecipesScreen()),
   NavArea(id: 'chat', path: '/chat', label: 'Chat', icon: Icons.chat_bubble_outline, selectedIcon: Icons.chat_bubble, screen: const ChatScreen()),
+  NavArea(id: 'tasks', path: '/tasks', label: 'Aufgaben', icon: Icons.check_box_outlined, selectedIcon: Icons.check_box, screen: const TasksScreen()),
+  NavArea(id: 'calendar', path: '/calendar', label: 'Kalender', icon: Icons.calendar_today_outlined, selectedIcon: Icons.calendar_today, screen: const CalendarScreen()),
   NavArea(id: 'profile', path: '/profile', label: 'Profil', icon: Icons.person_outline, selectedIcon: Icons.person, screen: const ProfileScreen()),
 ];
 
