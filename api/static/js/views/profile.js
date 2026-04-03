@@ -188,6 +188,36 @@ const ProfileView = (() => {
             </div>
           </div>
 
+          <!-- Notifications -->
+          <div class="pref-section">
+            <div class="pref-section-header" onclick="ProfileView.togglePrefSection('pref-notifications')">
+              <div class="pref-section-label">
+                <span class="material-symbols-outlined">notifications</span>
+                Benachrichtigungen
+              </div>
+              <span class="material-symbols-outlined collapse-icon" id="pref-notifications-icon">chevron_right</span>
+            </div>
+            <div class="pref-section-content collapsed" id="pref-notifications">
+              <div class="pref-section-inner">
+                <div class="settings-hint">Erinnerungen und Systemhinweise erscheinen automatisch. Einzelne Benachrichtigungen kannst du im Notification Center ausblenden.</div>
+                <div class="settings-item">
+                  <span class="settings-item-label">Im Dashboard anzeigen</span>
+                  <label class="toggle toggle-sm">
+                    <input type="checkbox" id="notif-widget-toggle" checked
+                           onchange="ProfileView.toggleNotifWidget(this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <a href="#/notifications" style="text-decoration:none;color:inherit">
+                  <div class="settings-item" style="cursor:pointer">
+                    <span class="settings-item-label"><span class="material-symbols-outlined mi-sm">inbox</span> Zum Notification Center</span>
+                    <span class="material-symbols-outlined mi-sm" style="color:var(--text-muted)">chevron_right</span>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+
           <!-- Navigation -->
           <div class="pref-section">
             <div class="pref-section-header" onclick="ProfileView.togglePrefSection('pref-nav')">
@@ -319,16 +349,23 @@ const ProfileView = (() => {
 
       const connCount = Object.values(connMap).filter(Boolean).length;
 
+      const SERVICE_ROUTES = { calendar: '#/calendar', email: '#/inbox', drive: '#/drive' };
+
       el.innerHTML = SERVICE_DEFS.map(svc => {
         const connected = connMap[svc.connKey];
         const chipClass = connected ? 'connected' : 'not-setup';
         const chipText = connected ? 'Verbunden' : 'Noch nicht eingerichtet';
+        const route = SERVICE_ROUTES[svc.id] || '#/profile';
+        const hint = !connected && svc.id === 'calendar'
+          ? '<div class="service-card-hint">Wende dich an den Administrator, um den Kalender zu verbinden.</div>'
+          : '';
         return `
-          <div class="service-card">
+          <div class="service-card card-clickable" onclick="Router.navigate('${route}')">
             <div class="service-card-icon">${svc.emoji}</div>
             <div class="service-card-body">
               <div class="service-card-name">${escapeHtml(svc.name)}</div>
               <div class="service-card-desc">${escapeHtml(svc.desc)}</div>
+              ${hint}
             </div>
             <div class="service-status-chip ${chipClass}">
               <span class="service-status-dot"></span>
@@ -490,6 +527,7 @@ const ProfileView = (() => {
       if (contentId === 'pref-nav') loadNavConfig();
       if (contentId === 'pref-widgets') loadWidgetConfig();
       if (contentId === 'pref-dev') loadDevWidgets();
+      if (contentId === 'pref-notifications') syncNotifToggle();
     }
   }
 
@@ -575,6 +613,7 @@ const ProfileView = (() => {
       widgets.sort((a, b) => (a.order || 0) - (b.order || 0));
 
       const widgetLabels = {
+        notifications: { icon: 'notifications', label: 'Benachrichtigungen' },
         emails: { icon: 'mail', label: 'E-Mails' },
         shifts: { icon: 'work', label: 'Dienste heute' },
         events: { icon: 'calendar_month', label: 'Termine heute' },
@@ -605,6 +644,20 @@ const ProfileView = (() => {
     } catch {
       el.innerHTML = '<div class="empty-state">Widgets konnten nicht geladen werden</div>';
     }
+  }
+
+  function syncNotifToggle() {
+    const toggle = document.getElementById('notif-widget-toggle');
+    if (!toggle) return;
+    const prefs = window.AppPreferences ? window.AppPreferences.getCached() : null;
+    if (prefs && prefs.dashboard && prefs.dashboard.widgets) {
+      const w = prefs.dashboard.widgets.find(w => w.id === 'notifications');
+      toggle.checked = w ? w.enabled !== false : true;
+    }
+  }
+
+  async function toggleNotifWidget(enabled) {
+    await toggleWidget('notifications', enabled);
   }
 
   async function toggleWidget(widgetId, enabled) {
@@ -801,6 +854,7 @@ const ProfileView = (() => {
     toggleNavItem,
     toggleWidget,
     refreshHealth,
-    toggleProactive
+    toggleProactive,
+    toggleNotifWidget
   };
 })();

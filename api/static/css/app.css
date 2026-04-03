@@ -4047,3 +4047,44 @@ select:focus-visible,
   color: var(--text-muted);
   margin-top: var(--space-1);
 }
+
+/* ── Notification & Calendar Integration ─────────── */
+
+.dashboard-notification-item .notification-preview {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.calendar-disconnected-hint {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--warning);
+}
+
+.calendar-disconnected-hint a {
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.calendar-disconnected-hint a:hover {
+  text-decoration: underline;
+}
+
+.notification-action-btn {
+  color: var(--accent) !important;
+}
+
+.notification-action-btn:hover {
+  background: var(--accent-soft, rgba(124, 77, 255, 0.1));
+}
+
+.service-card-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 4px;
+}
