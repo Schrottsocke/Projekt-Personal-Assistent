@@ -29,6 +29,8 @@
   Router.register('#/followups', (c) => FollowUpsView.render(c));
   Router.register('#/weather', (c) => WeatherView.render(c));
   Router.register('#/mobility', (c) => MobilityView.render(c));
+  Router.register('#/automation', (c) => AutomationView.render(c));
+  Router.register('#/inbox', (c) => InboxView.render(c));
 
   // ── Default Nav (vor Preferences-Load) ──
   const DEFAULT_NAV = [
@@ -60,6 +62,8 @@
     followups: { route: '#/followups', icon: 'reply_all', label: 'Follow-ups' },
     weather: { route: '#/weather', icon: 'cloud', label: 'Wetter' },
     mobility: { route: '#/mobility', icon: 'route', label: 'Mobilität' },
+    automation: { route: '#/automation', icon: 'smart_toy', label: 'Automation' },
+    inbox: { route: '#/inbox', icon: 'inbox', label: 'Inbox' },
   };
 
   // ── Cached Preferences ──
