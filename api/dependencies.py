@@ -25,7 +25,7 @@ _svc: dict = {}
 async def startup():
     """Alle Services initialisieren – wird in lifespan() aufgerufen."""
     from src.services.ai_service import AIService
-    from src.services.memory_service import MemoryService
+    from src.services.memory_service import ApiMemoryService
     from src.services.calendar_service import CalendarService
     from src.services.notes_service import NotesService
     from src.services.reminder_service import ReminderService
@@ -48,7 +48,7 @@ async def startup():
     pending: dict = {}
     _constructors = [
         ("ai", AIService),
-        ("memory", MemoryService),
+        ("memory", ApiMemoryService),
         ("calendar", CalendarService),
         ("notes", NotesService),
         ("reminder", ReminderService),

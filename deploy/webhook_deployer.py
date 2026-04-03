@@ -26,6 +26,8 @@ import os
 import subprocess
 import sys
 import threading
+import time
+import urllib.request
 from pathlib import Path
 
 # --- Konfiguration ---
@@ -33,7 +35,7 @@ PROJ_DIR = Path(__file__).parent.parent
 ENV_FILE = PROJ_DIR / ".env"
 PORT = int(os.getenv("WEBHOOK_PORT", "9000"))
 BRANCH = os.getenv("DEPLOY_BRANCH", "main")
-SERVICES = ["personal-assistant", "personal-assistant-api", "personal-assistant-webhook"]
+SERVICES = ["personal-assistant", "personal-assistant-api"]
 VENV_PIP = PROJ_DIR / "venv" / "bin" / "pip"
 BOT_USER = "assistant"
 
@@ -73,6 +75,28 @@ def _run(cmd: list[str], cwd: Path = PROJ_DIR) -> tuple[int, str]:
     result = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True, timeout=120)
     output = (result.stdout + result.stderr).strip()
     return result.returncode, output
+
+
+def _notify_deploy(success: bool, commit: str, details: str):
+    """Sendet Deploy-Status via Telegram Bot (optional)."""
+    token = os.getenv("TELEGRAM_TOKEN", "")
+    chat_id = os.getenv("DEPLOY_NOTIFY_CHAT_ID", "")
+    if not token or not chat_id:
+        logger.info("Deploy-Notification uebersprungen (TELEGRAM_TOKEN oder DEPLOY_NOTIFY_CHAT_ID nicht gesetzt)")
+        return
+    status = "erfolgreich" if success else "FEHLGESCHLAGEN"
+    text = f"Deploy {status}\nCommit: {commit}\n{details[:500]}"
+    data = json.dumps({"chat_id": chat_id, "text": text, "parse_mode": "HTML"}).encode()
+    req = urllib.request.Request(
+        f"https://api.telegram.org/bot{token}/sendMessage",
+        data=data,
+        headers={"Content-Type": "application/json"},
+    )
+    try:
+        urllib.request.urlopen(req, timeout=10)
+        logger.info("Deploy-Notification gesendet")
+    except Exception as e:
+        logger.warning("Deploy-Notification fehlgeschlagen: %s", e)
 
 
 def deploy() -> tuple[bool, str]:
@@ -127,8 +151,32 @@ def _deploy_inner() -> tuple[bool, str]:
         if rc != 0:
             logger.warning(f"restart {svc} fehlgeschlagen: {out}")
 
-    logger.info("Deploy erfolgreich abgeschlossen.")
-    return True, "\n".join(lines)
+    # 4. Health-Check
+    logger.info("Health-Check nach Deploy ...")
+    api_healthy = False
+    for attempt in range(6):
+        time.sleep(5)
+        try:
+            resp = urllib.request.urlopen("http://localhost:8000/health", timeout=5)
+            if resp.status == 200:
+                api_healthy = True
+                logger.info("Health-Check OK (Versuch %d)", attempt + 1)
+                break
+        except Exception:
+            logger.info("Health-Check Versuch %d fehlgeschlagen, warte ...", attempt + 1)
+
+    if not api_healthy:
+        logger.error("API Health-Check nach Deploy fehlgeschlagen!")
+        lines.append("health_check: FAILED after 6 attempts")
+    else:
+        lines.append("health_check: OK")
+
+    # 5. Notification
+    _, current_commit = _run(["git", "rev-parse", "--short", "HEAD"])
+    _notify_deploy(api_healthy, current_commit.strip(), "\n".join(lines))
+
+    logger.info("Deploy abgeschlossen (healthy=%s).", api_healthy)
+    return api_healthy, "\n".join(lines)
 
 
 class WebhookHandler(http.server.BaseHTTPRequestHandler):

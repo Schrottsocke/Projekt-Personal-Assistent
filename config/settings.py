@@ -26,6 +26,22 @@ def _safe_int(value: str | None, default: int, name: str) -> int:
         return default
 
 
+def _safe_float(value: str | None, default: float, name: str) -> float:
+    """Konvertiert einen String sicher zu float mit Fehlerbehandlung."""
+    if value is None or value.strip() == "":
+        return default
+    try:
+        return float(value)
+    except ValueError:
+        logging.getLogger(__name__).warning(
+            "Umgebungsvariable '%s' hat ungültigen Wert '%s' – verwende Default %.2f.",
+            name,
+            value,
+            default,
+        )
+        return default
+
+
 class BotConfig:
     """Konfiguration für einen einzelnen Bot/User"""
 
@@ -95,24 +111,28 @@ class Settings:
     DOCUMENTS_DIR: Path = BASE_DIR / "data" / "documents"
 
     # Calendar Cache (TTL in Minuten)
-    CALENDAR_CACHE_TTL_MINUTES: int = int(os.getenv("CALENDAR_CACHE_TTL_MINUTES", "5"))
+    CALENDAR_CACHE_TTL_MINUTES: int = _safe_int(
+        os.getenv("CALENDAR_CACHE_TTL_MINUTES"), 5, "CALENDAR_CACHE_TTL_MINUTES"
+    )
 
     # Memory Search Cache (TTL in Minuten)
-    MEMORY_CACHE_TTL_MINUTES: int = int(os.getenv("MEMORY_CACHE_TTL_MINUTES", "5"))
+    MEMORY_CACHE_TTL_MINUTES: int = _safe_int(os.getenv("MEMORY_CACHE_TTL_MINUTES"), 5, "MEMORY_CACHE_TTL_MINUTES")
 
     # Mobility (OpenRouteService)
     OPENROUTE_API_KEY: str = os.getenv("OPENROUTE_API_KEY", "")
     HOME_ADDRESS: str = os.getenv("HOME_ADDRESS", "")
 
     # Email (Gmail) – Check-Intervall in Minuten
-    EMAIL_CHECK_INTERVAL_MINUTES: int = int(os.getenv("EMAIL_CHECK_INTERVAL_MINUTES", "15"))
+    EMAIL_CHECK_INTERVAL_MINUTES: int = _safe_int(
+        os.getenv("EMAIL_CHECK_INTERVAL_MINUTES"), 15, "EMAIL_CHECK_INTERVAL_MINUTES"
+    )
 
     # Conversation History Pruning (Einträge älter als N Tage löschen)
-    CONVERSATION_HISTORY_DAYS: int = int(os.getenv("CONVERSATION_HISTORY_DAYS", "30"))
+    CONVERSATION_HISTORY_DAYS: int = _safe_int(os.getenv("CONVERSATION_HISTORY_DAYS"), 30, "CONVERSATION_HISTORY_DAYS")
 
     # Dokument-Scan
     DRIVE_DOCUMENTS_FOLDER_ID: str = os.getenv("DRIVE_DOCUMENTS_FOLDER_ID", "")
-    OCR_CONFIDENCE_THRESHOLD: int = int(os.getenv("OCR_CONFIDENCE_THRESHOLD", "70"))
+    OCR_CONFIDENCE_THRESHOLD: int = _safe_int(os.getenv("OCR_CONFIDENCE_THRESHOLD"), 70, "OCR_CONFIDENCE_THRESHOLD")
     SCAN_SAVE_LOCAL: bool = os.getenv("SCAN_SAVE_LOCAL", "true").lower() == "true"
     SCANS_DIR: Path = BASE_DIR / "data" / "scans"
 
@@ -120,7 +140,7 @@ class Settings:
     API_SECRET_KEY: str = os.getenv("API_SECRET_KEY", "")
     API_PASSWORD_TAAKE: str = os.getenv("API_PASSWORD_TAAKE", "")
     API_PASSWORD_NINA: str = os.getenv("API_PASSWORD_NINA", "")
-    API_PORT: int = int(os.getenv("API_PORT", "8000"))
+    API_PORT: int = _safe_int(os.getenv("API_PORT"), 8000, "API_PORT")
     API_CORS_ORIGINS: list = [o.strip() for o in os.getenv("API_CORS_ORIGINS", "").split(",") if o.strip()]
 
     # Rate Limits (Requests pro Minute)
@@ -129,14 +149,14 @@ class Settings:
     RATE_LIMIT_DEFAULT: str = os.getenv("RATE_LIMIT_DEFAULT", "60/minute")
     RATE_LIMIT_UPLOAD: str = os.getenv("RATE_LIMIT_UPLOAD", "10/minute")
     RATE_LIMIT_WRITE: str = os.getenv("RATE_LIMIT_WRITE", "30/minute")
-    API_TOKEN_EXPIRE_DAYS: int = int(os.getenv("API_TOKEN_EXPIRE_DAYS", "30"))
+    API_TOKEN_EXPIRE_DAYS: int = _safe_int(os.getenv("API_TOKEN_EXPIRE_DAYS"), 30, "API_TOKEN_EXPIRE_DAYS")
 
     # Upload-Limits
-    MAX_UPLOAD_SIZE: int = int(os.getenv("MAX_UPLOAD_SIZE", str(50 * 1024 * 1024)))  # 50MB
+    MAX_UPLOAD_SIZE: int = _safe_int(os.getenv("MAX_UPLOAD_SIZE"), 50 * 1024 * 1024, "MAX_UPLOAD_SIZE")
 
     # Webhook Deployer
     WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
-    WEBHOOK_PORT: int = int(os.getenv("WEBHOOK_PORT", "9000"))
+    WEBHOOK_PORT: int = _safe_int(os.getenv("WEBHOOK_PORT"), 9000, "WEBHOOK_PORT")
     DEPLOY_BRANCH: str = os.getenv("DEPLOY_BRANCH", "main")
 
     # GitHub API (Issue-Erstellung aus der WebApp)
@@ -150,7 +170,9 @@ class Settings:
     # Observability (Sentry)
     SENTRY_DSN: str = os.getenv("SENTRY_DSN", "")
     SENTRY_ENVIRONMENT: str = os.getenv("SENTRY_ENVIRONMENT", "development")
-    SENTRY_TRACES_SAMPLE_RATE: float = float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.2"))
+    SENTRY_TRACES_SAMPLE_RATE: float = _safe_float(
+        os.getenv("SENTRY_TRACES_SAMPLE_RATE"), 0.2, "SENTRY_TRACES_SAMPLE_RATE"
+    )
 
     # Bot Configs
     @classmethod
