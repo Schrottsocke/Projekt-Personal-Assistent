@@ -16,6 +16,35 @@ const DocumentsView = (() => {
     'Sonstiges': { icon: 'article', color: 'var(--text-secondary)' },
   };
 
+  /** Authenticated JSON request helper (mirrors Api.request internals) */
+  async function apiRequest(path, options = {}) {
+    const { body, method = 'GET' } = options;
+    const headers = { 'Content-Type': 'application/json' };
+    const token = Api.getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const fetchOpts = { method, headers };
+    if (body !== undefined) fetchOpts.body = JSON.stringify(body);
+    const res = await fetch(path, fetchOpts);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
+  /** Authenticated file upload (FormData, no Content-Type header) */
+  async function apiUpload(path, formData) {
+    const headers = {};
+    const token = Api.getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(path, { method: 'POST', headers, body: formData });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
   function formatDate(dateStr) {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -108,8 +137,8 @@ const DocumentsView = (() => {
       const params = new URLSearchParams();
       if (typeFilter) params.set('doc_type', typeFilter);
       const qs = params.toString();
-      const data = await Api.request(`/documents${qs ? '?' + qs : ''}`);
-      documents = data.items || [];
+      const data = await apiRequest(`/documents${qs ? '?' + qs : ''}`);
+      documents = Array.isArray(data) ? data : (data.items || []);
     } catch (err) {
       documents = [];
     } finally {
@@ -164,20 +193,7 @@ const DocumentsView = (() => {
         const formData = new FormData();
         formData.append('file', file);
 
-        const token = Api.getToken();
-        const headers = {};
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const res = await fetch('/documents/upload', {
-          method: 'POST',
-          headers,
-          body: formData,
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ detail: res.statusText }));
-          throw new Error(err.detail || `HTTP ${res.status}`);
-        }
+        await apiUpload('/documents/upload', formData);
 
         Toast.show('Dokument erfolgreich verarbeitet', 'success');
         uploadForm.style.display = 'none';

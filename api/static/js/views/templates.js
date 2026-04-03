@@ -17,6 +17,22 @@ const TemplatesView = (() => {
     checklist: { icon: 'checklist',     label: 'Checkliste', color: 'var(--error)' },
   };
 
+  /** Authenticated JSON request helper (mirrors Api.request internals) */
+  async function apiRequest(path, options = {}) {
+    const { body, method = 'GET' } = options;
+    const headers = { 'Content-Type': 'application/json' };
+    const token = Api.getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const fetchOpts = { method, headers };
+    if (body !== undefined) fetchOpts.body = JSON.stringify(body);
+    const res = await fetch(path, fetchOpts);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
   function renderHeader() {
     return `
       <div class="section-header">
@@ -110,7 +126,7 @@ const TemplatesView = (() => {
       const params = new URLSearchParams();
       if (categoryFilter) params.set('category', categoryFilter);
       const qs = params.toString();
-      templates = await Api.request(`/templates${qs ? '?' + qs : ''}`);
+      templates = await apiRequest(`/templates${qs ? '?' + qs : ''}`);
     } catch (err) {
       templates = [];
     } finally {
@@ -179,13 +195,13 @@ const TemplatesView = (() => {
 
       try {
         if (editingId) {
-          await Api.request(`/templates/${editingId}`, {
+          await apiRequest(`/templates/${editingId}`, {
             method: 'PATCH',
-            body: { name, content, description },
+            body: { name, category, content, description },
           });
           Toast.show('Vorlage aktualisiert', 'success');
         } else {
-          await Api.request('/templates', {
+          await apiRequest('/templates', {
             method: 'POST',
             body: { name, category, content, description },
           });
@@ -220,7 +236,7 @@ const TemplatesView = (() => {
 
           if (action === 'apply') {
             try {
-              const result = await Api.request(`/templates/${id}/apply`, { method: 'POST' });
+              const result = await apiRequest(`/templates/${id}/apply`, { method: 'POST' });
               Toast.show(`Vorlage "${result.name}" angewendet`, 'success');
               await load();
             } catch (err) {
@@ -231,7 +247,7 @@ const TemplatesView = (() => {
           } else if (action === 'delete') {
             if (!confirm(`Vorlage "${tpl.name}" wirklich loeschen?`)) return;
             try {
-              await Api.request(`/templates/${id}`, { method: 'DELETE' });
+              await apiRequest(`/templates/${id}`, { method: 'DELETE' });
               Toast.show('Vorlage geloescht', 'success');
               await load();
             } catch (err) {
