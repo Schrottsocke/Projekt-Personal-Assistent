@@ -57,10 +57,15 @@ from api.routers import (
 
 logger = structlog.get_logger(__name__)
 
-_COMMIT_HASH = _sp.run(
-    ["git", "rev-parse", "--short", "HEAD"],
-    capture_output=True, text=True, cwd=str(Path(__file__).parent.parent),
-).stdout.strip() or "dev"
+_COMMIT_HASH = (
+    _sp.run(
+        ["git", "rev-parse", "--short", "HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=str(Path(__file__).parent.parent),
+    ).stdout.strip()
+    or "dev"
+)
 _STARTUP_TIME = _dt.datetime.utcnow().isoformat() + "Z"
 
 

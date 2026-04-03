@@ -393,6 +393,10 @@ const Api = (() => {
   function getGitHubIssues() { return request('/github/issues', { timeoutMs: 10000 }); }
   function createGitHubIssue(data) { return request('/github/issues', { method: 'POST', body: data, timeoutMs: 15000 }); }
 
+  // Status / Health
+  function getStatusHealth() { return request('/status/health', { noAuth: true, timeoutMs: 5000 }); }
+  function getStatusDetail() { return request('/status/detail', { timeoutMs: 10000 }); }
+
   // Notifications
   function getNotifications(params = {}) {
     const qs = new URLSearchParams();
@@ -507,6 +511,7 @@ const Api = (() => {
     getMealPlanWeek, createMealPlan, deleteMealPlan,
     getDriveFiles, uploadFile,
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
+    getStatusHealth, getStatusDetail,
     getNotifications, getNotificationCount, updateNotification, bulkUpdateNotifications, markAllNotificationsRead, createNotification,
     getAutomationRules, createAutomationRule, toggleAutomationRule, deleteAutomationRule,
     getInboxItems, getInboxCount, actionInboxItem,
