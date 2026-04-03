@@ -1,11 +1,13 @@
 /**
- * Tasks View – CRUD, Filter, Status Toggle
+ * Tasks View – CRUD, Filter, Status Toggle, Recurring Tasks
  */
 const TasksView = (() => {
   let tasks = [];
   let filterStatus = 'open';
   let filterPriority = 'all';
   let showForm = false;
+
+  const RECURRENCE_LABELS = { daily: 'Täglich', weekly: 'Wöchentlich', monthly: 'Monatlich' };
 
   function priorityBadge(p) {
     const map = { high: 'badge-error', medium: 'badge-warning', low: 'badge-success' };
@@ -18,10 +20,28 @@ const TasksView = (() => {
     return `<span class="badge ${map[s] || 'badge-accent'}">${labels[s] || s}</span>`;
   }
 
+  function recurrenceBadge(r) {
+    if (!r) return '';
+    return `<span class="badge badge-accent recurrence-badge"><span class="material-symbols-outlined mi-sm">repeat</span> ${RECURRENCE_LABELS[r] || r}</span>`;
+  }
+
   function formatDate(iso) {
     if (!iso) return '';
     const d = new Date(iso);
     return d.toLocaleDateString('de-DE', { day: 'numeric', month: 'short' });
+  }
+
+  function lastCompletedText(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const now = new Date();
+    const diffMs = now - d;
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    let ago;
+    if (diffDays === 0) ago = 'heute';
+    else if (diffDays === 1) ago = 'gestern';
+    else ago = `vor ${diffDays} Tagen`;
+    return `Zuletzt erledigt: ${ago}`;
   }
 
   async function render(container) {
@@ -108,7 +128,10 @@ const TasksView = (() => {
       return;
     }
 
-    el.innerHTML = filtered.map(t => `
+    el.innerHTML = filtered.map(t => {
+      const isRecurring = !!t.recurrence;
+      const lastDone = isRecurring ? lastCompletedText(t.last_completed_at) : '';
+      return `
       <div class="task-item">
         <input type="checkbox" class="task-checkbox"
                ${t.status === 'done' ? 'checked' : ''}
@@ -117,16 +140,21 @@ const TasksView = (() => {
           <div class="flex-between">
             <span class="task-title">${escapeHtml(t.title)}</span>
             <div class="task-badges">
+              ${recurrenceBadge(t.recurrence)}
               ${priorityBadge(t.priority)}
               ${statusBadge(t.status)}
             </div>
           </div>
           ${t.description ? `<div class="card-subtitle">${escapeHtml(t.description)}</div>` : ''}
-          ${t.due_date ? `<div class="card-subtitle mt-8"><span class="material-symbols-outlined mi-sm">event</span> ${formatDate(t.due_date)}</div>` : ''}
+          <div class="task-meta-row">
+            ${t.due_date ? `<span class="card-subtitle"><span class="material-symbols-outlined mi-sm">event</span> ${formatDate(t.due_date)}</span>` : ''}
+            ${lastDone ? `<span class="task-last-completed"><span class="material-symbols-outlined mi-sm">check</span> ${lastDone}</span>` : ''}
+          </div>
         </div>
         <button class="item-delete" onclick="TasksView.deleteTask(${t.id})" title="Löschen"><span class="material-symbols-outlined">delete</span></button>
       </div>
-    `).join('');
+    `;
+    }).join('');
   }
 
   function toggleForm() {
@@ -147,6 +175,14 @@ const TasksView = (() => {
           </select>
           <input type="date" id="task-due">
         </div>
+        <div class="input-group mb-8">
+          <select id="task-recurrence">
+            <option value="">Einmalig</option>
+            <option value="daily">Täglich</option>
+            <option value="weekly">Wöchentlich</option>
+            <option value="monthly">Monatlich</option>
+          </select>
+        </div>
         <div class="flex-between">
           <button class="btn btn-sm btn-secondary" onclick="TasksView.toggleForm()">Abbrechen</button>
           <button class="btn btn-sm btn-primary" onclick="TasksView.createTask()">Erstellen</button>
@@ -162,10 +198,12 @@ const TasksView = (() => {
     const desc = document.getElementById('task-desc').value.trim();
     const priority = document.getElementById('task-priority').value;
     const due = document.getElementById('task-due').value;
+    const recurrence = document.getElementById('task-recurrence').value;
 
     const data = { title, priority };
     if (desc) data.description = desc;
     if (due) data.due_date = new Date(due).toISOString();
+    if (recurrence) data.recurrence = recurrence;
 
     try {
       const newTask = await Api.createTask(data);

@@ -320,6 +320,9 @@ const Api = (() => {
   function deleteTask(id) {
     return request(`/tasks/${id}`, { method: 'DELETE' });
   }
+  function getWeeklyReview() {
+    return request('/dashboard/weekly-review');
+  }
 
   // MealPlan
   function getMealPlanWeek(start) {
@@ -507,7 +510,7 @@ const Api = (() => {
     getChatHistory, sendMessage, sendMessageStream, transcribeVoice,
     getFeatures, toggleFeature,
     getCalendarToday, getCalendarWeek, createCalendarEvent,
-    getTasks, createTask, updateTaskStatus, deleteTask,
+    getTasks, createTask, updateTaskStatus, deleteTask, getWeeklyReview,
     getMealPlanWeek, createMealPlan, deleteMealPlan,
     getDriveFiles, uploadFile,
     getGitHubLabels, getGitHubIssues, createGitHubIssue,

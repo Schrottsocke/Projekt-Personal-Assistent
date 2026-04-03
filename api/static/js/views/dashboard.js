@@ -1,10 +1,13 @@
 /**
- * Dashboard View – Configurable widget-based layout.
+ * Dashboard View – Configurable widget-based layout with Focus Mode.
  *
  * Widgets werden aus den User-Preferences geladen.
  * Jedes Widget hat eine eigene Render-Funktion.
+ * Focus Mode zeigt nur die wichtigsten Tagespunkte.
  */
 const DashboardView = (() => {
+  let focusMode = localStorage.getItem('dm_focus_mode') === 'true';
+
   function getGreeting() {
     const h = new Date().getHours();
     if (h < 12) return 'Guten Morgen';
@@ -55,7 +58,6 @@ const DashboardView = (() => {
   }
 
   // ── Widget Renderers ──
-  // Each returns an HTML string (or empty string to skip)
 
   function renderEmailsWidget(data) {
     const emails = data.unread_emails || 0;
@@ -106,11 +108,12 @@ const DashboardView = (() => {
       html += `<div class="empty-state"><span class="material-symbols-outlined empty-state-icon">check_circle</span><div class="empty-state-text">Alles erledigt \u2014 gut gemacht!</div><a href="#/tasks" class="empty-state-cta">Neue Aufgabe \u2192</a></div>`;
     } else {
       tasks.forEach(t => {
+        const recur = t.recurrence ? `<span class="badge badge-accent recurrence-badge"><span class="material-symbols-outlined mi-sm">repeat</span></span>` : '';
         html += `
           <div class="card">
             <div class="flex-between">
               <div class="card-title">${escapeHtml(t.title)}</div>
-              ${priorityBadge(t.priority)}
+              <div class="task-badges">${recur}${priorityBadge(t.priority)}</div>
             </div>
             ${t.description ? `<div class="card-subtitle">${escapeHtml(t.description)}</div>` : ''}
           </div>
@@ -145,7 +148,7 @@ const DashboardView = (() => {
     return html;
   }
 
-  // Widget registry: maps widget ID to render function
+  // Widget registry
   const WIDGET_RENDERERS = {
     emails: renderEmailsWidget,
     shifts: renderShiftsWidget,
@@ -154,17 +157,161 @@ const DashboardView = (() => {
     shopping: renderShoppingWidget,
   };
 
-  // Async widget renderers (loaded after initial render)
   const ASYNC_WIDGET_RENDERERS = {
     mealplan: renderMealplanWidget,
     drive: renderDriveWidget,
+    weeklyreview: renderWeeklyReviewWidget,
   };
+
+  // ── Focus Mode ──
+
+  function toggleFocus() {
+    focusMode = !focusMode;
+    localStorage.setItem('dm_focus_mode', focusMode);
+    render(document.getElementById('view-container'));
+  }
+
+  function getNextEvent(events) {
+    if (events.length === 0) return null;
+    const now = new Date();
+    const sorted = [...events].sort((a, b) => new Date(a.start) - new Date(b.start));
+    return sorted.find(e => new Date(e.end || e.start) > now) || sorted[0];
+  }
+
+  function getTopTasks(tasks, max) {
+    const prioOrder = { high: 0, medium: 1, low: 2 };
+    return [...tasks].sort((a, b) => {
+      const pa = prioOrder[a.priority] ?? 1;
+      const pb = prioOrder[b.priority] ?? 1;
+      if (pa !== pb) return pa - pb;
+      if (a.due_date && b.due_date) return new Date(a.due_date) - new Date(b.due_date);
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      return 0;
+    }).slice(0, max);
+  }
+
+  function renderFocusContent(data) {
+    const el = document.getElementById('dashboard-content');
+    if (!el) return;
+
+    const subEl = document.getElementById('greeting-summary');
+    if (subEl) subEl.textContent = 'Dein Fokus f\u00fcr heute';
+
+    const items = [];
+
+    // Shift
+    const shift = (data.shifts_today || [])[0];
+    if (shift) {
+      const color = shift.shift_color || 'var(--accent)';
+      items.push(`
+        <a class="focus-card" href="#/shifts">
+          <div class="focus-card-icon" style="color:${color}"><span class="material-symbols-outlined">work</span></div>
+          <div class="focus-card-content">
+            <div class="focus-card-label">Dienst heute</div>
+            <div class="focus-card-title">${escapeHtml(shift.summary || shift.shift_short_name || '')}</div>
+          </div>
+          <div class="focus-card-meta">${formatTime(shift.start)}${shift.end ? ' \u2013 ' + formatTime(shift.end) : ''}</div>
+        </a>
+      `);
+    }
+
+    // Next event
+    const nextEvent = getNextEvent(data.events_today || []);
+    if (nextEvent) {
+      items.push(`
+        <a class="focus-card" href="#/calendar">
+          <div class="focus-card-icon"><span class="material-symbols-outlined">calendar_month</span></div>
+          <div class="focus-card-content">
+            <div class="focus-card-label">N\u00e4chster Termin</div>
+            <div class="focus-card-title">${escapeHtml(nextEvent.summary || '')}</div>
+            ${nextEvent.location ? `<div class="focus-card-sub">${escapeHtml(nextEvent.location)}</div>` : ''}
+          </div>
+          <div class="focus-card-meta">${formatTime(nextEvent.start)}${nextEvent.end ? ' \u2013 ' + formatTime(nextEvent.end) : ''}</div>
+        </a>
+      `);
+    }
+
+    // Top tasks (max 3)
+    const topTasks = getTopTasks(data.open_tasks || [], 3);
+    topTasks.forEach(t => {
+      const prioMap = { high: 'badge-error', medium: 'badge-warning', low: 'badge-success' };
+      const prioLabel = { high: 'Hoch', medium: 'Mittel', low: 'Niedrig' };
+      const recur = t.recurrence ? `<span class="material-symbols-outlined mi-sm" style="margin-right:2px">repeat</span>` : '';
+      items.push(`
+        <a class="focus-card" href="#/tasks">
+          <div class="focus-card-icon"><span class="material-symbols-outlined">check_circle</span></div>
+          <div class="focus-card-content">
+            <div class="focus-card-label">${recur}Aufgabe</div>
+            <div class="focus-card-title">${escapeHtml(t.title)}</div>
+            ${t.description ? `<div class="focus-card-sub">${escapeHtml(t.description)}</div>` : ''}
+          </div>
+          <div class="focus-card-meta"><span class="badge ${prioMap[t.priority] || 'badge-accent'}">${prioLabel[t.priority] || t.priority}</span></div>
+        </a>
+      `);
+    });
+
+    // Shopping
+    const shop = data.shopping_preview || {};
+    if ((shop.pending || 0) > 0) {
+      const total = shop.total || 0;
+      const pending = shop.pending || 0;
+      const pct = total > 0 ? Math.round(((total - pending) / total) * 100) : 0;
+      items.push(`
+        <a class="focus-card" href="#/shopping">
+          <div class="focus-card-icon"><span class="material-symbols-outlined">shopping_cart</span></div>
+          <div class="focus-card-content">
+            <div class="focus-card-label">Einkaufsliste</div>
+            <div class="focus-card-title">${pending} offene Artikel</div>
+            <div class="progress-bar" style="margin-top:4px"><div class="progress-fill" style="width:${pct}%"></div></div>
+          </div>
+          <div class="focus-card-meta">${pct}%</div>
+        </a>
+      `);
+    }
+
+    // Unread emails
+    if ((data.unread_emails || 0) > 0) {
+      items.push(`
+        <a class="focus-card" href="#/dashboard">
+          <div class="focus-card-icon"><span class="material-symbols-outlined">mail</span></div>
+          <div class="focus-card-content">
+            <div class="focus-card-label">E-Mails</div>
+            <div class="focus-card-title">${data.unread_emails} ungelesene E-Mail${data.unread_emails > 1 ? 's' : ''}</div>
+          </div>
+          <div class="focus-card-meta"><span class="badge badge-accent">${data.unread_emails}</span></div>
+        </a>
+      `);
+    }
+
+    if (items.length === 0) {
+      el.innerHTML = `
+        <div class="focus-empty">
+          <span class="material-symbols-outlined" style="font-size:48px;color:var(--success)">check_circle</span>
+          <p>Nichts Wichtiges heute \u2013 alles erledigt!</p>
+        </div>
+      `;
+    } else {
+      el.innerHTML = `<div class="focus-container">${items.join('')}</div>`;
+    }
+
+    // Load weekly review async in focus mode too
+    loadAsyncWidgets(el, [{ id: 'weeklyreview' }], data);
+  }
+
+  // ── Main Render ──
 
   async function render(container) {
     const user = capitalize(Api.getUserKey());
     container.innerHTML = `
       <div class="greeting-date">${formatDate()}</div>
-      <div class="greeting">${getGreeting()}, ${user}</div>
+      <div class="greeting-row">
+        <div class="greeting">${getGreeting()}, ${user}</div>
+        <button class="focus-mode-toggle ${focusMode ? 'active' : ''}" onclick="DashboardView.toggleFocus()" title="${focusMode ? 'Vollst\u00e4ndiges Dashboard' : 'Fokus-Modus'}">
+          <span class="material-symbols-outlined">${focusMode ? 'dashboard' : 'filter_center_focus'}</span>
+          ${focusMode ? 'Dashboard' : 'Fokus'}
+        </button>
+      </div>
       <div class="greeting-sub" id="greeting-summary">Dein Tages\u00fcberblick wird geladen\u2026</div>
       <div id="proactive-suggestions"></div>
       ${renderQuickActions()}
@@ -181,7 +328,11 @@ const DashboardView = (() => {
 
     try {
       const data = await Api.getDashboard();
-      renderContent(data);
+      if (focusMode) {
+        renderFocusContent(data);
+      } else {
+        renderContent(data);
+      }
       // Proaktive Vorschlaege im Hintergrund laden
       loadProactiveSuggestions();
     } catch (err) {
@@ -203,7 +354,6 @@ const DashboardView = (() => {
         .filter(w => w.enabled !== false)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
     }
-    // Default widget order
     return [
       { id: 'emails', enabled: true, order: 0 },
       { id: 'shifts', enabled: true, order: 1 },
@@ -212,6 +362,7 @@ const DashboardView = (() => {
       { id: 'shopping', enabled: true, order: 4 },
       { id: 'mealplan', enabled: true, order: 5 },
       { id: 'drive', enabled: true, order: 6 },
+      { id: 'weeklyreview', enabled: true, order: 7 },
     ];
   }
 
@@ -219,14 +370,13 @@ const DashboardView = (() => {
     const el = document.getElementById('dashboard-content');
     if (!el) return;
 
-    // Update summary line with real data
     const subEl = document.getElementById('greeting-summary');
     if (subEl) subEl.textContent = buildSummaryLine(data);
 
     const widgets = getWidgetConfig();
     let html = '';
 
-    // Zone A: "Dein Tag" — Shifts + Events (priority zone)
+    // Zone A: "Dein Tag" — Shifts + Events
     const zoneShifts = WIDGET_RENDERERS.shifts ? renderShiftsWidget(data) : '';
     const zoneEvents = WIDGET_RENDERERS.events ? renderEventsWidget(data) : '';
     const zoneAContent = zoneShifts + zoneEvents;
@@ -236,11 +386,11 @@ const DashboardView = (() => {
       html += zoneAContent;
     }
 
-    // Zone B: Tasks + Shopping (planning)
+    // Zone B: Tasks + Shopping
     html += renderTasksWidget(data);
     html += renderShoppingWidget(data);
 
-    // Render remaining sync widgets not covered by zones
+    // Remaining sync widgets
     for (const widget of widgets) {
       if (['shifts', 'events', 'tasks', 'shopping'].includes(widget.id)) continue;
       const renderer = WIDGET_RENDERERS[widget.id];
@@ -250,8 +400,6 @@ const DashboardView = (() => {
     }
 
     el.innerHTML = html;
-
-    // Load async widgets (MealPlan, Drive) without blocking
     loadAsyncWidgets(el, widgets, data);
   }
 
@@ -321,6 +469,41 @@ const DashboardView = (() => {
         `;
       });
     }
+    return html;
+  }
+
+  async function renderWeeklyReviewWidget() {
+    const review = await Api.getWeeklyReview();
+    const ct = review.completed_tasks || 0;
+    const ev = review.events_attended || 0;
+    const sh = review.items_shopped || 0;
+
+    if (ct === 0 && ev === 0 && sh === 0) {
+      return `
+        <div class="section-header"><span class="section-icon material-symbols-outlined">bar_chart</span> Wochenr\u00fcckblick</div>
+        <div class="empty-state"><span class="material-symbols-outlined empty-state-icon">bar_chart</span><div class="empty-state-text">Noch keine Aktivit\u00e4t diese Woche</div></div>
+      `;
+    }
+
+    let html = `<div class="section-header"><span class="section-icon material-symbols-outlined">bar_chart</span> Wochenr\u00fcckblick</div>`;
+    html += `<div class="weekly-review-card">`;
+    html += `<div class="weekly-review-stats">`;
+    if (ct > 0) html += `<div class="weekly-review-stat"><span class="weekly-review-num">${ct}</span><span class="weekly-review-label">Aufgabe${ct > 1 ? 'n' : ''} erledigt</span></div>`;
+    if (ev > 0) html += `<div class="weekly-review-stat"><span class="weekly-review-num">${ev}</span><span class="weekly-review-label">Termin${ev > 1 ? 'e' : ''}</span></div>`;
+    if (sh > 0) html += `<div class="weekly-review-stat"><span class="weekly-review-num">${sh}</span><span class="weekly-review-label">Eink\u00e4ufe</span></div>`;
+    html += `</div>`;
+
+    // Highlights
+    const highlights = review.highlights || [];
+    if (highlights.length > 0) {
+      html += `<div class="weekly-review-highlights">`;
+      highlights.slice(0, 3).forEach(h => {
+        html += `<div class="weekly-review-highlight"><span class="material-symbols-outlined mi-sm">check</span> ${escapeHtml(h)}</div>`;
+      });
+      html += `</div>`;
+    }
+
+    html += `</div>`;
     return html;
   }
 
@@ -404,5 +587,5 @@ const DashboardView = (() => {
     }
   }
 
-  return { render, dismissSuggestion: _dismissSuggestion };
+  return { render, toggleFocus, dismissSuggestion: _dismissSuggestion };
 })();
