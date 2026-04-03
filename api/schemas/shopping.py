@@ -25,6 +25,7 @@ class ShoppingItemOut(BaseModel):
 
 
 class ShoppingItemUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
     checked: Optional[bool] = None
     quantity: Optional[str] = Field(None, max_length=50)
     unit: Optional[str] = Field(None, max_length=50)
