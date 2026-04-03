@@ -187,7 +187,9 @@ async def image_proxy(request: Request, path: str):
         if resp.status_code != 200:
             logger.warning(
                 "CDN returned %s for %s – body: %s",
-                resp.status_code, upstream, resp.content[:200],
+                resp.status_code,
+                upstream,
+                resp.content[:200],
             )
             raise HTTPException(status_code=resp.status_code, detail="Bild nicht verfügbar.")
         ct = resp.headers.get("content-type", "image/jpeg")
