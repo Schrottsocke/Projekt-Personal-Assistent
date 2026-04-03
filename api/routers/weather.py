@@ -1,14 +1,13 @@
 """GET /weather – Wetter-Daten (aktuell, Vorhersage, einfach)"""
 
-from typing import Annotated, Optional
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from api.dependencies import get_current_user, get_weather_service
 from api.schemas.weather import WeatherCurrent, WeatherForecastDay, WeatherResponse
-from config.settings import settings
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)

@@ -1,8 +1,8 @@
 """GET/POST/PATCH/DELETE /automation – Regel- und Automationscenter"""
 
-from typing import Annotated, Optional
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
