@@ -20,7 +20,7 @@ from src.services.ai_service import AIService
 from src.services.calendar_service import CalendarService
 from src.services.notes_service import NotesService
 from src.services.reminder_service import ReminderService
-from src.memory.memory_service import MemoryService
+from src.memory.memory_service import BotMemoryService
 from src.scheduler.scheduler import AssistantScheduler
 from src.services.proposal_service import ProposalService
 from src.services.task_service import TaskService
@@ -160,7 +160,7 @@ async def main():
 
     SERVICE_DEFINITIONS = [
         ("ai_service", AIService, False),
-        ("memory_service", MemoryService, True),
+        ("memory_service", BotMemoryService, True),
         ("calendar_service", CalendarService, True),
         ("notes_service", NotesService, True),
         ("reminder_service", ReminderService, True),
