@@ -379,6 +379,41 @@ const Api = (() => {
     return res.json();
   }
 
+  async function uploadFiles(files, path = '/documents/upload-multi') {
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('files', file);
+    }
+
+    const headers = {};
+    const token = getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    let res = await fetch(path, { method: 'POST', headers, body: formData });
+
+    if (res.status === 401 && getRefreshToken()) {
+      if (!_refreshing) {
+        _refreshing = refreshToken().finally(() => { _refreshing = null; });
+      }
+      try {
+        const newToken = await _refreshing;
+        headers['Authorization'] = `Bearer ${newToken}`;
+        res = await fetch(path, { method: 'POST', headers, body: formData });
+      } catch {
+        clearAuth();
+        window.location.hash = '#/login';
+        throw new Error('Session abgelaufen');
+      }
+    }
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      throw new Error(err.detail || `HTTP ${res.status}`);
+    }
+
+    return res.json();
+  }
+
   // Preferences
   function getPreferences() { return request('/preferences'); }
   function updatePreferences(data) {
@@ -512,7 +547,7 @@ const Api = (() => {
     getCalendarToday, getCalendarWeek, createCalendarEvent,
     getTasks, createTask, updateTaskStatus, deleteTask, getWeeklyReview,
     getMealPlanWeek, createMealPlan, deleteMealPlan,
-    getDriveFiles, uploadFile,
+    getDriveFiles, uploadFile, uploadFiles,
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
     getStatusHealth, getStatusDetail,
     getNotifications, getNotificationCount, updateNotification, bulkUpdateNotifications, markAllNotificationsRead, createNotification,
