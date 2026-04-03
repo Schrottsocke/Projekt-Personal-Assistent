@@ -297,11 +297,7 @@ class ShoppingService:
         merged = 0
         with get_db()() as session:
             # Bestehende unchecked Items laden fuer Duplikaterkennung
-            existing = (
-                session.query(ShoppingItem)
-                .filter_by(user_key=user_key, checked=False)
-                .all()
-            )
+            existing = session.query(ShoppingItem).filter_by(user_key=user_key, checked=False).all()
             lookup: dict[tuple[str, str], ShoppingItem] = {}
             for ex in existing:
                 key = (ex.name.lower().strip(), _normalize_unit(ex.unit))

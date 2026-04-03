@@ -168,12 +168,14 @@ async def week_to_shopping(
                                 scaled_amount = int(num) if num == int(num) else num
                             except (ValueError, TypeError):
                                 scaled_amount = amount
-                        all_items.append({
-                            "name": name,
-                            "quantity": str(scaled_amount) if scaled_amount else None,
-                            "unit": unit or None,
-                            "source": f"mealplan:chefkoch:{entry['chefkoch_id']}",
-                        })
+                        all_items.append(
+                            {
+                                "name": name,
+                                "quantity": str(scaled_amount) if scaled_amount else None,
+                                "unit": unit or None,
+                                "source": f"mealplan:chefkoch:{entry['chefkoch_id']}",
+                            }
+                        )
                 processed += 1
             except Exception as exc:
                 logger.warning("Rezept %s konnte nicht geladen werden: %s", entry["chefkoch_id"], exc)

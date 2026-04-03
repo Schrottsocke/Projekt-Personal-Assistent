@@ -217,8 +217,7 @@ async def selected_ingredients_to_shopping(
 ):
     """Uebernimmt vorselektierte Zutaten direkt in die Einkaufsliste."""
     items = [
-        {"name": ing.name, "quantity": ing.amount, "unit": ing.unit, "source": "recipe"}
-        for ing in body.ingredients
+        {"name": ing.name, "quantity": ing.amount, "unit": ing.unit, "source": "recipe"} for ing in body.ingredients
     ]
     result = await shopping_svc.add_items_bulk(user_key, items)
     return {"added": result["added"], "merged": result["merged"]}
@@ -251,5 +250,3 @@ async def recipe_to_shopping(
         raise HTTPException(status_code=404, detail="Rezept nicht gefunden.")
     result = await shopping_svc.add_items_from_recipe(user_key, recipe, servings=body.servings)
     return {"added": result["added"], "merged": result["merged"], "recipe_title": recipe.get("title", "")}
-
-
