@@ -176,7 +176,7 @@ async def delete_saved(
 @limiter.limit("60/minute")
 async def image_proxy(request: Request, path: str):
     """Proxied Chefkoch-CDN-Bilder um Hotlinking-Schutz zu umgehen."""
-    if not re.match(r"^rezepte/\d+/bilder/\d+/crop-\d+x\d+", path):
+    if not re.match(r"^rezepte/\d+/bilder/\d+/crop-\d+x\d+$", path):
         raise HTTPException(status_code=400, detail="Ungültiger Bildpfad.")
 
     upstream = f"{_CHEFKOCH_CDN}/{path}"
