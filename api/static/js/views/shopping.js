@@ -162,6 +162,11 @@ const ShoppingView = (() => {
           <span class="material-symbols-outlined">delete_sweep</span> Erledigte löschen
         </button>`;
       }
+      if (unchecked > 0) {
+        actionsHtml += `<button class="btn btn-secondary" onclick="ShoppingView.saveAsTemplate()">
+          <span class="material-symbols-outlined">library_add</span> Als Vorlage
+        </button>`;
+      }
       actionsEl.innerHTML = actionsHtml;
     }
 
@@ -562,11 +567,27 @@ const ShoppingView = (() => {
     return c;
   }
 
+  // ── Save as Template ──
+
+  async function saveAsTemplate() {
+    const name = prompt('Name fuer die Vorlage:');
+    if (!name || !name.trim()) return;
+    try {
+      await Api.request('/templates/from-shopping', {
+        method: 'POST',
+        body: { name: name.trim(), description: '' },
+      });
+      showToast('Vorlage gespeichert', 'success');
+    } catch (err) {
+      showToast(err.message || 'Fehler beim Speichern', 'error');
+    }
+  }
+
   // ── Public API ──
 
   return {
     render, addItem, toggleItem, deleteItem, clearChecked, toggleShowChecked,
     editItem, saveEdit, cancelEdit, toggleCategory, checkAll, undoDelete,
-    swipeStart, swipeMove, swipeEnd,
+    swipeStart, swipeMove, swipeEnd, saveAsTemplate,
   };
 })();
