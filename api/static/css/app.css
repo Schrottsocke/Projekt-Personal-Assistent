@@ -4421,3 +4421,99 @@ select:focus-visible,
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
 }
+
+/* ── Offline Banner & Sync Status ── */
+
+.offline-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 1100;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: opacity 0.3s ease, max-height 0.3s ease, padding 0.3s ease;
+}
+
+.offline-banner.visible {
+  opacity: 1;
+  max-height: 60px;
+  padding: 10px 16px;
+}
+
+.offline-banner.offline {
+  background: #f57c00;
+  color: #fff;
+}
+
+.offline-banner.syncing {
+  background: var(--accent);
+  color: #fff;
+}
+
+.offline-banner.pending {
+  background: var(--warning, #ff9800);
+  color: #fff;
+}
+
+.offline-banner-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.offline-banner-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.offline-banner-btn {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: var(--radius-sm, 6px);
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.offline-banner-btn:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.offline-banner-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: offlineSpin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes offlineSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Queued item indicator (subtle dot in views) */
+.queued-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--warning, #ff9800);
+  font-style: italic;
+}
+
+.queued-indicator .material-symbols-outlined {
+  font-size: 14px;
+}

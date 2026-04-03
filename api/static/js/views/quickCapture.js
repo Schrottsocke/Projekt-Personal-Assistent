@@ -246,8 +246,36 @@ const QuickCapture = (() => {
       close();
       showSuccessSnackbar(typeInfo.label, typeInfo.route);
     } catch (e) {
-      if (saveBtn) saveBtn.disabled = false;
-      showSnackbar('Fehler beim Speichern');
+      if (e.isOffline && typeof OfflineQueue !== 'undefined') {
+        if (type === 'task') {
+          OfflineQueue.enqueue({
+            type: 'task_create',
+            endpoint: '/tasks',
+            method: 'POST',
+            body: { title: text, description: '' },
+            label: text,
+          });
+          close();
+          showSnackbar('Task gespeichert f\u00fcr sp\u00e4ter');
+        } else if (type === 'shopping') {
+          const itemName = text.replace(/^(kauf[e]?|buy|besorg[e]?|hol[e]?)\s+/i, '');
+          OfflineQueue.enqueue({
+            type: 'shopping_add',
+            endpoint: '/shopping/items',
+            method: 'POST',
+            body: { name: itemName },
+            label: itemName,
+          });
+          close();
+          showSnackbar('Artikel gespeichert f\u00fcr sp\u00e4ter');
+        } else {
+          if (saveBtn) saveBtn.disabled = false;
+          showSnackbar('Du bist offline \u2013 bitte sp\u00e4ter erneut versuchen');
+        }
+      } else {
+        if (saveBtn) saveBtn.disabled = false;
+        showSnackbar('Fehler beim Speichern');
+      }
     }
   }
 
