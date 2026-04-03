@@ -402,8 +402,8 @@ async def trigger_document_action(
         subject = f"Betr.: {doc_data['doc_type']}"
         if doc_data["sender"]:
             subject += f" von {doc_data['sender']}"
-        email_body = f"Sehr geehrte Damen und Herren,\n\n"
-        email_body += f"bezugnehmend auf Ihr Schreiben"
+        email_body = "Sehr geehrte Damen und Herren,\n\n"
+        email_body += "bezugnehmend auf Ihr Schreiben"
         if doc_data["sender"]:
             email_body += f" ({doc_data['sender']})"
         email_body += ":\n\n"
