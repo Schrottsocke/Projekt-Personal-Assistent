@@ -72,7 +72,7 @@ async def send_message_stream(
                 yield f"data: {json.dumps({'done': True})}\n\n"
             except Exception as e:
                 logger.error("Handler-Fehler für '%s' (intent=%s): %s", user_key, intent, e)
-                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+                yield f"data: {json.dumps({'error': 'Entschuldigung, es ist ein interner Fehler aufgetreten.'})}\n\n"
 
         return StreamingResponse(
             handler_generator(),
@@ -93,7 +93,7 @@ async def send_message_stream(
             yield f"data: {json.dumps({'done': True})}\n\n"
         except Exception as e:
             logger.error("Streaming-Fehler für '%s': %s", user_key, e)
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+            yield f"data: {json.dumps({'error': 'Entschuldigung, es ist ein interner Fehler aufgetreten.'})}\n\n"
 
     return StreamingResponse(
         event_generator(),
