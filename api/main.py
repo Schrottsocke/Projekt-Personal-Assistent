@@ -24,6 +24,9 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import subprocess as _sp
+import datetime as _dt
+
 from config.settings import settings
 from api import dependencies
 from api.routers import (
@@ -53,6 +56,12 @@ from api.routers import (
 )
 
 logger = structlog.get_logger(__name__)
+
+_COMMIT_HASH = _sp.run(
+    ["git", "rev-parse", "--short", "HEAD"],
+    capture_output=True, text=True, cwd=str(Path(__file__).parent.parent),
+).stdout.strip() or "dev"
+_STARTUP_TIME = _dt.datetime.utcnow().isoformat() + "Z"
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
@@ -240,7 +249,7 @@ app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def homepage():
     """Oeffentliche Landing Page."""
-    return _LANDING_PAGE_HTML
+    return HTMLResponse(_LANDING_PAGE_HTML, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
 @app.get("/app/sw.js", include_in_schema=False)
@@ -253,13 +262,17 @@ async def service_worker():
 @app.get("/app", include_in_schema=False)
 async def web_app_root():
     """SPA-Shell fuer die Web-App."""
-    return FileResponse(str(_static_dir / "app.html"))
+    html = (_static_dir / "app.html").read_text()
+    html = html.replace("__CACHE_VERSION__", _COMMIT_HASH)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
 @app.get("/app/{path:path}", include_in_schema=False)
 async def web_app_catchall(path: str):
     """SPA Catch-All fuer Deep-Links."""
-    return FileResponse(str(_static_dir / "app.html"))
+    html = (_static_dir / "app.html").read_text()
+    html = html.replace("__CACHE_VERSION__", _COMMIT_HASH)
+    return HTMLResponse(html, headers={"Cache-Control": "no-cache, must-revalidate"})
 
 
 @app.get("/health", tags=["Status"])
@@ -316,5 +329,5 @@ async def health():
 
     return JSONResponse(
         status_code=status_code,
-        content={"status": status_str, "services": checks},
+        content={"status": status_str, "commit": _COMMIT_HASH, "deployed_at": _STARTUP_TIME, "services": checks},
     )
