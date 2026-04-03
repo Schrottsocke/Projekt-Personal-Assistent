@@ -225,10 +225,7 @@ async def create_from_shopping(
     items_raw = await shopping_svc.get_items(user_key, include_checked=False)
     if not items_raw:
         raise HTTPException(status_code=400, detail="Einkaufsliste ist leer.")
-    items = [
-        {"name": it["name"], "quantity": it.get("quantity", ""), "unit": it.get("unit", "")}
-        for it in items_raw
-    ]
+    items = [{"name": it["name"], "quantity": it.get("quantity", ""), "unit": it.get("unit", "")} for it in items_raw]
     data = {
         "name": body.name,
         "category": "shopping",
