@@ -3435,6 +3435,64 @@ select:focus-visible,
   font-size: 16px;
 }
 
+/* ── Drive Dashboard Widget ── */
+.drive-widget-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.drive-widget-icon {
+  font-size: 1.3rem;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.drive-widget-info {
+  flex: 1;
+  min-width: 0;
+}
+.drive-widget-info .card-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Weather Dashboard Widget ── */
+.weather-widget-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.weather-widget-icon {
+  font-size: 2rem;
+  color: var(--accent);
+}
+.weather-widget-temp {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.weather-widget-desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.weather-widget-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.weather-widget-hint .material-symbols-outlined {
+  color: var(--warning);
+  font-size: 16px;
+}
+
 /* ── Recurrence Badge ── */
 
 .recurrence-badge {
