@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api_config.dart';
+
 
 class WeatherScreen extends ConsumerStatefulWidget {
   const WeatherScreen({super.key});
@@ -11,7 +11,6 @@ class WeatherScreen extends ConsumerStatefulWidget {
 class _WeatherScreenState extends ConsumerState<WeatherScreen> {
   bool _loading = true;
   String? _error;
-  Map<String, dynamic>? _weatherData;
   final _locationCtrl = TextEditingController(text: 'Schwerin');
 
   @override
