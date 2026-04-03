@@ -338,15 +338,15 @@ class AIService:
         )
         logger.info("perf | phase=total | duration_ms=%d | intent=%s | user=%s", int(t_total * 1000), intent, user_key)
 
-        # Intent-Handler (außer _handle_chat) speichern History nicht selbst.
-        # _handle_chat delegiert an intelligence.process_with_memory(), das History speichert.
+        # Conversation History für alle Nicht-Chat-Handler speichern (#547)
+        # _handle_chat speichert via process_with_memory() selbst
         if intent != INTENT_CHAT and result:
-            self._save_handler_history(user_key, message, result)
+            self._save_conversation_history(user_key, message, result)
 
         return result
 
-    def _save_handler_history(self, user_key: str, message: str, response: str) -> None:
-        """Speichert User-Nachricht und Handler-Antwort non-blocking in ConversationHistory."""
+    def _save_conversation_history(self, user_key: str, message: str, response: str) -> None:
+        """Speichert User-Nachricht und Bot-Antwort non-blocking in der DB."""
         import asyncio
 
         from src.services.database import ConversationHistory, get_db
@@ -357,7 +357,7 @@ class AIService:
                     session.add(ConversationHistory(user_key=user_key, role="user", content=message))
                     session.add(ConversationHistory(user_key=user_key, role="assistant", content=response))
             except Exception as e:
-                logger.warning("Intent-Handler History speichern fehlgeschlagen: %s", e)
+                logger.warning(f"Chat-History speichern fehlgeschlagen: {e}")
 
         asyncio.create_task(asyncio.to_thread(_save))
 
@@ -788,9 +788,11 @@ Formatiere strukturiert und übersichtlich."""
     async def _handle_briefing(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
         """Erstellt ein Tagesbriefing."""
         intelligence = self._get_intelligence_service()
-        if hasattr(intelligence, "create_briefing"):
-            return await intelligence.create_briefing(user_key, chat_id, bot)
-        return await self._handle_chat(message, intent_data, user_key, chat_id, bot)
+        return await intelligence.process_with_memory(
+            "Erstelle mir ein kurzes Tagesbriefing mit Kalender, offenen Tasks und Wetter.",
+            user_key,
+            chat_id,
+        )
 
     async def _handle_spotify(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
         """Steuert Spotify."""
