@@ -151,6 +151,7 @@ const TasksView = (() => {
             ${lastDone ? `<span class="task-last-completed"><span class="material-symbols-outlined mi-sm">check</span> ${lastDone}</span>` : ''}
           </div>
         </div>
+        <button class="btn-icon" onclick="TasksView.saveAsTemplate(${t.id})" title="Als Vorlage speichern"><span class="material-symbols-outlined">library_add</span></button>
         <button class="item-delete" onclick="TasksView.deleteTask(${t.id})" title="Löschen"><span class="material-symbols-outlined">delete</span></button>
       </div>
     `;
@@ -272,5 +273,18 @@ const TasksView = (() => {
     }
   }
 
-  return { render, setFilter, toggleForm, createTask, toggleStatus, deleteTask };
+  async function saveAsTemplate(id) {
+    try {
+      await Api.request(`/templates/from-task/${id}`, { method: 'POST' });
+      if (typeof Toast !== 'undefined' && Toast.show) {
+        Toast.show('Vorlage gespeichert', 'success');
+      }
+    } catch (err) {
+      if (typeof Toast !== 'undefined' && Toast.show) {
+        Toast.show(err.message || 'Fehler beim Speichern');
+      }
+    }
+  }
+
+  return { render, setFilter, toggleForm, createTask, toggleStatus, deleteTask, saveAsTemplate };
 })();
