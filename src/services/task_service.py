@@ -3,7 +3,7 @@ Task Service: Aufgabenverwaltung mit Status-Tracking und Cross-Bot-Zuweisung.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import pytz
 
@@ -21,6 +21,12 @@ STATUS_DONE = "done"
 
 PRIORITY_ICONS = {PRIORITY_HIGH: "🔴", PRIORITY_MEDIUM: "🟡", PRIORITY_LOW: "🟢"}
 STATUS_ICONS = {STATUS_OPEN: "📋", STATUS_IN_PROGRESS: "⚙️", STATUS_DONE: "✅"}
+
+RECURRENCE_INTERVALS = {
+    "daily": timedelta(days=1),
+    "weekly": timedelta(weeks=1),
+    "monthly": timedelta(days=30),
+}
 
 
 class TaskService:
@@ -47,6 +53,7 @@ class TaskService:
         description: str = "",
         due_date: Optional[datetime] = None,
         assigned_by: Optional[str] = None,
+        recurrence: Optional[str] = None,
     ) -> dict:
         from src.services.database import Task
 
@@ -60,6 +67,7 @@ class TaskService:
                 due_date=due_date,
                 status=STATUS_OPEN,
                 assigned_by=assigned_by,
+                recurrence=recurrence if recurrence in RECURRENCE_INTERVALS else None,
             )
             session.add(task)
             session.flush()
@@ -98,13 +106,43 @@ class TaskService:
         from src.services.database import Task
 
         self._ensure_initialized()
+        now = datetime.now(timezone.utc)
         with self._db() as session:
             task = session.query(Task).filter_by(id=task_id, user_key=user_key).first()
             if not task:
                 return None
-            task.status = STATUS_DONE
-            task.updated_at = datetime.now(timezone.utc)
+            if task.recurrence and task.recurrence in RECURRENCE_INTERVALS:
+                # Recurring: record completion, keep open
+                task.last_completed_at = now
+                task.status = STATUS_OPEN
+                task.updated_at = now
+            else:
+                task.status = STATUS_DONE
+                task.updated_at = now
             return self._task_to_dict(task)
+
+    async def get_completed_tasks_since(self, user_key: str, since: datetime) -> list[dict]:
+        """Tasks completed (done or recurring-completed) since a given datetime."""
+        from src.services.database import Task
+        from sqlalchemy import or_
+
+        self._ensure_initialized()
+        with self._db() as session:
+            tasks = (
+                session.query(Task)
+                .filter(
+                    Task.user_key == user_key,
+                    or_(
+                        # Normal tasks marked done in the period
+                        (Task.status == STATUS_DONE) & (Task.updated_at >= since),
+                        # Recurring tasks completed in the period
+                        (Task.recurrence.isnot(None)) & (Task.last_completed_at >= since),
+                    ),
+                )
+                .order_by(Task.updated_at.desc())
+                .all()
+            )
+            return [self._task_to_dict(t) for t in tasks]
 
     async def delete_task(self, task_id: int, user_key: str) -> bool:
         from src.services.database import Task
@@ -121,6 +159,9 @@ class TaskService:
         due = None
         if task.due_date:
             due = task.due_date.replace(tzinfo=pytz.utc).astimezone(self.tz)
+        last_completed = None
+        if task.last_completed_at:
+            last_completed = task.last_completed_at.replace(tzinfo=pytz.utc).astimezone(self.tz)
         return {
             "id": task.id,
             "user_key": task.user_key,
@@ -130,6 +171,8 @@ class TaskService:
             "status": task.status,
             "due_date": due,
             "assigned_by": task.assigned_by,
+            "recurrence": task.recurrence,
+            "last_completed_at": last_completed,
             "created_at": task.created_at,
         }
 
@@ -152,6 +195,10 @@ class TaskService:
                 assigned_str = ""
                 if t.get("assigned_by"):
                     assigned_str = f" ← von {t['assigned_by'].capitalize()}"
-                lines.append(f"{icon} `#{t['id']}` {t['title']}{due_str}{assigned_str}")
+                recur_str = ""
+                if t.get("recurrence"):
+                    recur_labels = {"daily": "täglich", "weekly": "wöchentlich", "monthly": "monatlich"}
+                    recur_str = f" 🔄 {recur_labels.get(t['recurrence'], t['recurrence'])}"
+                lines.append(f"{icon} `#{t['id']}` {t['title']}{due_str}{assigned_str}{recur_str}")
 
         return "\n".join(lines)

@@ -8,6 +8,7 @@ class TaskCreate(BaseModel):
     description: str = Field("", max_length=2000)
     priority: Literal["high", "medium", "low"] = "medium"
     due_date: Optional[datetime] = None
+    recurrence: Optional[Literal["daily", "weekly", "monthly"]] = None
 
 
 class TaskOut(BaseModel):
@@ -19,6 +20,8 @@ class TaskOut(BaseModel):
     status: str
     due_date: Optional[datetime]
     assigned_by: Optional[str]
+    recurrence: Optional[str] = None
+    last_completed_at: Optional[datetime] = None
     created_at: datetime
 
     class Config:

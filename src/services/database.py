@@ -123,6 +123,8 @@ class Task(Base):
     priority = Column(String(10), default="medium")  # high / medium / low
     due_date = Column(DateTime, nullable=True)
     status = Column(String(20), default="open")  # open / in_progress / done
+    recurrence = Column(String(20), nullable=True)  # daily / weekly / monthly / None
+    last_completed_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
@@ -337,6 +339,8 @@ def init_db():
                     "ALTER TABLE user_profiles ADD COLUMN spotify_token_json TEXT",
                     "ALTER TABLE user_profiles ADD COLUMN enabled_features TEXT",
                     "ALTER TABLE user_profiles ADD COLUMN preferences_json TEXT",
+                    "ALTER TABLE tasks ADD COLUMN recurrence VARCHAR(20)",
+                    "ALTER TABLE tasks ADD COLUMN last_completed_at DATETIME",
                 ]:
                     try:
                         conn.execute(sa_text(col_sql))
