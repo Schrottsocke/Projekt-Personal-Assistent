@@ -3,6 +3,8 @@ Notification Service: Zentrale Benachrichtigungsverwaltung.
 Speichert und verwaltet Systemereignisse, Warnungen, Erinnerungen.
 """
 
+from __future__ import annotations
+
 import logging
 from datetime import datetime, timezone
 from typing import Optional
@@ -107,8 +109,10 @@ class NotificationService:
             count = (
                 session.query(Notification)
                 .filter(Notification.id.in_(ids), Notification.user_key == user_key)
-                .update({Notification.status: new_status, Notification.updated_at: datetime.now(timezone.utc)},
-                        synchronize_session="fetch")
+                .update(
+                    {Notification.status: new_status, Notification.updated_at: datetime.now(timezone.utc)},
+                    synchronize_session="fetch",
+                )
             )
             return count
 
@@ -120,8 +124,10 @@ class NotificationService:
             count = (
                 session.query(Notification)
                 .filter(Notification.user_key == user_key, Notification.status == "new")
-                .update({Notification.status: "read", Notification.updated_at: datetime.now(timezone.utc)},
-                        synchronize_session="fetch")
+                .update(
+                    {Notification.status: "read", Notification.updated_at: datetime.now(timezone.utc)},
+                    synchronize_session="fetch",
+                )
             )
             return count
 
