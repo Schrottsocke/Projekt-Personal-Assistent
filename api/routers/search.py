@@ -1,4 +1,4 @@
-"""GET /search – Globale Suche ueber Tasks, Kalender, Einkauf, Chat, Drive."""
+"""GET /search – Globale Suche ueber Tasks, Kalender, Einkauf, Chat, Rezepte, Dokumente, Notizen."""
 
 from typing import Annotated
 
@@ -11,6 +11,11 @@ from src.services.database import (
     Task,
     ConversationHistory,
     ShoppingItem,
+    SavedRecipe,
+    MealPlanEntry,
+    Note,
+    ScannedDocument,
+    MemoryFact,
     get_db,
 )
 
@@ -23,9 +28,10 @@ async def global_search(
     q: str = Query(..., min_length=1),
     limit: int = Query(20, ge=1, le=100),
 ):
-    """Sucht uebergreifend in Tasks, Einkauf und Chat-History."""
+    """Sucht uebergreifend in Tasks, Einkauf, Chat, Rezepte, Wochenplan, Notizen, Dokumente, Gedaechtnis."""
     results: list[SearchResult] = []
     term = f"%{q}%"
+    per_source = min(limit, 5)
 
     with get_db()() as session:
         # Tasks
@@ -38,7 +44,7 @@ async def global_search(
                     Task.description.ilike(term),
                 ),
             )
-            .limit(limit)
+            .limit(per_source)
             .all()
         )
         for t in tasks:
@@ -59,7 +65,7 @@ async def global_search(
                 ShoppingItem.user_key == user_key,
                 ShoppingItem.name.ilike(term),
             )
-            .limit(limit)
+            .limit(per_source)
             .all()
         )
         for s in shopping:
@@ -74,6 +80,109 @@ async def global_search(
                 )
             )
 
+        # Saved recipes
+        recipes = (
+            session.query(SavedRecipe)
+            .filter(
+                SavedRecipe.user_key == user_key,
+                SavedRecipe.title.ilike(term),
+            )
+            .limit(per_source)
+            .all()
+        )
+        for r in recipes:
+            parts = []
+            if r.difficulty:
+                parts.append(r.difficulty)
+            parts.append(f"{r.servings} Portionen")
+            if r.is_favorite:
+                parts.append("Favorit")
+            results.append(
+                SearchResult(
+                    type="recipe",
+                    id=r.id,
+                    title=r.title,
+                    subtitle=" · ".join(parts),
+                    route="#/recipes",
+                )
+            )
+
+        # Meal plan entries
+        mealplan = (
+            session.query(MealPlanEntry)
+            .filter(
+                MealPlanEntry.user_key == user_key,
+                MealPlanEntry.recipe_title.ilike(term),
+            )
+            .limit(per_source)
+            .all()
+        )
+        for m in mealplan:
+            meal_labels = {"breakfast": "Frühstück", "lunch": "Mittagessen", "dinner": "Abendessen"}
+            meal_label = meal_labels.get(m.meal_type, m.meal_type or "")
+            results.append(
+                SearchResult(
+                    type="mealplan",
+                    id=m.id,
+                    title=m.recipe_title,
+                    subtitle=f"{m.planned_date} · {meal_label}" if meal_label else m.planned_date,
+                    route="#/mealplan",
+                )
+            )
+
+        # Scanned documents
+        documents = (
+            session.query(ScannedDocument)
+            .filter(
+                ScannedDocument.user_key == user_key,
+                or_(
+                    ScannedDocument.filename.ilike(term),
+                    ScannedDocument.summary.ilike(term),
+                    ScannedDocument.sender.ilike(term),
+                    ScannedDocument.doc_type.ilike(term),
+                ),
+            )
+            .limit(per_source)
+            .all()
+        )
+        for d in documents:
+            parts = [d.doc_type]
+            if d.sender:
+                parts.append(d.sender)
+            if d.amount:
+                parts.append(d.amount)
+            results.append(
+                SearchResult(
+                    type="document",
+                    id=d.id,
+                    title=d.filename,
+                    subtitle=" · ".join(parts),
+                    route="#/documents",
+                )
+            )
+
+        # Notes
+        notes = (
+            session.query(Note)
+            .filter(
+                Note.user_key == user_key,
+                Note.content.ilike(term),
+            )
+            .limit(per_source)
+            .all()
+        )
+        for n in notes:
+            preview = n.content[:80] + ("…" if len(n.content) > 80 else "")
+            results.append(
+                SearchResult(
+                    type="note",
+                    id=n.id,
+                    title=preview,
+                    subtitle=n.created_at.strftime("%d.%m.%Y") if n.created_at else "",
+                    route="#/memory",
+                )
+            )
+
         # Chat history
         chats = (
             session.query(ConversationHistory)
@@ -82,7 +191,7 @@ async def global_search(
                 ConversationHistory.content.ilike(term),
             )
             .order_by(ConversationHistory.created_at.desc())
-            .limit(limit)
+            .limit(per_source)
             .all()
         )
         for c in chats:
@@ -94,6 +203,28 @@ async def global_search(
                     title=preview,
                     subtitle=f"{c.role} · {c.created_at.strftime('%d.%m.%Y %H:%M') if c.created_at else ''}",
                     route="#/chat",
+                )
+            )
+
+        # Memory facts
+        memories = (
+            session.query(MemoryFact)
+            .filter(
+                MemoryFact.user_key == user_key,
+                MemoryFact.content.ilike(term),
+            )
+            .limit(per_source)
+            .all()
+        )
+        for mem in memories:
+            preview = mem.content[:100] + ("…" if len(mem.content) > 100 else "")
+            results.append(
+                SearchResult(
+                    type="memory",
+                    id=mem.id,
+                    title=preview,
+                    subtitle=f"Konfidenz: {mem.confirmation_count}",
+                    route="#/memory",
                 )
             )
 

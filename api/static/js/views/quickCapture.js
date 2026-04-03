@@ -206,5 +206,5 @@ const QuickCapture = (() => {
     }, 3000);
   }
 
-  return { init, open, close, save };
+  return { init, open, close, save, selectType };
 })();
