@@ -320,5 +320,12 @@ const QuickCapture = (() => {
     }, 3000);
   }
 
-  return { init, open, close, save };
+  function selectType(type) {
+    if (!overlay) return;
+    manualOverride = true;
+    selectedType = type;
+    updateChips({ type, confidence: 'high' });
+  }
+
+  return { init, open, close, save, selectType };
 })();

@@ -3073,6 +3073,107 @@ select:focus-visible,
   flex-direction: column;
 }
 
+.cp-group-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cp-clear-history {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 var(--space-4) 0 0;
+  transition: color var(--transition);
+}
+.cp-clear-history:hover {
+  color: var(--error);
+}
+
+.command-palette-loading-bar {
+  height: 2px;
+  background: transparent;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+.command-palette-loading-bar.active {
+  background: var(--bg-card);
+}
+.command-palette-loading-bar.active::after {
+  content: '';
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: var(--accent);
+  border-radius: 1px;
+  animation: cpLoadSlide 1s ease-in-out infinite;
+}
+@keyframes cpLoadSlide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+.command-palette-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  color: var(--text-muted);
+  font-size: 13px;
+  gap: var(--space-2);
+}
+.cp-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: cpSpin 0.6s linear infinite;
+}
+@keyframes cpSpin { to { transform: rotate(360deg); } }
+
+.command-palette-footer {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.command-palette-footer kbd {
+  padding: 1px 5px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 10px;
+  margin-right: 2px;
+}
+
+@media (max-width: 640px) {
+  .command-palette-overlay {
+    padding-top: 0;
+    align-items: flex-start;
+  }
+  .command-palette {
+    max-width: 100%;
+    border-radius: 0 0 var(--radius) var(--radius);
+  }
+  .command-palette-results {
+    max-height: 60vh;
+  }
+  .command-palette-item {
+    min-height: 48px;
+  }
+  .command-palette-kbd {
+    display: none;
+  }
+  .command-palette-footer {
+    display: none;
+  }
+}
+
 /* ── Quick Capture FAB (#453) ──────────────────── */
 .quick-capture-fab {
   position: fixed;
