@@ -93,84 +93,102 @@ async def chat_suggestions(
 
     # --- Tageszeit-basierte Vorschlaege ---
     if slot == "morning":
-        suggestions.append(ChatSuggestionOut(
-            label="Briefing",
-            message="Gib mir ein Briefing fuer heute",
-            icon="wb_sunny",
-            priority=10,
-        ))
+        suggestions.append(
+            ChatSuggestionOut(
+                label="Briefing",
+                message="Gib mir ein Briefing fuer heute",
+                icon="wb_sunny",
+                priority=10,
+            )
+        )
     elif slot == "evening":
-        suggestions.append(ChatSuggestionOut(
-            label="Zusammenfassung",
-            message="Fasse meinen Tag zusammen",
-            icon="nightlight",
-            priority=10,
-        ))
+        suggestions.append(
+            ChatSuggestionOut(
+                label="Zusammenfassung",
+                message="Fasse meinen Tag zusammen",
+                icon="nightlight",
+                priority=10,
+            )
+        )
 
     # --- Aufgaben ---
     high_prio = [t for t in tasks if t.get("priority") == "high"]
     if high_prio:
         n = len(high_prio)
-        suggestions.append(ChatSuggestionOut(
-            label=f"{n} dringende Aufgabe{'n' if n > 1 else ''}",
-            message="Zeig mir meine dringenden Aufgaben",
-            icon="priority_high",
-            priority=9,
-        ))
+        suggestions.append(
+            ChatSuggestionOut(
+                label=f"{n} dringende Aufgabe{'n' if n > 1 else ''}",
+                message="Zeig mir meine dringenden Aufgaben",
+                icon="priority_high",
+                priority=9,
+            )
+        )
     elif tasks:
         n = len(tasks)
-        suggestions.append(ChatSuggestionOut(
-            label=f"{n} offene Aufgabe{'n' if n > 1 else ''}",
-            message="Was muss ich heute erledigen?",
-            icon="check_circle",
-            priority=5,
-        ))
+        suggestions.append(
+            ChatSuggestionOut(
+                label=f"{n} offene Aufgabe{'n' if n > 1 else ''}",
+                message="Was muss ich heute erledigen?",
+                icon="check_circle",
+                priority=5,
+            )
+        )
 
     # --- Termine ---
     if events:
         next_event = events[0]
         summary = next_event.get("summary", "Termin")
-        suggestions.append(ChatSuggestionOut(
-            label=f"Naechster Termin: {summary[:25]}",
-            message="Was steht heute an?",
-            icon="event",
-            priority=7,
-        ))
+        suggestions.append(
+            ChatSuggestionOut(
+                label=f"Naechster Termin: {summary[:25]}",
+                message="Was steht heute an?",
+                icon="event",
+                priority=7,
+            )
+        )
     elif slot in ("morning", "midday"):
-        suggestions.append(ChatSuggestionOut(
-            label="Tagesplan",
-            message="Was steht heute an?",
-            icon="calendar_month",
-            priority=4,
-        ))
+        suggestions.append(
+            ChatSuggestionOut(
+                label="Tagesplan",
+                message="Was steht heute an?",
+                icon="calendar_month",
+                priority=4,
+            )
+        )
 
     # --- Einkauf ---
     pending = [i for i in shopping_items if not i.get("checked")]
     if len(pending) >= 3:
-        suggestions.append(ChatSuggestionOut(
-            label=f"{len(pending)} Sachen einkaufen",
-            message="Zeig die Einkaufsliste",
-            icon="shopping_cart",
-            priority=6 if slot == "midday" else 3,
-        ))
+        suggestions.append(
+            ChatSuggestionOut(
+                label=f"{len(pending)} Sachen einkaufen",
+                message="Zeig die Einkaufsliste",
+                icon="shopping_cart",
+                priority=6 if slot == "midday" else 3,
+            )
+        )
 
     # --- E-Mails ---
     if unread_emails and unread_emails > 0:
-        suggestions.append(ChatSuggestionOut(
-            label=f"{unread_emails} neue E-Mail{'s' if unread_emails > 1 else ''}",
-            message="Fasse meine neuen E-Mails zusammen",
-            icon="mail",
-            priority=5,
-        ))
+        suggestions.append(
+            ChatSuggestionOut(
+                label=f"{unread_emails} neue E-Mail{'s' if unread_emails > 1 else ''}",
+                message="Fasse meine neuen E-Mails zusammen",
+                icon="mail",
+                priority=5,
+            )
+        )
 
     # --- Essensplanung (Mittag) ---
     if slot == "midday":
-        suggestions.append(ChatSuggestionOut(
-            label="Was koche ich?",
-            message="Schlage mir ein Rezept fuer heute Abend vor",
-            icon="restaurant",
-            priority=4,
-        ))
+        suggestions.append(
+            ChatSuggestionOut(
+                label="Was koche ich?",
+                message="Schlage mir ein Rezept fuer heute Abend vor",
+                icon="restaurant",
+                priority=4,
+            )
+        )
 
     # Sortieren nach Prioritaet (hoch zuerst), max 5
     suggestions.sort(key=lambda s: s.priority, reverse=True)
@@ -223,14 +241,16 @@ async def proactive_suggestions(
         n = len(due_soon)
         first_title = due_soon[0].get("title", "Aufgabe")
         body = first_title if n == 1 else f"{first_title} und {n - 1} weitere"
-        suggestions.append(ProactiveSuggestionOut(
-            id=f"tasks-due-{now.strftime('%Y%m%d')}",
-            type="tasks",
-            title=f"{n} faellige Aufgabe{'n' if n > 1 else ''}",
-            body=body,
-            action_route="#/tasks",
-            action_label="Aufgaben ansehen",
-        ))
+        suggestions.append(
+            ProactiveSuggestionOut(
+                id=f"tasks-due-{now.strftime('%Y%m%d')}",
+                type="tasks",
+                title=f"{n} faellige Aufgabe{'n' if n > 1 else ''}",
+                body=body,
+                action_route="#/tasks",
+                action_label="Aufgaben ansehen",
+            )
+        )
 
     # --- Anstehende Termine (naechste 2 Stunden) ---
     upcoming = []
@@ -255,36 +275,42 @@ async def proactive_suggestions(
             time_label = f"in {minutes} Minuten" if minutes > 0 else "jetzt"
         except (ValueError, TypeError):
             time_label = "bald"
-        suggestions.append(ProactiveSuggestionOut(
-            id=f"event-{hashlib.md5(summary.encode()).hexdigest()[:8]}",
-            type="calendar",
-            title=f"{summary}",
-            body=f"Beginnt {time_label}",
-            action_route="#/calendar",
-            action_label="Kalender oeffnen",
-        ))
+        suggestions.append(
+            ProactiveSuggestionOut(
+                id=f"event-{hashlib.md5(summary.encode()).hexdigest()[:8]}",
+                type="calendar",
+                title=f"{summary}",
+                body=f"Beginnt {time_label}",
+                action_route="#/calendar",
+                action_label="Kalender oeffnen",
+            )
+        )
 
     # --- Einkaufsliste ---
     pending = [i for i in shopping_items if not i.get("checked")]
     if len(pending) >= 5:
-        suggestions.append(ProactiveSuggestionOut(
-            id=f"shopping-{now.strftime('%Y%m%d')}",
-            type="shopping",
-            title="Einkaufsliste wartet",
-            body=f"{len(pending)} offene Artikel",
-            action_route="#/shopping",
-            action_label="Einkaufsliste oeffnen",
-        ))
+        suggestions.append(
+            ProactiveSuggestionOut(
+                id=f"shopping-{now.strftime('%Y%m%d')}",
+                type="shopping",
+                title="Einkaufsliste wartet",
+                body=f"{len(pending)} offene Artikel",
+                action_route="#/shopping",
+                action_label="Einkaufsliste oeffnen",
+            )
+        )
 
     # --- Ungelesene E-Mails ---
     if unread_emails and unread_emails >= 3:
-        suggestions.append(ProactiveSuggestionOut(
-            id=f"emails-{now.strftime('%Y%m%d')}",
-            type="email",
-            title=f"{unread_emails} ungelesene E-Mails",
-            body="Schau mal in dein Postfach",
-            action_route="#/chat",
-            action_label="E-Mails zusammenfassen",
-        ))
+        suggestions.append(
+            ProactiveSuggestionOut(
+                id=f"emails-{now.strftime('%Y%m%d')}",
+                type="email",
+                title=f"{unread_emails} ungelesene E-Mails",
+                body="Schau mal in dein Postfach",
+                action_route="#/chat",
+                action_label="E-Mails zusammenfassen",
+            )
+        )
 
     return suggestions
