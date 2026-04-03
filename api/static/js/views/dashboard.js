@@ -166,6 +166,7 @@ const DashboardView = (() => {
       <div class="greeting-date">${formatDate()}</div>
       <div class="greeting">${getGreeting()}, ${user}</div>
       <div class="greeting-sub" id="greeting-summary">Dein Tages\u00fcberblick wird geladen\u2026</div>
+      <div id="proactive-suggestions"></div>
       ${renderQuickActions()}
       <div id="dashboard-content">
         <div class="skeleton skeleton-section-header"></div>
@@ -181,6 +182,8 @@ const DashboardView = (() => {
     try {
       const data = await Api.getDashboard();
       renderContent(data);
+      // Proaktive Vorschlaege im Hintergrund laden
+      loadProactiveSuggestions();
     } catch (err) {
       document.getElementById('dashboard-content').innerHTML = `
         <div class="error-state">
@@ -321,5 +324,85 @@ const DashboardView = (() => {
     return html;
   }
 
-  return { render };
+  // ── Proaktive Vorschlaege ──
+
+  function _getDismissed() {
+    try {
+      const raw = localStorage.getItem('dm_dismissed_suggestions');
+      if (!raw) return {};
+      const data = JSON.parse(raw);
+      const now = Date.now();
+      // Abgelaufene Eintraege entfernen (24h TTL)
+      const cleaned = {};
+      for (const [k, v] of Object.entries(data)) {
+        if (now - v < 86400000) cleaned[k] = v;
+      }
+      return cleaned;
+    } catch { return {}; }
+  }
+
+  function _dismissSuggestion(id) {
+    const dismissed = _getDismissed();
+    dismissed[id] = Date.now();
+    localStorage.setItem('dm_dismissed_suggestions', JSON.stringify(dismissed));
+    const card = document.querySelector(`.suggestion-card[data-id="${id}"]`);
+    if (card) {
+      card.style.opacity = '0';
+      card.style.transform = 'translateX(20px)';
+      setTimeout(() => {
+        card.remove();
+        // Container ausblenden wenn leer
+        const container = document.getElementById('proactive-suggestions');
+        if (container && container.querySelectorAll('.suggestion-card').length === 0) {
+          container.innerHTML = '';
+        }
+      }, 200);
+    }
+  }
+
+  async function loadProactiveSuggestions() {
+    // Pruefen ob Feature aktiviert ist
+    const prefs = window.AppPreferences ? window.AppPreferences.getCached() : null;
+    if (prefs && prefs.proactive_suggestions === false) return;
+
+    const el = document.getElementById('proactive-suggestions');
+    if (!el) return;
+
+    try {
+      const suggestions = await Api.getProactiveSuggestions();
+      if (!suggestions || suggestions.length === 0) return;
+
+      const dismissed = _getDismissed();
+      const visible = suggestions.filter(s => !dismissed[s.id]);
+      if (visible.length === 0) return;
+
+      const ICONS = {
+        tasks: 'check_circle',
+        calendar: 'event',
+        shopping: 'shopping_cart',
+        email: 'mail',
+      };
+
+      el.innerHTML = visible.map(s => {
+        const icon = ICONS[s.type] || 'lightbulb';
+        return `
+          <div class="suggestion-card card" data-id="${escapeHtml(s.id)}">
+            <div class="suggestion-card-body">
+              <span class="material-symbols-outlined suggestion-card-icon">${icon}</span>
+              <div class="suggestion-card-content">
+                <div class="suggestion-card-title">${escapeHtml(s.title)}</div>
+                <div class="suggestion-card-text">${escapeHtml(s.body)}</div>
+              </div>
+              ${s.dismissible ? `<button class="btn btn-icon suggestion-card-dismiss" onclick="DashboardView.dismissSuggestion('${escapeHtml(s.id)}')" title="Ausblenden"><span class="material-symbols-outlined mi-sm">close</span></button>` : ''}
+            </div>
+            ${s.action_route ? `<a href="${escapeHtml(s.action_route)}" class="suggestion-card-action">${escapeHtml(s.action_label || 'Oeffnen')} <span class="material-symbols-outlined mi-sm">arrow_forward</span></a>` : ''}
+          </div>
+        `;
+      }).join('');
+    } catch {
+      // Fehler ignorieren – Vorschlaege sind optional
+    }
+  }
+
+  return { render, dismissSuggestion: _dismissSuggestion };
 })();

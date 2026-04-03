@@ -3,6 +3,7 @@ Google Calendar Service: OAuth2-Authentifizierung und CRUD-Operationen.
 Jeder User hat eigene OAuth-Credentials.
 """
 
+import asyncio
 import logging
 import json
 from datetime import datetime, timedelta, timezone
@@ -200,18 +201,15 @@ class CalendarService:
             now = datetime.now(self.tz)
             end = now + timedelta(days=days)
 
-            events_result = (
-                service.events()
-                .list(
-                    calendarId="primary",
-                    timeMin=now.isoformat(),
-                    timeMax=end.isoformat(),
-                    maxResults=max_results,
-                    singleEvents=True,
-                    orderBy="startTime",
-                )
-                .execute()
+            request = service.events().list(
+                calendarId="primary",
+                timeMin=now.isoformat(),
+                timeMax=end.isoformat(),
+                maxResults=max_results,
+                singleEvents=True,
+                orderBy="startTime",
             )
+            events_result = await asyncio.to_thread(request.execute)
             result = events_result.get("items", [])
             self._set_cached(cache_key, result)
             return result
@@ -242,18 +240,15 @@ class CalendarService:
             start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
             end_of_day = now.replace(hour=23, minute=59, second=59, microsecond=0)
 
-            events_result = (
-                service.events()
-                .list(
-                    calendarId="primary",
-                    timeMin=start_of_day.isoformat(),
-                    timeMax=end_of_day.isoformat(),
-                    maxResults=20,
-                    singleEvents=True,
-                    orderBy="startTime",
-                )
-                .execute()
+            request = service.events().list(
+                calendarId="primary",
+                timeMin=start_of_day.isoformat(),
+                timeMax=end_of_day.isoformat(),
+                maxResults=20,
+                singleEvents=True,
+                orderBy="startTime",
             )
+            events_result = await asyncio.to_thread(request.execute)
             result = events_result.get("items", [])
             self._set_cached(cache_key, result)
             return result
@@ -300,7 +295,8 @@ class CalendarService:
                 },
             }
 
-            created = service.events().insert(calendarId="primary", body=event).execute()
+            request = service.events().insert(calendarId="primary", body=event)
+            created = await asyncio.to_thread(request.execute)
             self._invalidate_cache(user_key)
             logger.info(f"Event erstellt für '{user_key}': {summary}")
             return created
@@ -319,7 +315,8 @@ class CalendarService:
         """Löscht einen Kalendereintrag."""
         try:
             service = self._get_service(user_key)
-            service.events().delete(calendarId="primary", eventId=event_id).execute()
+            request = service.events().delete(calendarId="primary", eventId=event_id)
+            await asyncio.to_thread(request.execute)
             self._invalidate_cache(user_key)
             return True
         except (ValueError, RefreshError, TransportError, OSError) as e:
