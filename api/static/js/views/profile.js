@@ -243,7 +243,7 @@ const ProfileView = (() => {
       </div>
     `;
 
-    await Promise.all([loadServices(), loadFeatures(), loadNavConfig(), loadWidgetConfig()]);
+    await Promise.allSettled([loadServices(), loadFeatures(), loadNavConfig(), loadWidgetConfig()]);
   }
 
   /* ── Status Bar (computed after data loads) ── */

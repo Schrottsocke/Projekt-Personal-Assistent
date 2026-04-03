@@ -133,7 +133,7 @@ const IssuesView = (() => {
 
   function renderLabelBadge(labelName) {
     const labelData = labels.find(l => l.name === labelName);
-    if (labelData && labelData.color) {
+    if (labelData && labelData.color && /^[0-9a-fA-F]{6}$/.test(labelData.color)) {
       const bg = `#${labelData.color}33`;
       const fg = `#${labelData.color}`;
       return `<span class="badge" style="background:${bg};color:${fg}">${escapeHtml(labelName)}</span>`;

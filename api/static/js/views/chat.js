@@ -133,6 +133,7 @@ const ChatView = (() => {
     setQuickActionsVisible(false);
 
     const messagesEl = document.getElementById('chat-messages');
+    if (!messagesEl) return;
 
     // Remove empty state if present
     const empty = messagesEl.querySelector('.empty-state');
