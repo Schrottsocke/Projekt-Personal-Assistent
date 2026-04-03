@@ -91,6 +91,8 @@ const NotificationsView = (() => {
         </div>
         <div class="notification-actions">
           ${n.link ? `<button class="btn-icon" data-action="open" title="Oeffnen"><span class="material-symbols-outlined">open_in_new</span></button>` : ''}
+          ${['reminder', 'follow_up'].includes(n.type) ? `<button class="btn-icon notification-action-btn" data-action="to-task" title="Als Aufgabe erstellen"><span class="material-symbols-outlined">add_task</span></button>` : ''}
+          ${n.type === 'reminder' ? `<button class="btn-icon notification-action-btn" data-action="to-calendar" title="Im Kalender ansehen"><span class="material-symbols-outlined">calendar_month</span></button>` : ''}
           ${n.status === 'new' ? `<button class="btn-icon" data-action="read" title="Als gelesen markieren"><span class="material-symbols-outlined">done</span></button>` : ''}
           ${n.status !== 'completed' ? `<button class="btn-icon" data-action="complete" title="Erledigen"><span class="material-symbols-outlined">check_circle</span></button>` : ''}
           ${n.status !== 'hidden' ? `<button class="btn-icon" data-action="hide" title="Ausblenden"><span class="material-symbols-outlined">visibility_off</span></button>` : ''}
@@ -214,6 +216,25 @@ const NotificationsView = (() => {
                 NotificationBell.refresh();
               }
               window.location.hash = notif.link;
+              return;
+            }
+            if (action === 'to-task') {
+              // Navigate to tasks view – user creates task manually
+              if (notif.status === 'new') {
+                await Api.updateNotification(id, 'read');
+                notif.status = 'read';
+                NotificationBell.refresh();
+              }
+              window.location.hash = '#/tasks';
+              return;
+            }
+            if (action === 'to-calendar') {
+              if (notif.status === 'new') {
+                await Api.updateNotification(id, 'read');
+                notif.status = 'read';
+                NotificationBell.refresh();
+              }
+              window.location.hash = '#/calendar';
               return;
             }
             if (action === 'read') {

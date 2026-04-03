@@ -320,6 +320,9 @@ const Api = (() => {
   function deleteTask(id) {
     return request(`/tasks/${id}`, { method: 'DELETE' });
   }
+  function getWeeklyReview() {
+    return request('/dashboard/weekly-review');
+  }
 
   // MealPlan
   function getMealPlanWeek(start) {
@@ -392,6 +395,10 @@ const Api = (() => {
   function getGitHubLabels() { return request('/github/labels', { timeoutMs: 10000 }); }
   function getGitHubIssues() { return request('/github/issues', { timeoutMs: 10000 }); }
   function createGitHubIssue(data) { return request('/github/issues', { method: 'POST', body: data, timeoutMs: 15000 }); }
+
+  // Status / Health
+  function getStatusHealth() { return request('/status/health', { noAuth: true, timeoutMs: 5000 }); }
+  function getStatusDetail() { return request('/status/detail', { timeoutMs: 10000 }); }
 
   // Notifications
   function getNotifications(params = {}) {
@@ -466,6 +473,21 @@ const Api = (() => {
     return request(`/shifts/entries/${id}`, { method: 'DELETE' });
   }
 
+  // Suggestions
+  function getChatSuggestions() { return request('/suggestions/chat'); }
+  function getProactiveSuggestions() { return request('/suggestions/proactive'); }
+
+  // Memories
+  function getMemories(offset = 0, limit = 20) {
+    return request(`/memories?offset=${offset}&limit=${limit}`);
+  }
+  function searchMemories(query, limit = 10) {
+    return request(`/memories/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+  }
+  function deleteMemory(id) {
+    return request(`/memories/${id}`, { method: 'DELETE' });
+  }
+
   // Generic convenience methods
   function get(path, opts = {}) {
     return request(path, { ...opts, method: 'GET' });
@@ -488,16 +510,19 @@ const Api = (() => {
     getChatHistory, sendMessage, sendMessageStream, transcribeVoice,
     getFeatures, toggleFeature,
     getCalendarToday, getCalendarWeek, createCalendarEvent,
-    getTasks, createTask, updateTaskStatus, deleteTask,
+    getTasks, createTask, updateTaskStatus, deleteTask, getWeeklyReview,
     getMealPlanWeek, createMealPlan, deleteMealPlan,
     getDriveFiles, uploadFile,
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
+    getStatusHealth, getStatusDetail,
     getNotifications, getNotificationCount, updateNotification, bulkUpdateNotifications, markAllNotificationsRead, createNotification,
     getAutomationRules, createAutomationRule, toggleAutomationRule, deleteAutomationRule,
     getInboxItems, getInboxCount, actionInboxItem,
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
     getPreferences, updatePreferences, getPreferencesRegistry,
+    getChatSuggestions, getProactiveSuggestions,
+    getMemories, searchMemories, deleteMemory,
     request,
     searchGlobal,
     get, post, patch, 'delete': del,

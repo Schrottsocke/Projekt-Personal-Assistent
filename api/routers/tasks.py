@@ -39,6 +39,7 @@ async def create_task(
         priority=body.priority,
         description=body.description,
         due_date=body.due_date,
+        recurrence=body.recurrence,
     )
 
 

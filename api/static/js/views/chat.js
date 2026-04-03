@@ -16,11 +16,12 @@ const ChatView = (() => {
   let recordingSeconds = 0;
   const MAX_RECORDING_SECONDS = 120;
 
-  const QUICK_ACTIONS = [
-    { label: 'Briefing', msg: 'Gib mir ein Briefing' },
-    { label: 'Offene Aufgaben', msg: 'Zeig mir offene Aufgaben' },
-    { label: 'Tagesplan', msg: 'Was steht heute an?' },
-    { label: 'Einkaufsliste', msg: 'Zeig die Einkaufsliste' },
+  // Fallback-Vorschlaege falls der Endpoint nicht erreichbar ist
+  const FALLBACK_ACTIONS = [
+    { label: 'Briefing', message: 'Gib mir ein Briefing', icon: 'wb_sunny' },
+    { label: 'Offene Aufgaben', message: 'Zeig mir offene Aufgaben', icon: 'check_circle' },
+    { label: 'Tagesplan', message: 'Was steht heute an?', icon: 'calendar_month' },
+    { label: 'Einkaufsliste', message: 'Zeig die Einkaufsliste', icon: 'shopping_cart' },
   ];
 
   async function render(container) {
@@ -29,9 +30,7 @@ const ChatView = (() => {
         <div class="chat-messages" id="chat-messages">
           <div class="loading"><div class="spinner"></div> Nachrichten laden…</div>
         </div>
-        <div class="chat-quick-actions" id="chat-quick-actions">
-          ${QUICK_ACTIONS.map(a => `<button class="chip quick-action" data-msg="${escapeHtml(a.msg)}">${escapeHtml(a.label)}</button>`).join('')}
-        </div>
+        <div class="chat-quick-actions" id="chat-quick-actions"></div>
         <div class="chat-input-area">
           <input type="text" id="chat-input" placeholder="Nachricht schreiben…"
                  onkeydown="if(event.key==='Enter' && !event.shiftKey) ChatView.send()">
@@ -51,7 +50,21 @@ const ChatView = (() => {
       if (chip && !sending) send(chip.dataset.msg);
     });
 
+    // Dynamische Vorschlaege laden
+    loadSuggestions();
+
     await loadHistory();
+
+    // Chat-Prefill (z.B. von Memory-View)
+    const prefill = sessionStorage.getItem('dm_chat_prefill');
+    if (prefill) {
+      sessionStorage.removeItem('dm_chat_prefill');
+      const input = document.getElementById('chat-input');
+      if (input) {
+        input.value = prefill;
+        input.focus();
+      }
+    }
   }
 
   async function loadHistory() {
@@ -119,6 +132,24 @@ const ChatView = (() => {
   function setQuickActionsVisible(visible) {
     const qa = document.getElementById('chat-quick-actions');
     if (qa) qa.style.display = visible ? '' : 'none';
+  }
+
+  async function loadSuggestions() {
+    const qa = document.getElementById('chat-quick-actions');
+    if (!qa) return;
+    try {
+      const suggestions = await Api.getChatSuggestions();
+      const items = (suggestions && suggestions.length > 0) ? suggestions : FALLBACK_ACTIONS;
+      renderSuggestionChips(items);
+    } catch {
+      renderSuggestionChips(FALLBACK_ACTIONS);
+    }
+  }
+
+  function renderSuggestionChips(items) {
+    const qa = document.getElementById('chat-quick-actions');
+    if (!qa) return;
+    qa.innerHTML = items.map(a => `<button class="chip quick-action chat-suggestion-chip" data-msg="${escapeHtml(a.message)}"><span class="material-symbols-outlined mi-sm">${escapeHtml(a.icon || 'lightbulb')}</span> ${escapeHtml(a.label)}</button>`).join('');
   }
 
   async function send(retryMsg) {
@@ -243,6 +274,7 @@ const ChatView = (() => {
       pendingController = null;
       sendBtn.disabled = false;
       setQuickActionsVisible(true);
+      loadSuggestions();
       if (input) input.focus();
     }
   }

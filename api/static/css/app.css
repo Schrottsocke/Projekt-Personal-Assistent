@@ -1992,6 +1992,160 @@ select option {
   opacity: 1;
 }
 
+/* Developer Widgets */
+.dev-widgets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dev-widget {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+.dev-widget-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.dev-widget-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.btn-icon-sm {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-decoration: none;
+  transition: color var(--transition), background var(--transition);
+}
+.btn-icon-sm:hover {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+/* Health Monitor */
+.health-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-2);
+}
+.health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.health-dot-ok { background: var(--success); }
+.health-dot-err { background: var(--error); }
+
+.health-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.health-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px 0;
+  font-size: var(--text-xs);
+}
+.health-svc-name {
+  flex: 1;
+  color: var(--text-primary);
+}
+.health-svc-meta {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+.health-footer {
+  display: flex;
+  justify-content: space-between;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+  margin-top: var(--space-2);
+}
+.health-meta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Compact Issue List */
+.dev-issue-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: 4px 0;
+  text-decoration: none;
+  color: inherit;
+  font-size: var(--text-sm);
+  border-bottom: 1px solid var(--border);
+  transition: background var(--transition);
+}
+.dev-issue-row:last-of-type { border-bottom: none; }
+.dev-issue-row:hover { background: var(--bg-hover); }
+
+.dev-issue-num {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  flex-shrink: 0;
+  min-width: 32px;
+}
+.dev-issue-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-primary);
+}
+.dev-issue-labels {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.dev-issue-labels .badge {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+}
+.dev-issues-more {
+  display: block;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--accent);
+  text-decoration: none;
+  padding: var(--space-2) 0 0;
+}
+.dev-issues-more:hover { text-decoration: underline; }
+
+@media (max-width: 480px) {
+  .dev-issue-row { flex-wrap: wrap; }
+  .dev-issue-labels { width: 100%; padding-left: 40px; }
+  .health-footer { flex-direction: column; gap: 2px; }
+}
+
 /* Logout */
 .profile-logout {
   text-align: center;
@@ -3137,6 +3291,141 @@ select:focus-visible,
   transform: translateX(16px);
 }
 
+/* ── Focus Mode Toggle (Dashboard) ── */
+
+.greeting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.focus-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: all var(--transition);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.focus-mode-toggle:hover {
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.focus-mode-toggle.active {
+  background: var(--accent-light);
+  border-color: var(--accent-border);
+  color: var(--accent);
+}
+
+.focus-mode-toggle .material-symbols-outlined {
+  font-size: 18px;
+}
+
+/* ── Weekly Review Widget ── */
+
+.weekly-review-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.weekly-review-stats {
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-around;
+  margin-bottom: var(--space-3);
+}
+
+.weekly-review-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.weekly-review-num {
+  font-size: var(--text-xl);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.weekly-review-label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.weekly-review-highlights {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+
+.weekly-review-highlight {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: 3px 0;
+}
+
+.weekly-review-highlight .material-symbols-outlined {
+  color: var(--success);
+  font-size: 16px;
+}
+
+/* ── Recurrence Badge ── */
+
+.recurrence-badge {
+  font-size: 0.7rem !important;
+  padding: 2px 8px !important;
+  gap: 2px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.recurrence-badge .material-symbols-outlined {
+  font-size: 13px;
+}
+
+/* ── Task Meta Row ── */
+
+.task-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: 4px;
+}
+
+.task-meta-row:empty {
+  display: none;
+}
+
+.task-last-completed {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.task-last-completed .material-symbols-outlined {
+  font-size: 14px;
+  color: var(--success);
+}
+
 /* ── Focus View ── */
 
 .focus-container {
@@ -3586,4 +3875,216 @@ select:focus-visible,
 
 .btn-icon .material-symbols-outlined {
   font-size: 18px;
+}
+
+/* ── Chat Suggestion Chips ── */
+
+.chat-suggestion-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  animation: chipFadeIn 0.3s ease both;
+}
+
+.chat-suggestion-chip .material-symbols-outlined {
+  font-size: 16px;
+  opacity: 0.7;
+}
+
+@keyframes chipFadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.chat-suggestion-chip:nth-child(2) { animation-delay: 0.05s; }
+.chat-suggestion-chip:nth-child(3) { animation-delay: 0.1s; }
+.chat-suggestion-chip:nth-child(4) { animation-delay: 0.15s; }
+.chat-suggestion-chip:nth-child(5) { animation-delay: 0.2s; }
+
+/* ── Proaktive Vorschlaege (Dashboard) ── */
+
+#proactive-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.suggestion-card {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.suggestion-card-body {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.suggestion-card-icon {
+  color: var(--accent);
+  font-size: 22px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.suggestion-card-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-card-title {
+  font-weight: 600;
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.suggestion-card-text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.suggestion-card-dismiss {
+  flex-shrink: 0;
+  opacity: 0.5;
+  margin: -4px -4px 0 0;
+}
+
+.suggestion-card-dismiss:hover {
+  opacity: 1;
+}
+
+.suggestion-card-action {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.suggestion-card-action:hover {
+  color: var(--accent-hover);
+}
+
+/* ── Memory View ── */
+
+.memory-view {
+  padding: 0 0 var(--space-6) 0;
+}
+
+.memory-search-wrap {
+  position: relative;
+  margin-bottom: var(--space-4);
+}
+
+.memory-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 20px;
+  pointer-events: none;
+}
+
+.memory-search-input {
+  width: 100%;
+  padding: 12px 12px 12px 40px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--text-base);
+  transition: border-color var(--transition);
+}
+
+.memory-search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.memory-card {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.memory-card-text {
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin-bottom: var(--space-2);
+}
+
+.memory-card-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+.memory-delete-btn {
+  margin-left: auto;
+  opacity: 0.5;
+}
+
+.memory-delete-btn:hover {
+  opacity: 1;
+  color: var(--error);
+}
+
+.memory-load-more-btn {
+  width: 100%;
+  margin-top: var(--space-3);
+}
+
+.empty-state-hint {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-top: var(--space-1);
+}
+
+/* ── Notification & Calendar Integration ─────────── */
+
+.dashboard-notification-item .notification-preview {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.calendar-disconnected-hint {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  padding: var(--space-3);
+  background: var(--bg-elevated);
+  border-left: 3px solid var(--warning);
+}
+
+.calendar-disconnected-hint a {
+  color: var(--accent);
+  text-decoration: none;
+  margin-left: 4px;
+}
+
+.calendar-disconnected-hint a:hover {
+  text-decoration: underline;
+}
+
+.notification-action-btn {
+  color: var(--accent) !important;
+}
+
+.notification-action-btn:hover {
+  background: var(--accent-soft, rgba(124, 77, 255, 0.1));
+}
+
+.service-card-hint {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 4px;
 }
