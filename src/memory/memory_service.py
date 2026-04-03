@@ -141,7 +141,3 @@ class BotMemoryService(BaseMemoryService):
         except (OSError, ValueError, RuntimeError, SQLAlchemyError) as e:
             logger.error("Is-Onboarded-Fehler: %s", e)
             return False
-
-
-# Rueckwaertskompatibilitaet: bestehende Imports bleiben funktional
-MemoryService = BotMemoryService

@@ -28,7 +28,3 @@ class ApiMemoryService(BaseMemoryService):
             user_key=user_key,
         )
         return ids[0] if ids else None
-
-
-# Rueckwaertskompatibilitaet: bestehende Imports bleiben funktional
-MemoryService = ApiMemoryService

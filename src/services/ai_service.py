@@ -525,8 +525,7 @@ Details je nach Intent:
             return "❌ Kalender-Service nicht verfügbar."
 
         try:
-            now = datetime.now(self.tz)
-            events = await bot.calendar_service.get_events(start=now, end=now + timedelta(days=7))
+            events = await bot.calendar_service.get_upcoming_events(user_key=user_key, days=7)
 
             if not events:
                 return "📅 Keine Termine in den nächsten 7 Tagen."
@@ -910,11 +909,11 @@ Formatiere strukturiert und übersichtlich."""
         items = details.get("items", [message])
 
         try:
-            added = await bot.shopping_service.add_items(items)
-            if added:
-                item_list = "\n".join(f"• {item}" for item in items)
-                return f"🛒 Zur Einkaufsliste hinzugefügt:\n{item_list}"
-            return "❌ Artikel konnten nicht hinzugefügt werden."
+            for item in items:
+                name = item if isinstance(item, str) else item.get("name", str(item))
+                await bot.shopping_service.add_item(user_key=user_key, name=name)
+            item_list = "\n".join(f"• {item}" for item in items)
+            return f"🛒 Zur Einkaufsliste hinzugefügt:\n{item_list}"
         except Exception as e:
             logger.error(f"Shopping-Fehler: {e}")
             return "❌ Fehler beim Hinzufügen zur Einkaufsliste."
@@ -925,7 +924,7 @@ Formatiere strukturiert und übersichtlich."""
             return "❌ Einkaufslisten-Service nicht verfügbar."
 
         try:
-            items = await bot.shopping_service.get_items()
+            items = await bot.shopping_service.get_items(user_key=user_key)
 
             if not items:
                 return "🛒 Einkaufsliste ist leer."
@@ -949,15 +948,19 @@ Formatiere strukturiert und übersichtlich."""
         recipe_name = details.get("recipe_name", message)
 
         try:
-            ingredients = await bot.recipe_service.get_ingredients(recipe_name)
-            if not ingredients:
-                return f"❌ Keine Zutaten für '{recipe_name}' gefunden."
+            results = await bot.recipe_service.search_recipes(recipe_name, limit=1)
+            if not results:
+                return f"❌ Kein Rezept für '{recipe_name}' gefunden."
 
-            added = await bot.shopping_service.add_items(ingredients)
-            if added:
-                ingredient_list = "\n".join(f"• {i}" for i in ingredients[:10])
-                return f"🛒 Zutaten für *{recipe_name}* hinzugefügt:\n{ingredient_list}"
-            return "❌ Zutaten konnten nicht hinzugefügt werden."
+            recipe_id = str(results[0].get("id", ""))
+            recipe = await bot.recipe_service.get_recipe(recipe_id)
+            if not recipe:
+                return f"❌ Rezeptdetails für '{recipe_name}' konnten nicht geladen werden."
+
+            count = await bot.shopping_service.add_items_from_recipe(user_key=user_key, recipe=recipe)
+            if count:
+                return f"🛒 {count} Zutaten für *{recipe_name}* zur Einkaufsliste hinzugefügt."
+            return "❌ Keine Zutaten im Rezept gefunden."
         except Exception as e:
             logger.error(f"Shopping-Recipe-Fehler: {e}")
             return "❌ Fehler beim Hinzufügen der Rezeptzutaten."
