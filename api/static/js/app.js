@@ -35,8 +35,8 @@
   // ── Default Nav (vor Preferences-Load) ──
   const DEFAULT_NAV = [
     { id: 'dashboard', label: 'Home', icon: 'home', route: '#/dashboard', pinned: true, order: 0 },
-    { id: 'shopping', label: 'Einkauf', icon: 'shopping_cart', route: '#/shopping', pinned: true, order: 1 },
-    { id: 'recipes', label: 'Rezepte', icon: 'restaurant', route: '#/recipes', pinned: true, order: 2 },
+    { id: 'calendar', label: 'Kalender', icon: 'calendar_month', route: '#/calendar', pinned: true, order: 1 },
+    { id: 'shopping', label: 'Einkauf', icon: 'shopping_cart', route: '#/shopping', pinned: true, order: 2 },
     { id: 'chat', label: 'Chat', icon: 'chat_bubble', route: '#/chat', pinned: true, order: 3 },
     { id: 'profile', label: 'Profil', icon: 'person', route: '#/profile', pinned: true, order: 4 },
   ];
