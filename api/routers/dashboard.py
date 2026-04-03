@@ -16,6 +16,7 @@ from api.dependencies import (
     get_shopping_service,
     get_reminder_service,
     get_email_service,
+    get_notification_service,
 )
 from config.settings import settings
 
@@ -34,6 +35,7 @@ async def dashboard_today(
     shopping_svc=Depends(get_shopping_service),
     reminder_svc=Depends(get_reminder_service),
     email_svc=Depends(get_email_service),
+    notif_svc=Depends(get_notification_service),
 ):
     """Kombinierte Tages-Übersicht: Termine, Tasks, Einkauf, Erinnerungen, E-Mails."""
 
@@ -48,12 +50,14 @@ async def dashboard_today(
         return value
 
     # Alle Quellen parallel abrufen
-    events, tasks, shopping_items, reminders, unread_count = await asyncio.gather(
+    events, tasks, shopping_items, reminders, unread_count, notif_unread, notif_latest = await asyncio.gather(
         safe(calendar_svc.get_todays_events(user_key), []) if calendar_svc.is_connected(user_key) else resolved([]),
         safe(task_svc.get_open_tasks(user_key), []),
         safe(shopping_svc.get_items(user_key, include_checked=False), []),
         safe(reminder_svc.get_todays_reminders(user_key), []),
         safe(email_svc.get_unread_count(user_key), 0) if email_svc.is_connected(user_key) else resolved(0),
+        safe(notif_svc.count_unread(user_key), 0),
+        safe(notif_svc.list(user_key, status_filter="new", limit=3), []),
     )
 
     # Shift-Eintraege fuer heute
@@ -88,6 +92,8 @@ async def dashboard_today(
         "reminders_today": reminders,
         "unread_emails": unread_count,
         "email_connected": email_svc.is_connected(user_key),
+        "notifications_unread": notif_unread,
+        "notifications_latest": notif_latest[:3],
     }
 
 

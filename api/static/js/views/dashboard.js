@@ -85,8 +85,13 @@ const DashboardView = (() => {
   function renderEventsWidget(data) {
     const events = (data.events_today || []).slice(0, 3);
     let html = `<a class="section-header section-link" href="#/calendar"><span class="section-icon material-symbols-outlined">calendar_month</span> Deine Termine <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
-    if (events.length === 0) {
+    if (data.calendar_connected === false) {
+      html += `<div class="card calendar-disconnected-hint"><span class="material-symbols-outlined mi-sm" style="color:var(--warning);vertical-align:-3px">warning</span> Kalender nicht verbunden \u2013 Termine werden nicht synchronisiert. <a href="#/profile">Zum Profil</a></div>`;
+    }
+    if (events.length === 0 && data.calendar_connected !== false) {
       html += `<div class="empty-state"><span class="material-symbols-outlined empty-state-icon">calendar_month</span><div class="empty-state-text">Heute keine Termine</div><a href="#/calendar" class="empty-state-cta">Termin erstellen \u2192</a></div>`;
+    } else if (events.length === 0) {
+      // Calendar disconnected hint already shown above, skip empty state
     } else {
       events.forEach(e => {
         html += `
@@ -123,6 +128,45 @@ const DashboardView = (() => {
     return html;
   }
 
+  function renderNotificationsWidget(data) {
+    const unread = data.notifications_unread || 0;
+    const latest = data.notifications_latest || [];
+    if (unread <= 0 && latest.length === 0) return '';
+
+    const TYPE_ICONS = {
+      reminder: 'schedule', follow_up: 'reply', document: 'description',
+      inbox: 'inbox', weather: 'cloud', system: 'info',
+    };
+
+    function relTime(dateStr) {
+      const diff = Date.now() - new Date(dateStr).getTime();
+      if (diff < 60000) return 'Gerade eben';
+      if (diff < 3600000) return `vor ${Math.floor(diff / 60000)} Min.`;
+      if (diff < 86400000) return `vor ${Math.floor(diff / 3600000)} Std.`;
+      return 'Gestern';
+    }
+
+    let html = `<a class="section-header section-link" href="#/notifications"><span class="section-icon material-symbols-outlined">notifications</span> Benachrichtigungen <span class="badge badge-accent">${unread}</span> <span class="section-arrow">Alle anzeigen &#8594;</span></a>`;
+
+    if (latest.length === 0) {
+      html += `<div class="card card-clickable" onclick="Router.navigate('#/notifications')"><div class="card-subtitle">${unread} ungelesene Benachrichtigung${unread > 1 ? 'en' : ''}</div></div>`;
+    } else {
+      latest.forEach(n => {
+        const icon = TYPE_ICONS[n.type] || 'info';
+        html += `
+          <div class="card card-clickable dashboard-notification-item" onclick="Router.navigate('${n.link || '#/notifications'}')">
+            <div class="flex-between">
+              <div class="card-title"><span class="material-symbols-outlined mi-sm" style="vertical-align:-3px;margin-right:4px;color:var(--accent)">${icon}</span>${escapeHtml(n.title)}</div>
+              <span class="card-subtitle">${relTime(n.created_at)}</span>
+            </div>
+            ${n.message ? `<div class="card-subtitle notification-preview">${escapeHtml(n.message.length > 80 ? n.message.slice(0, 80) + '\u2026' : n.message)}</div>` : ''}
+          </div>
+        `;
+      });
+    }
+    return html;
+  }
+
   function renderShoppingWidget(data) {
     const shop = data.shopping_preview || {};
     const total = shop.total || 0;
@@ -150,6 +194,7 @@ const DashboardView = (() => {
 
   // Widget registry
   const WIDGET_RENDERERS = {
+    notifications: renderNotificationsWidget,
     emails: renderEmailsWidget,
     shifts: renderShiftsWidget,
     events: renderEventsWidget,
@@ -355,14 +400,15 @@ const DashboardView = (() => {
         .sort((a, b) => (a.order || 0) - (b.order || 0));
     }
     return [
-      { id: 'emails', enabled: true, order: 0 },
-      { id: 'shifts', enabled: true, order: 1 },
-      { id: 'events', enabled: true, order: 2 },
-      { id: 'tasks', enabled: true, order: 3 },
-      { id: 'shopping', enabled: true, order: 4 },
-      { id: 'mealplan', enabled: true, order: 5 },
-      { id: 'drive', enabled: true, order: 6 },
-      { id: 'weeklyreview', enabled: true, order: 7 },
+      { id: 'notifications', enabled: true, order: 0 },
+      { id: 'emails', enabled: true, order: 1 },
+      { id: 'shifts', enabled: true, order: 2 },
+      { id: 'events', enabled: true, order: 3 },
+      { id: 'tasks', enabled: true, order: 4 },
+      { id: 'shopping', enabled: true, order: 5 },
+      { id: 'mealplan', enabled: true, order: 6 },
+      { id: 'drive', enabled: true, order: 7 },
+      { id: 'weeklyreview', enabled: true, order: 8 },
     ];
   }
 
@@ -375,6 +421,12 @@ const DashboardView = (() => {
 
     const widgets = getWidgetConfig();
     let html = '';
+
+    // Notifications widget (above all zones)
+    const notifWidget = widgets.find(w => w.id === 'notifications');
+    if (notifWidget && notifWidget.enabled !== false) {
+      html += renderNotificationsWidget(data);
+    }
 
     // Zone A: "Dein Tag" — Shifts + Events
     const zoneShifts = WIDGET_RENDERERS.shifts ? renderShiftsWidget(data) : '';
@@ -392,7 +444,7 @@ const DashboardView = (() => {
 
     // Remaining sync widgets
     for (const widget of widgets) {
-      if (['shifts', 'events', 'tasks', 'shopping'].includes(widget.id)) continue;
+      if (['notifications', 'shifts', 'events', 'tasks', 'shopping'].includes(widget.id)) continue;
       const renderer = WIDGET_RENDERERS[widget.id];
       if (renderer) {
         html += renderer(data);
