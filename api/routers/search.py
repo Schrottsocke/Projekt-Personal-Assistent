@@ -249,7 +249,11 @@ async def global_search(
                 if q_lower not in f"{summary} {location} {description}".lower():
                     continue
                 start_raw = ev.get("start", {})
-                start_str = start_raw.get("dateTime", start_raw.get("date", "")) if isinstance(start_raw, dict) else str(start_raw)
+                start_str = (
+                    start_raw.get("dateTime", start_raw.get("date", ""))
+                    if isinstance(start_raw, dict)
+                    else str(start_raw)
+                )
                 # Format for display
                 subtitle_parts = []
                 if start_str:
@@ -274,7 +278,7 @@ async def global_search(
     if drive_svc and drive_svc.is_connected(user_key):
         try:
             drive_files = await drive_svc.search_files(user_key, q, limit=per_source)
-            for f in (drive_files or []):
+            for f in drive_files or []:
                 name = f.get("name", "")
                 mime = f.get("mimeType", "")
                 size = f.get("size")
