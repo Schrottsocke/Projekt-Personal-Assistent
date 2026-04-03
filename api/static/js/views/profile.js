@@ -172,6 +172,15 @@ const ProfileView = (() => {
                   <span class="settings-item-label">Deine Zeitzone</span>
                   <span class="settings-item-value">Europe/Berlin</span>
                 </div>
+                <div class="settings-item">
+                  <span class="settings-item-label">Proaktive Vorschlaege</span>
+                  <label class="toggle toggle-sm">
+                    <input type="checkbox" id="proactive-toggle" checked
+                           onchange="ProfileView.toggleProactive(this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+                <div class="settings-hint">Zeigt Erinnerungen und Vorschlaege auf dem Dashboard.</div>
               </div>
             </div>
           </div>
@@ -244,6 +253,7 @@ const ProfileView = (() => {
     `;
 
     await Promise.allSettled([loadServices(), loadFeatures(), loadNavConfig(), loadWidgetConfig()]);
+    _initProactiveToggle();
   }
 
   /* ── Status Bar (computed after data loads) ── */
@@ -601,6 +611,28 @@ const ProfileView = (() => {
     }
   }
 
+  /* ── Proaktive Vorschlaege ── */
+
+  async function toggleProactive(enabled) {
+    try {
+      if (window.AppPreferences) {
+        await window.AppPreferences.save({ proactive_suggestions: enabled });
+      }
+      Toast.show(enabled ? 'Proaktive Vorschlaege aktiviert' : 'Proaktive Vorschlaege deaktiviert', 'info');
+    } catch {
+      Toast.show('Einstellung konnte nicht gespeichert werden', 'error');
+    }
+  }
+
+  function _initProactiveToggle() {
+    const toggle = document.getElementById('proactive-toggle');
+    if (!toggle) return;
+    const prefs = window.AppPreferences ? window.AppPreferences.getCached() : null;
+    if (prefs && prefs.proactive_suggestions === false) {
+      toggle.checked = false;
+    }
+  }
+
   /* ── Logout ── */
 
   function confirmLogout() {
@@ -628,6 +660,7 @@ const ProfileView = (() => {
     getTheme,
     toggleTheme,
     toggleNavItem,
-    toggleWidget
+    toggleWidget,
+    toggleProactive
   };
 })();
