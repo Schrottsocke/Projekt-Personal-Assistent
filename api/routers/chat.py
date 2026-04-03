@@ -60,6 +60,7 @@ async def send_message_stream(
     intent = intent_data.get("intent", "chat")
 
     if intent != "chat":
+
         async def handler_generator():
             try:
                 result = await ai_svc.process_message(
