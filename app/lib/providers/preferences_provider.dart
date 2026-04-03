@@ -15,7 +15,7 @@ class PreferencesNotifier extends AsyncNotifier<Map<String, dynamic>> {
     return resp.data as Map<String, dynamic>;
   }
 
-  Future<void> update(Map<String, dynamic> updates) async {
+  Future<void> updatePreferences(Map<String, dynamic> updates) async {
     final api = ref.read(apiServiceProvider);
     final resp =
         await api.patch(ApiConfig.preferencesPath, data: updates);

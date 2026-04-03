@@ -231,7 +231,7 @@ class _NavConfigSection extends ConsumerWidget {
       return copy;
     }).toList();
 
-    await ref.read(preferencesProvider.notifier).update({'nav': {'items': updated}});
+    await ref.read(preferencesProvider.notifier).updatePreferences({'nav': {'items': updated}});
   }
 }
 
@@ -281,7 +281,7 @@ class _WidgetConfigSection extends ConsumerWidget {
                   copy['enabled'] = val;
                   return copy;
                 }).toList();
-                await ref.read(preferencesProvider.notifier).update({'dashboard': {'widgets': updated}});
+                await ref.read(preferencesProvider.notifier).updatePreferences({'dashboard': {'widgets': updated}});
               },
             );
           }).toList(),

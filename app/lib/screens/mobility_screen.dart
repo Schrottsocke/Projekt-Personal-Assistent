@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/api_config.dart';
+
 
 class MobilityScreen extends ConsumerStatefulWidget {
   const MobilityScreen({super.key});
@@ -11,7 +11,6 @@ class MobilityScreen extends ConsumerStatefulWidget {
 class _MobilityScreenState extends ConsumerState<MobilityScreen> {
   bool _loading = true;
   String? _error;
-  List<dynamic>? _flowEntries;
   final _originCtrl = TextEditingController();
   final _destinationCtrl = TextEditingController();
 
