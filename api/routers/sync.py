@@ -61,17 +61,17 @@ async def sync_batch(
                 failed += 1
                 continue
 
-            # Hinweis: Die eigentliche Ausfuehrung der gepufferten Ops
-            # wuerde hier gegen die internen Services dispatched werden.
-            # Fuer Phase 1 akzeptieren wir den Batch und loggen ihn.
+            # Phase 1: Batch-Dispatch nicht implementiert.
+            # Explizit als nicht-implementiert markieren statt fake success.
             results.append(
                 SyncOperationResult(
                     index=i,
-                    success=True,
-                    status_code=200,
+                    success=False,
+                    status_code=501,
+                    error="Batch-Sync noch nicht implementiert. Bitte Einzel-Endpunkte verwenden.",
                 )
             )
-            processed += 1
+            failed += 1
         except Exception as e:
             results.append(
                 SyncOperationResult(

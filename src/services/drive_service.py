@@ -4,6 +4,7 @@ Jeder User hat eigene OAuth-Credentials (per-User token files).
 Modelliert nach dem Muster von calendar_service.py.
 """
 
+import asyncio
 import logging
 from pathlib import Path
 from typing import Optional
@@ -262,7 +263,8 @@ class DriveService:
                 safe_query = query.replace("\\", "\\\\").replace("'", "\\'")
                 list_kwargs["q"] = f"name contains '{safe_query}'"
 
-            result = service.files().list(**list_kwargs).execute()
+            request = service.files().list(**list_kwargs)
+            result = await asyncio.to_thread(request.execute)
             files = result.get("files", [])
             logger.debug("Drive list_files für '%s': %d Dateien gefunden.", user_key, len(files))
             return files
@@ -313,15 +315,12 @@ class DriveService:
 
             media = MediaFileUpload(str(file_path), mimetype=mime_type, resumable=True)
 
-            created = (
-                service.files()
-                .create(
-                    body=file_metadata,
-                    media_body=media,
-                    fields="id,name,webViewLink,mimeType",
-                )
-                .execute()
+            request = service.files().create(
+                body=file_metadata,
+                media_body=media,
+                fields="id,name,webViewLink,mimeType",
             )
+            created = await asyncio.to_thread(request.execute)
 
             logger.info(
                 "Drive upload für '%s': '%s' hochgeladen (id=%s).",
@@ -355,7 +354,8 @@ class DriveService:
         """
         try:
             service = self._get_service(user_key)
-            service.files().delete(fileId=file_id).execute()
+            request = service.files().delete(fileId=file_id)
+            await asyncio.to_thread(request.execute)
             logger.info("Drive delete für '%s': Datei '%s' gelöscht.", user_key, file_id)
             return True
         except ValueError:
@@ -388,7 +388,8 @@ class DriveService:
             }
             if parent_id:
                 metadata["parents"] = [parent_id]
-            folder = service.files().create(body=metadata, fields="id,name,webViewLink").execute()
+            request = service.files().create(body=metadata, fields="id,name,webViewLink")
+            folder = await asyncio.to_thread(request.execute)
             logger.info(
                 "Drive Ordner '%s' erstellt für '%s': %s",
                 name,
@@ -426,16 +427,13 @@ class DriveService:
             q_parts = [f"name contains '{safe_query}'", "trashed = false"]
             if mime_type:
                 q_parts.append(f"mimeType = '{mime_type}'")
-            result = (
-                service.files()
-                .list(
-                    q=" and ".join(q_parts),
-                    pageSize=limit,
-                    fields="files(id,name,mimeType,modifiedTime,size,webViewLink)",
-                    orderBy="modifiedTime desc",
-                )
-                .execute()
+            request = service.files().list(
+                q=" and ".join(q_parts),
+                pageSize=limit,
+                fields="files(id,name,mimeType,modifiedTime,size,webViewLink)",
+                orderBy="modifiedTime desc",
             )
+            result = await asyncio.to_thread(request.execute)
             return result.get("files", [])
         except ValueError:
             raise
@@ -454,15 +452,12 @@ class DriveService:
         folder_name = "Personal Assistant"
         try:
             service = self._get_service(user_key)
-            result = (
-                service.files()
-                .list(
-                    q=f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
-                    fields="files(id,name)",
-                    pageSize=1,
-                )
-                .execute()
+            request = service.files().list(
+                q=f"name = '{folder_name}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
+                fields="files(id,name)",
+                pageSize=1,
             )
+            result = await asyncio.to_thread(request.execute)
             folders = result.get("files", [])
             if folders:
                 return folders[0]["id"]
@@ -487,13 +482,17 @@ class DriveService:
             import io
 
             service = self._get_service(user_key)
-            request = service.files().get_media(fileId=file_id)
-            buf = io.BytesIO()
-            downloader = MediaIoBaseDownload(buf, request)
-            done = False
-            while not done:
-                _, done = downloader.next_chunk()
-            return buf.getvalue()
+
+            def _download():
+                req = service.files().get_media(fileId=file_id)
+                buf = io.BytesIO()
+                downloader = MediaIoBaseDownload(buf, req)
+                done = False
+                while not done:
+                    _, done = downloader.next_chunk()
+                return buf.getvalue()
+
+            return await asyncio.to_thread(_download)
         except ValueError:
             raise
         except Exception as e:
@@ -536,7 +535,8 @@ class DriveService:
                 f"and '{base_folder_id}' in parents "
                 f"and trashed = false"
             )
-            result = service.files().list(q=q, fields="files(id,name)", pageSize=1).execute()
+            request = service.files().list(q=q, fields="files(id,name)", pageSize=1)
+            result = await asyncio.to_thread(request.execute)
             folders = result.get("files", [])
             if folders:
                 return folders[0]["id"]
