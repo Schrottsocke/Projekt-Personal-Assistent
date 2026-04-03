@@ -260,25 +260,31 @@ class AutomationService:
                     rule["trigger_count"] = rule.get("trigger_count", 0) + 1
                     rule["last_triggered_at"] = datetime.now().isoformat()
                     results["triggered"] += 1
-                    results["details"].append({
-                        "rule_id": rule["id"],
-                        "name": rule.get("name", ""),
-                        "triggered": True,
-                    })
+                    results["details"].append(
+                        {
+                            "rule_id": rule["id"],
+                            "name": rule.get("name", ""),
+                            "triggered": True,
+                        }
+                    )
                 else:
-                    results["details"].append({
+                    results["details"].append(
+                        {
+                            "rule_id": rule["id"],
+                            "name": rule.get("name", ""),
+                            "triggered": False,
+                        }
+                    )
+            except Exception as e:
+                logger.warning("Regel '%s' Fehler: %s", rule.get("name", rule["id"]), e)
+                results["details"].append(
+                    {
                         "rule_id": rule["id"],
                         "name": rule.get("name", ""),
                         "triggered": False,
-                    })
-            except Exception as e:
-                logger.warning("Regel '%s' Fehler: %s", rule.get("name", rule["id"]), e)
-                results["details"].append({
-                    "rule_id": rule["id"],
-                    "name": rule.get("name", ""),
-                    "triggered": False,
-                    "error": str(e),
-                })
+                        "error": str(e),
+                    }
+                )
 
         await self._save(user_key, rules)
         return results
@@ -309,10 +315,7 @@ class AutomationService:
             return False
         tasks = await task_svc.get_open_tasks(user_key)
         today = datetime.now(timezone.utc).date()
-        return any(
-            t.get("due_date") and _parse_date(t["due_date"]) == today
-            for t in tasks
-        )
+        return any(t.get("due_date") and _parse_date(t["due_date"]) == today for t in tasks)
 
     async def _check_event_tomorrow(self, user_key: str, services: dict) -> bool:
         cal_svc = services.get("calendar")
@@ -323,10 +326,7 @@ class AutomationService:
         except Exception:
             return False
         tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).date()
-        return any(
-            e.get("start") and _parse_date(e["start"]) == tomorrow
-            for e in events
-        )
+        return any(e.get("start") and _parse_date(e["start"]) == tomorrow for e in events)
 
     async def _check_task_completed(self, user_key: str, rule: dict, services: dict) -> bool:
         task_svc = services.get("task")
