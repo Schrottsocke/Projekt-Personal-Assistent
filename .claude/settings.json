@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo '=== Handoffs ===' && cat memory/handoffs.md 2>/dev/null | grep '^- ' | head -5; echo '=== Branch ===' && git branch --show-current; echo '=== Status ===' && git status --short | head -10"
+            "command": "echo '=== Handoffs ===' && cat memory/handoffs.md 2>/dev/null | grep '^- ' | head -5; echo '=== Branch ===' && git branch --show-current; echo '=== Status ===' && git status --short | head -10; echo '=== MCP Readiness ===' && ([ -n \"$GITHUB_PERSONAL_ACCESS_TOKEN\" ] && echo 'GitHub MCP: ✓ Token gesetzt' || echo 'GitHub MCP: ✗ GITHUB_PERSONAL_ACCESS_TOKEN fehlt! → Web-UI Umgebungseinstellungen prüfen') && ([ -n \"$HOSTINGER_API_TOKEN\" ] && echo 'Hostinger MCP: ✓ Token gesetzt' || echo 'Hostinger MCP: ✗ HOSTINGER_API_TOKEN fehlt (optional)')"
           }
         ]
       }
