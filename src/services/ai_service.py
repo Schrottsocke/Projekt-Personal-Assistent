@@ -337,7 +337,29 @@ class AIService:
             "perf | phase=handler | duration_ms=%d | intent=%s | user=%s", int(t_handler * 1000), intent, user_key
         )
         logger.info("perf | phase=total | duration_ms=%d | intent=%s | user=%s", int(t_total * 1000), intent, user_key)
+
+        # Conversation History für alle Nicht-Chat-Handler speichern (#547)
+        # _handle_chat speichert via process_with_memory() selbst
+        if intent != INTENT_CHAT and result:
+            self._save_conversation_history(user_key, message, result)
+
         return result
+
+    def _save_conversation_history(self, user_key: str, message: str, response: str) -> None:
+        """Speichert User-Nachricht und Bot-Antwort non-blocking in der DB."""
+        import asyncio
+
+        from src.services.database import ConversationHistory, get_db
+
+        def _save():
+            try:
+                with get_db()() as session:
+                    session.add(ConversationHistory(user_key=user_key, role="user", content=message))
+                    session.add(ConversationHistory(user_key=user_key, role="assistant", content=response))
+            except Exception as e:
+                logger.warning(f"Chat-History speichern fehlgeschlagen: {e}")
+
+        asyncio.create_task(asyncio.to_thread(_save))
 
     async def _detect_intent(self, message: str, user_key: str) -> tuple[str, dict]:
         """
@@ -766,7 +788,11 @@ Formatiere strukturiert und übersichtlich."""
     async def _handle_briefing(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
         """Erstellt ein Tagesbriefing."""
         intelligence = self._get_intelligence_service()
-        return await intelligence.create_briefing(user_key, chat_id, bot)
+        return await intelligence.process_with_memory(
+            "Erstelle mir ein kurzes Tagesbriefing mit Kalender, offenen Tasks und Wetter.",
+            user_key,
+            chat_id,
+        )
 
     async def _handle_spotify(self, message: str, intent_data: dict, user_key: str, chat_id: int, bot) -> str:
         """Steuert Spotify."""
