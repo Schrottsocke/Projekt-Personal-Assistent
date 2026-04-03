@@ -1164,7 +1164,8 @@ async def cmd_einkauf(update: Update, context: ContextTypes.DEFAULT_TYPE):
         raw = " ".join(context.args)
         items_raw = [i.strip() for i in raw.split(",") if i.strip()]
         items = [{"name": i} for i in items_raw]
-        count = await bot.shopping_service.add_items_bulk(user_key, items)
+        result = await bot.shopping_service.add_items_bulk(user_key, items)
+        count = result["added"] + result["merged"]
         await update.message.reply_text(
             f"✅ {count} Artikel auf die Einkaufsliste:\n" + "\n".join(f"• {i['name']}" for i in items),
             parse_mode="Markdown",

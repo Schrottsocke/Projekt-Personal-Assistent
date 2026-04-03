@@ -387,15 +387,37 @@ const RecipesView = (() => {
     } catch (_) { /* Toast handles error */ }
   }
 
-  async function addToShopping(chefkochId) {
+  function addToShopping(chefkochId) {
     if (!chefkochId) return;
-    try {
-      const result = await Api.addRecipeToShopping(chefkochId, currentServings);
-      alert(`${result.added} Zutaten zur Einkaufsliste hinzugefügt`);
-      document.querySelector('.modal-overlay')?.remove();
-    } catch (err) {
-      alert('Fehler: ' + err.message);
+    // Aktuelles Rezept aus dem offenen Detail-Modal bestimmen
+    const overlay = document.querySelector('.modal-overlay');
+    let recipe = null;
+    if (overlay) {
+      const idx = parseInt(overlay.dataset.recipeIdx, 10);
+      const isSaved = overlay.dataset.isSaved === 'true';
+      recipe = (isSaved ? savedRecipes : searchResults)[idx];
     }
+    // Detail-Modal schliessen
+    if (overlay) overlay.remove();
+
+    IngredientPreview.show({
+      title: recipe ? recipe.title : 'Rezept',
+      chefkochId,
+      ingredients: recipe ? recipe.ingredients : null,
+      baseServings: recipe ? (recipe.servings || 4) : 4,
+      currentServings,
+      onConfirm: async (items) => {
+        try {
+          const result = await Api.addIngredientsToShopping(items);
+          const msg = result.merged > 0
+            ? `${result.added} Zutaten hinzugefuegt, ${result.merged} zusammengefuehrt`
+            : `${result.added} Zutaten zur Einkaufsliste hinzugefuegt`;
+          Toast ? Toast.show(msg, 'info') : alert(msg);
+        } catch (err) {
+          Toast ? Toast.show('Fehler: ' + err.message, 'error') : alert('Fehler: ' + err.message);
+        }
+      }
+    });
   }
 
   return {

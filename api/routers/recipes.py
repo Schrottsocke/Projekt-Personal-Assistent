@@ -16,7 +16,7 @@ from api.dependencies import (
     get_chefkoch_service,
     get_shopping_service,
 )
-from api.schemas.recipe import SavedRecipeCreate, SavedRecipeOut, ToShoppingRequest
+from api.schemas.recipe import SavedRecipeCreate, SavedRecipeOut, SelectedIngredientsRequest, ToShoppingRequest
 from config.settings import settings
 
 router = APIRouter()
@@ -207,6 +207,22 @@ async def image_proxy(request: Request, path: str):
         raise HTTPException(status_code=502, detail="Chefkoch-CDN nicht erreichbar.")
 
 
+@router.post("/ingredients-to-shopping")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def selected_ingredients_to_shopping(
+    request: Request,
+    body: SelectedIngredientsRequest,
+    user_key: Annotated[str, Depends(get_current_user)],
+    shopping_svc=Depends(get_shopping_service),
+):
+    """Uebernimmt vorselektierte Zutaten direkt in die Einkaufsliste."""
+    items = [
+        {"name": ing.name, "quantity": ing.amount, "unit": ing.unit, "source": "recipe"} for ing in body.ingredients
+    ]
+    result = await shopping_svc.add_items_bulk(user_key, items)
+    return {"added": result["added"], "merged": result["merged"]}
+
+
 @router.get("/{chefkoch_id}")
 async def get_recipe(
     chefkoch_id: str,
@@ -232,5 +248,5 @@ async def recipe_to_shopping(
     recipe = await chefkoch_svc.get_recipe(chefkoch_id)
     if not recipe:
         raise HTTPException(status_code=404, detail="Rezept nicht gefunden.")
-    count = await shopping_svc.add_items_from_recipe(user_key, recipe, servings=body.servings)
-    return {"added": count, "recipe_title": recipe.get("title", "")}
+    result = await shopping_svc.add_items_from_recipe(user_key, recipe, servings=body.servings)
+    return {"added": result["added"], "merged": result["merged"], "recipe_title": recipe.get("title", "")}

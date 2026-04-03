@@ -44,3 +44,13 @@ class SavedRecipeOut(SavedRecipeCreate):
 
 class ToShoppingRequest(BaseModel):
     servings: int = Field(4, ge=1, le=100)  # Für Portionskalkulation
+
+
+class IngredientItem(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    amount: Optional[str] = None
+    unit: Optional[str] = None
+
+
+class SelectedIngredientsRequest(BaseModel):
+    ingredients: list[IngredientItem] = Field(..., min_length=1)

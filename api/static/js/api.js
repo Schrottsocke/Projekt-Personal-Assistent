@@ -200,6 +200,15 @@ const Api = (() => {
       body: { servings },
     });
   }
+  function addIngredientsToShopping(ingredients) {
+    return request('/recipes/ingredients-to-shopping', {
+      method: 'POST',
+      body: { ingredients },
+    });
+  }
+  function addWeekToShopping(weekStart) {
+    return request(`/meal-plan/week/to-shopping?start=${weekStart}`, { method: 'POST' });
+  }
 
   // Chat
   function getChatHistory(limit = 50) {
@@ -541,7 +550,7 @@ const Api = (() => {
     getToken, getUserKey, isLoggedIn, login, logout, clearAuth,
     getDashboard,
     getShoppingItems, addShoppingItem, toggleShoppingItem, updateShoppingItem, deleteShoppingItem, clearCheckedItems,
-    searchRecipes, getSavedRecipes, saveRecipe, deleteRecipe, toggleFavorite, addRecipeToShopping,
+    searchRecipes, getSavedRecipes, saveRecipe, deleteRecipe, toggleFavorite, addRecipeToShopping, addIngredientsToShopping, addWeekToShopping,
     getChatHistory, sendMessage, sendMessageStream, transcribeVoice,
     getFeatures, toggleFeature,
     getCalendarToday, getCalendarWeek, createCalendarEvent,

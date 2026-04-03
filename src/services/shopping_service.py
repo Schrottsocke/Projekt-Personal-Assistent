@@ -207,6 +207,38 @@ def _categorize(name: str) -> str:
     return "Sonstiges"
 
 
+_UNIT_ALIASES: dict[str, str] = {
+    "gramm": "g",
+    "kilogramm": "kg",
+    "milliliter": "ml",
+    "liter": "l",
+    "stueck": "stk",
+    "stück": "stk",
+    "stk.": "stk",
+    "packung": "pkg",
+    "pkg.": "pkg",
+    "bund": "bund",
+    "dose": "dose",
+    "dosen": "dose",
+    "el": "el",
+    "tl": "tl",
+    "esslöffel": "el",
+    "teelöffel": "tl",
+    "essl.": "el",
+    "teel.": "tl",
+    "prise": "prise",
+    "prisen": "prise",
+}
+
+
+def _normalize_unit(unit: str | None) -> str:
+    """Normalisiert Einheiten für Duplikaterkennung."""
+    if not unit:
+        return ""
+    u = unit.strip().lower()
+    return _UNIT_ALIASES.get(u, u)
+
+
 class ShoppingService:
     """
     Verwaltet die Einkaufsliste pro User.
@@ -250,37 +282,65 @@ class ShoppingService:
         logger.debug(f"[{user_key}] Einkaufsartikel hinzugefügt: {name}")
         return result
 
-    async def add_items_bulk(self, user_key: str, items: list[dict]) -> int:
+    async def add_items_bulk(self, user_key: str, items: list[dict]) -> dict:
         """
-        Fügt mehrere Artikel auf einmal hinzu.
+        Fügt mehrere Artikel auf einmal hinzu. Erkennt Duplikate und
+        addiert Mengen bei gleichem Namen und kompatibler Einheit.
 
         Args:
             items: Liste von Dicts mit keys: name, quantity (opt), unit (opt), source (opt)
 
         Returns:
-            Anzahl der hinzugefügten Artikel.
+            Dict mit ``added`` (neue Artikel) und ``merged`` (zusammengefuehrte).
         """
-        count = 0
+        added = 0
+        merged = 0
         with get_db()() as session:
+            # Bestehende unchecked Items laden fuer Duplikaterkennung
+            existing = session.query(ShoppingItem).filter_by(user_key=user_key, checked=False).all()
+            lookup: dict[tuple[str, str], ShoppingItem] = {}
+            for ex in existing:
+                key = (ex.name.lower().strip(), _normalize_unit(ex.unit))
+                lookup[key] = ex
+
             for item_data in items:
                 name = item_data.get("name", "").strip()
                 if not name:
                     continue
+                unit_raw = item_data.get("unit")
+                norm_unit = _normalize_unit(unit_raw)
+                key = (name.lower(), norm_unit)
+
+                if key in lookup:
+                    # Mengen numerisch addieren
+                    ex_item = lookup[key]
+                    new_qty = item_data.get("quantity")
+                    if ex_item.quantity and new_qty:
+                        try:
+                            total = float(ex_item.quantity) + float(new_qty)
+                            ex_item.quantity = str(int(total) if total == int(total) else round(total, 2))
+                            merged += 1
+                            continue
+                        except (ValueError, TypeError):
+                            pass  # Nicht-numerisch → neuen Eintrag anlegen
+
                 category = item_data.get("category") or _categorize(name)
                 item = ShoppingItem(
                     user_key=user_key,
                     name=name,
                     quantity=item_data.get("quantity"),
-                    unit=item_data.get("unit"),
+                    unit=unit_raw,
                     category=category,
                     source=item_data.get("source", "manual"),
                 )
                 session.add(item)
-                count += 1
-        logger.info(f"[{user_key}] {count} Einkaufsartikel bulk hinzugefügt")
-        return count
+                # Neuen Eintrag auch im Lookup registrieren
+                lookup[key] = item
+                added += 1
+        logger.info(f"[{user_key}] Einkauf bulk: {added} neu, {merged} zusammengefuehrt")
+        return {"added": added, "merged": merged}
 
-    async def add_items_from_recipe(self, user_key: str, recipe: dict, servings: int | None = None) -> int:
+    async def add_items_from_recipe(self, user_key: str, recipe: dict, servings: int | None = None) -> dict:
         """
         Extrahiert Zutaten aus einem Chefkoch-Rezept und fügt sie zur Liste hinzu.
 
@@ -290,7 +350,7 @@ class ShoppingService:
                       Rezept eine Original-Portionszahl enthält.
 
         Returns:
-            Anzahl der hinzugefügten Zutaten.
+            Dict mit ``added`` und ``merged`` Counts.
         """
         recipe_id = recipe.get("id", "")
         source = f"chefkoch:{recipe_id}" if recipe_id else "chefkoch"
