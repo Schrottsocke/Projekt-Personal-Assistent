@@ -1,7 +1,86 @@
 /**
- * Profile View – Settings, Navigation Config, Dashboard Widgets, Features, Logout
+ * Profile View – Redesigned Personal Control Center
+ * Sections: Identity, Services, Features (grouped), Settings, Advanced
  */
 const ProfileView = (() => {
+
+  /* ── Feature Group Definitions ── */
+
+  const FEATURE_GROUPS = [
+    {
+      id: 'daily',
+      title: 'Alltag & Organisation',
+      desc: 'Termine, Aufgaben und Erinnerungen im Griff',
+      icon: 'event_note',
+      features: ['calendar', 'tasks', 'reminders']
+    },
+    {
+      id: 'communication',
+      title: 'Kommunikation',
+      desc: 'E-Mails und Sprachnachrichten',
+      icon: 'forum',
+      features: ['email', 'tts']
+    },
+    {
+      id: 'shopping',
+      title: 'Einkaufen & Rezepte',
+      desc: 'Einkaufslisten und Rezeptideen',
+      icon: 'local_grocery_store',
+      features: ['shopping', 'recipes']
+    },
+    {
+      id: 'productivity',
+      title: 'Dokumente & Produktivit\u00e4t',
+      desc: 'Dateien, Dokumente und Websuche',
+      icon: 'description',
+      features: ['drive', 'documents', 'tables', 'websearch']
+    },
+    {
+      id: 'smart',
+      title: 'Smartes Zuhause & Medien',
+      desc: 'Musik und Smart-Home-Steuerung',
+      icon: 'devices',
+      features: ['spotify', 'smarthome']
+    }
+  ];
+
+  const ALWAYS_ACTIVE = ['core', 'weather', 'mobility'];
+
+  const FEATURE_BENEFITS = {
+    calendar: 'Termine aus Google Calendar anzeigen und erstellen',
+    tasks: 'Aufgaben erstellen und verwalten',
+    reminders: 'Erinnerungen zu bestimmten Zeiten erhalten',
+    email: 'E-Mails lesen und schreiben',
+    tts: 'Antworten als Sprachnachricht erhalten',
+    shopping: 'Einkaufslisten erstellen und teilen',
+    recipes: 'Rezepte suchen und speichern',
+    drive: 'Dateien in Google Drive verwalten',
+    documents: 'Dokumente scannen und erkennen',
+    tables: 'Tabellen und Pr\u00e4sentationen erstellen',
+    websearch: 'Im Web nach Informationen suchen',
+    spotify: 'Musik abspielen und steuern',
+    smarthome: 'Smart-Home-Ger\u00e4te steuern',
+    core: 'KI-Chat \u2013 immer verf\u00fcgbar',
+    weather: 'Wetter abfragen',
+    mobility: 'Fahrzeiten und Routen berechnen'
+  };
+
+  const PREREQ_LABELS = {
+    GOOGLE_CREDENTIALS_PATH: 'Google',
+    SPOTIFY_CLIENT_ID: 'Spotify',
+    SPOTIFY_CLIENT_SECRET: 'Spotify',
+    HA_URL: 'Home Assistant',
+    HA_TOKEN: 'Home Assistant',
+    OPENROUTE_API_KEY: 'OpenRoute'
+  };
+
+  const SERVICE_DEFS = [
+    { id: 'calendar', emoji: '\ud83d\udcc5', name: 'Google Calendar', desc: 'Termine synchronisieren', connKey: 'calendar_connected' },
+    { id: 'email', emoji: '\ud83d\udce7', name: 'Gmail', desc: 'E-Mails verwalten', connKey: 'email_connected' },
+    { id: 'drive', emoji: '\ud83d\udcbe', name: 'Google Drive', desc: 'Dateien speichern und teilen', connKey: 'drive_connected' }
+  ];
+
+  /* ── Render ── */
 
   async function render(container) {
     const user = Api.getUserKey() || '';
@@ -13,66 +92,374 @@ const ProfileView = (() => {
         <div class="profile-avatar">${initial}</div>
         <div class="profile-name">${escapeHtml(name)}</div>
         <div class="profile-email">${escapeHtml(user)}@dualmind.app</div>
-      </div>
-
-      <div class="section-header"><span class="section-icon material-symbols-outlined">navigation</span> Navigation</div>
-      <div class="settings-hint">Bereiche ein-/ausschalten und in die Navbar pinnen (max. 5).</div>
-      <div id="nav-config-list"><div class="loading"><div class="spinner"></div></div></div>
-
-      <div class="section-header"><span class="section-icon material-symbols-outlined">dashboard</span> Dashboard-Widgets</div>
-      <div class="settings-hint">Widgets auf dem Home-Screen ein-/ausblenden.</div>
-      <div id="widget-config-list"><div class="loading"><div class="spinner"></div></div></div>
-
-      <div class="section-header"><span class="section-icon material-symbols-outlined">palette</span> Darstellung</div>
-      <div class="settings-list">
-        <div class="settings-item">
-          <span><span class="material-symbols-outlined mi-sm">dark_mode</span> Design</span>
-          <label class="toggle">
-            <input type="checkbox" id="theme-toggle" ${ProfileView.getTheme() === 'light' ? 'checked' : ''}
-                   onchange="ProfileView.toggleTheme(this.checked)">
-            <span class="toggle-slider"></span>
-          </label>
+        <div class="profile-status-bar" id="profile-status-bar">
+          <div class="profile-stat"><div class="spinner" style="width:12px;height:12px;border-width:1.5px"></div></div>
         </div>
       </div>
 
-      <div class="section-header"><span class="section-icon material-symbols-outlined">link</span> Verbundene Dienste</div>
-      <div id="services-list"><div class="loading"><div class="spinner"></div></div></div>
-
-      <div class="section-header"><span class="section-icon material-symbols-outlined">tune</span> Features</div>
-      <div id="features-list"><div class="loading"><div class="spinner"></div></div></div>
-
-      <div class="section-header"><span class="section-icon material-symbols-outlined">info</span> Sonstige Einstellungen</div>
-      <div class="settings-list">
-        <div class="settings-item">
-          <span>Briefing-Zeit</span>
-          <span class="card-subtitle">08:00 Uhr</span>
+      <!-- Services -->
+      <div class="profile-section">
+        <div class="profile-section-title">
+          <span class="material-symbols-outlined">link</span>
+          Deine verbundenen Dienste
         </div>
-        <div class="settings-item">
-          <span>Zeitzone</span>
-          <span class="card-subtitle">Europe/Berlin</span>
+        <div class="section-intro">DualMind arbeitet mit diesen Diensten f\u00fcr dich.</div>
+        <div id="services-list" class="service-cards-grid">
+          <div class="loading"><div class="spinner"></div></div>
         </div>
       </div>
 
-      <div class="section-header"><span class="section-icon material-symbols-outlined">code</span> Entwickler</div>
-      <div class="settings-list">
-        <a href="#/issues" class="settings-item" style="text-decoration:none;color:inherit">
-          <span><span class="material-symbols-outlined mi-sm">bug_report</span> GitHub Issues</span>
-          <span class="card-subtitle"><span class="material-symbols-outlined mi-sm">chevron_right</span></span>
-        </a>
+      <!-- Features -->
+      <div class="profile-section">
+        <div class="profile-section-title">
+          <span class="material-symbols-outlined">auto_awesome</span>
+          Was dein Assistent kann
+        </div>
+        <div class="section-intro">Funktionen ein- und ausschalten.</div>
+        <div id="always-active-strip"></div>
+        <div id="features-list" class="feature-groups">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
       </div>
 
-      <div class="text-center mt-16">
+      <!-- Settings -->
+      <div class="profile-section">
+        <div class="profile-section-title">
+          <span class="material-symbols-outlined">settings</span>
+          Deine Einstellungen
+        </div>
+        <div class="section-intro">Passe DualMind an deine Vorlieben an.</div>
+        <div class="pref-sections">
+          <!-- Appearance -->
+          <div class="pref-section">
+            <div class="pref-section-header" onclick="ProfileView.togglePrefSection('pref-appearance')">
+              <div class="pref-section-label">
+                <span class="material-symbols-outlined">palette</span>
+                Erscheinungsbild
+              </div>
+              <span class="material-symbols-outlined collapse-icon" id="pref-appearance-icon">expand_more</span>
+            </div>
+            <div class="pref-section-content" id="pref-appearance">
+              <div class="pref-section-inner">
+                <div class="settings-item">
+                  <span class="settings-item-label">Design</span>
+                  <label class="toggle toggle-sm">
+                    <input type="checkbox" id="theme-toggle" ${ProfileView.getTheme() === 'light' ? 'checked' : ''}
+                           onchange="ProfileView.toggleTheme(this.checked)">
+                    <span class="toggle-slider"></span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Daily Routine -->
+          <div class="pref-section">
+            <div class="pref-section-header" onclick="ProfileView.togglePrefSection('pref-routine')">
+              <div class="pref-section-label">
+                <span class="material-symbols-outlined">schedule</span>
+                Tagesablauf
+              </div>
+              <span class="material-symbols-outlined collapse-icon" id="pref-routine-icon">chevron_right</span>
+            </div>
+            <div class="pref-section-content collapsed" id="pref-routine">
+              <div class="pref-section-inner">
+                <div class="settings-item">
+                  <span class="settings-item-label">T\u00e4gliches Briefing</span>
+                  <span class="settings-item-value">08:00 Uhr</span>
+                </div>
+                <div class="settings-item">
+                  <span class="settings-item-label">Deine Zeitzone</span>
+                  <span class="settings-item-value">Europe/Berlin</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Navigation -->
+          <div class="pref-section">
+            <div class="pref-section-header" onclick="ProfileView.togglePrefSection('pref-nav')">
+              <div class="pref-section-label">
+                <span class="material-symbols-outlined">menu</span>
+                Navigation anpassen
+              </div>
+              <span class="material-symbols-outlined collapse-icon" id="pref-nav-icon">chevron_right</span>
+            </div>
+            <div class="pref-section-content collapsed" id="pref-nav">
+              <div class="pref-section-inner">
+                <div class="settings-hint">Bereiche ein-/ausschalten und in die Navbar pinnen (max. 5).</div>
+                <div id="nav-config-list"><div class="loading"><div class="spinner"></div></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dashboard Widgets -->
+          <div class="pref-section">
+            <div class="pref-section-header" onclick="ProfileView.togglePrefSection('pref-widgets')">
+              <div class="pref-section-label">
+                <span class="material-symbols-outlined">dashboard</span>
+                Dashboard anpassen
+              </div>
+              <span class="material-symbols-outlined collapse-icon" id="pref-widgets-icon">chevron_right</span>
+            </div>
+            <div class="pref-section-content collapsed" id="pref-widgets">
+              <div class="pref-section-inner">
+                <div class="settings-hint">Widgets auf dem Home-Screen ein-/ausblenden.</div>
+                <div id="widget-config-list"><div class="loading"><div class="spinner"></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced / Developer -->
+      <div class="dev-section">
+        <div class="pref-sections">
+          <div class="pref-section">
+            <div class="pref-section-header" onclick="ProfileView.togglePrefSection('pref-dev')">
+              <div class="pref-section-label">
+                <span class="material-symbols-outlined">code</span>
+                Erweitert
+              </div>
+              <span class="material-symbols-outlined collapse-icon" id="pref-dev-icon">chevron_right</span>
+            </div>
+            <div class="pref-section-content collapsed" id="pref-dev">
+              <div class="pref-section-inner">
+                <a href="#/issues" style="text-decoration:none;color:inherit">
+                  <div class="settings-item" style="cursor:pointer">
+                    <span class="settings-item-label"><span class="material-symbols-outlined mi-sm">bug_report</span> GitHub Issues</span>
+                    <span class="material-symbols-outlined mi-sm" style="color:var(--text-muted)">chevron_right</span>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logout -->
+      <div class="profile-logout">
         <button class="btn btn-danger" onclick="ProfileView.confirmLogout()">Abmelden</button>
       </div>
     `;
 
-    await Promise.all([loadNavConfig(), loadWidgetConfig(), loadServices(), loadFeatures()]);
+    await Promise.all([loadServices(), loadFeatures(), loadNavConfig(), loadWidgetConfig()]);
   }
 
-  // ── Nav Configuration ──
+  /* ── Status Bar (computed after data loads) ── */
+
+  function updateStatusBar(featureCount, serviceCount, totalServices) {
+    const el = document.getElementById('profile-status-bar');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="profile-stat">
+        <span class="material-symbols-outlined profile-stat-accent">auto_awesome</span>
+        ${featureCount} Funktionen aktiv
+      </div>
+      <div class="profile-stat">
+        <span class="material-symbols-outlined profile-stat-success">link</span>
+        ${serviceCount} von ${totalServices} Diensten verbunden
+      </div>
+    `;
+  }
+
+  /* ── Services ── */
+
+  let _serviceData = null;
+
+  async function loadServices() {
+    const el = document.getElementById('services-list');
+    try {
+      const data = await Api.getDashboard();
+      _serviceData = data;
+
+      // Drive connected status: same as calendar (same Google credentials)
+      const connMap = {
+        calendar_connected: !!data.calendar_connected,
+        email_connected: !!data.email_connected,
+        drive_connected: !!data.calendar_connected
+      };
+
+      const connCount = Object.values(connMap).filter(Boolean).length;
+
+      el.innerHTML = SERVICE_DEFS.map(svc => {
+        const connected = connMap[svc.connKey];
+        const chipClass = connected ? 'connected' : 'not-setup';
+        const chipText = connected ? 'Verbunden' : 'Noch nicht eingerichtet';
+        return `
+          <div class="service-card">
+            <div class="service-card-icon">${svc.emoji}</div>
+            <div class="service-card-body">
+              <div class="service-card-name">${escapeHtml(svc.name)}</div>
+              <div class="service-card-desc">${escapeHtml(svc.desc)}</div>
+            </div>
+            <div class="service-status-chip ${chipClass}">
+              <span class="service-status-dot"></span>
+              ${chipText}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Update status bar with service count
+      window._profileServiceCount = connCount;
+      window._profileTotalServices = SERVICE_DEFS.length;
+      tryUpdateStatusBar();
+    } catch {
+      el.innerHTML = '<div class="empty-state">Dienste konnten nicht geladen werden</div>';
+    }
+  }
+
+  /* ── Features ── */
+
+  let _featuresCache = null;
+
+  async function loadFeatures() {
+    const el = document.getElementById('features-list');
+    const stripEl = document.getElementById('always-active-strip');
+    try {
+      const features = await Api.getFeatures();
+      _featuresCache = features;
+
+      if (features.length === 0) {
+        el.innerHTML = '<div class="empty-state">Keine Funktionen verf\u00fcgbar</div>';
+        return;
+      }
+
+      const featureMap = {};
+      features.forEach(f => { featureMap[f.id] = f; });
+
+      // Always-active strip
+      const alwaysActive = ALWAYS_ACTIVE.map(id => featureMap[id]).filter(Boolean);
+      if (stripEl && alwaysActive.length > 0) {
+        stripEl.innerHTML = '<div class="always-active-strip">' +
+          alwaysActive.map(f => `
+            <span class="always-active-chip">${f.emoji || ''} ${escapeHtml(f.name)}</span>
+          `).join('') + '</div>';
+      }
+
+      // Count enabled features
+      const enabledCount = features.filter(f => f.enabled).length;
+      window._profileFeatureCount = enabledCount;
+      tryUpdateStatusBar();
+
+      // Render groups
+      el.innerHTML = FEATURE_GROUPS.map((group, gi) => {
+        const groupFeatures = group.features.map(id => featureMap[id]).filter(Boolean);
+        if (groupFeatures.length === 0) return '';
+
+        const enabledInGroup = groupFeatures.filter(f => f.enabled).length;
+        const isFirst = gi === 0;
+        const collapsedClass = isFirst ? '' : 'collapsed';
+        const collapseIcon = isFirst ? 'expand_more' : 'chevron_right';
+
+        return `
+          <div class="feature-group">
+            <div class="feature-group-header" onclick="ProfileView.toggleFeatureGroup('fg-${group.id}')">
+              <div class="feature-group-icon">
+                <span class="material-symbols-outlined">${group.icon}</span>
+              </div>
+              <div class="feature-group-info">
+                <div class="feature-group-title">${escapeHtml(group.title)}</div>
+                <div class="feature-group-desc">${escapeHtml(group.desc)}</div>
+              </div>
+              <div class="feature-group-meta">
+                <span class="feature-group-count">${enabledInGroup}/${groupFeatures.length}</span>
+                <span class="material-symbols-outlined collapse-icon" id="fg-${group.id}-icon">${collapseIcon}</span>
+              </div>
+            </div>
+            <div class="feature-group-content ${collapsedClass}" id="fg-${group.id}">
+              <div class="feature-group-list">
+                ${groupFeatures.map(f => renderFeatureCard(f)).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } catch {
+      el.innerHTML = '<div class="empty-state">Funktionen konnten nicht geladen werden</div>';
+    }
+  }
+
+  function renderFeatureCard(f) {
+    const benefit = FEATURE_BENEFITS[f.id] || f.description || '';
+    const available = f.available !== false;
+
+    let prereqHtml = '';
+    if (!available && f.required_settings && f.required_settings.length > 0) {
+      const services = [...new Set(f.required_settings.map(s => PREREQ_LABELS[s] || s))];
+      prereqHtml = `
+        <div class="feature-prereq">
+          <span class="material-symbols-outlined">info</span>
+          Verf\u00fcgbar nach Einrichtung von ${escapeHtml(services.join(', '))}
+        </div>
+      `;
+    }
+
+    return `
+      <div class="feature-card">
+        <span class="feature-card-emoji">${f.emoji || '\u2699'}</span>
+        <div class="feature-card-body">
+          <div class="feature-card-name">${escapeHtml(f.name)}</div>
+          <div class="feature-card-benefit">${escapeHtml(benefit)}</div>
+          ${prereqHtml}
+        </div>
+        <label class="toggle toggle-sm">
+          <input type="checkbox" ${f.enabled ? 'checked' : ''} ${!available ? 'disabled' : ''}
+                 onchange="ProfileView.toggleFeature('${f.id}')">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    `;
+  }
+
+  function tryUpdateStatusBar() {
+    if (window._profileFeatureCount !== undefined && window._profileServiceCount !== undefined) {
+      updateStatusBar(window._profileFeatureCount, window._profileServiceCount, window._profileTotalServices || 3);
+    }
+  }
+
+  /* ── Feature Toggle ── */
+
+  async function toggleFeature(featureId) {
+    try {
+      await Api.toggleFeature(featureId);
+      await loadFeatures();
+    } catch (err) {
+      Toast.show('Fehler: ' + err.message, 'error');
+      await loadFeatures();
+    }
+  }
+
+  /* ── Collapsible Helpers ── */
+
+  function toggleFeatureGroup(contentId) {
+    const content = document.getElementById(contentId);
+    const icon = document.getElementById(contentId + '-icon');
+    if (!content) return;
+    const isCollapsed = content.classList.toggle('collapsed');
+    if (icon) icon.textContent = isCollapsed ? 'chevron_right' : 'expand_more';
+  }
+
+  function togglePrefSection(contentId) {
+    const content = document.getElementById(contentId);
+    const icon = document.getElementById(contentId + '-icon');
+    if (!content) return;
+    const isCollapsed = content.classList.toggle('collapsed');
+    if (icon) icon.textContent = isCollapsed ? 'chevron_right' : 'expand_more';
+
+    // Lazy-load nav/widget config when first opened
+    if (!isCollapsed) {
+      if (contentId === 'pref-nav') loadNavConfig();
+      if (contentId === 'pref-widgets') loadWidgetConfig();
+    }
+  }
+
+  /* ── Nav Configuration ── */
 
   async function loadNavConfig() {
     const el = document.getElementById('nav-config-list');
+    if (!el) return;
     try {
       const prefs = window.AppPreferences ? window.AppPreferences.getCached() : null;
       const data = prefs || await Api.getPreferences();
@@ -80,7 +467,6 @@ const ProfileView = (() => {
       const maxPinned = (data.nav && data.nav.maxPinned) || 5;
       const meta = window.AppPreferences ? window.AppPreferences.NAV_META : {};
 
-      // Sort by order
       items.sort((a, b) => (a.order || 0) - (b.order || 0));
 
       el.innerHTML = '<div class="nav-config-grid">' + items.map(item => {
@@ -108,14 +494,14 @@ const ProfileView = (() => {
                       title="${pinned ? 'Aus Navbar entfernen' : 'In Navbar pinnen'}"
                       onclick="ProfileView.toggleNavItem('${item.id}', 'pinned', ${!pinned})"
                       ${!enabled || (!pinned && !canPin) ? 'disabled' : ''}>
-                <span class="material-symbols-outlined mi-sm">${pinned ? 'push_pin' : 'push_pin'}</span>
+                <span class="material-symbols-outlined mi-sm">push_pin</span>
               </button>
             </div>
           </div>
         `;
       }).join('') + '</div>';
     } catch {
-      el.innerHTML = '<div class="card-subtitle">Navigation konnte nicht geladen werden</div>';
+      el.innerHTML = '<div class="empty-state">Navigation konnte nicht geladen werden</div>';
     }
   }
 
@@ -127,32 +513,29 @@ const ProfileView = (() => {
       if (!item) return;
 
       item[field] = value;
-      // If disabling, also unpin
       if (field === 'enabled' && !value) {
         item.pinned = false;
       }
 
       await window.AppPreferences.save({ nav: { items } });
-      // Re-render nav config
       await loadNavConfig();
     } catch (err) {
       Toast.show('Fehler: ' + err.message);
     }
   }
 
-  // ── Dashboard Widget Configuration ──
+  /* ── Dashboard Widget Configuration ── */
 
   async function loadWidgetConfig() {
     const el = document.getElementById('widget-config-list');
+    if (!el) return;
     try {
       const prefs = window.AppPreferences ? window.AppPreferences.getCached() : null;
       const data = prefs || await Api.getPreferences();
       const widgets = (data.dashboard && data.dashboard.widgets) || [];
 
-      // Sort by order
       widgets.sort((a, b) => (a.order || 0) - (b.order || 0));
 
-      // Widget display labels
       const widgetLabels = {
         emails: { icon: 'mail', label: 'E-Mails' },
         shifts: { icon: 'work', label: 'Dienste heute' },
@@ -182,7 +565,7 @@ const ProfileView = (() => {
         `;
       }).join('') + '</div>';
     } catch {
-      el.innerHTML = '<div class="card-subtitle">Widgets konnten nicht geladen werden</div>';
+      el.innerHTML = '<div class="empty-state">Widgets konnten nicht geladen werden</div>';
     }
   }
 
@@ -201,76 +584,7 @@ const ProfileView = (() => {
     }
   }
 
-  // ── Services ──
-
-  async function loadServices() {
-    const el = document.getElementById('services-list');
-    try {
-      const data = await Api.getDashboard();
-      el.innerHTML = `
-        <div class="service-list">
-          <div class="service-item">
-            <div class="service-info">
-              <span class="service-icon material-symbols-outlined">calendar_month</span>
-              <span class="service-name">Google Calendar</span>
-            </div>
-            <div class="status-dot ${data.calendar_connected ? 'connected' : 'disconnected'}"></div>
-          </div>
-          <div class="service-item">
-            <div class="service-info">
-              <span class="service-icon material-symbols-outlined">mail</span>
-              <span class="service-name">Gmail</span>
-            </div>
-            <div class="status-dot ${data.email_connected ? 'connected' : 'disconnected'}"></div>
-          </div>
-        </div>
-      `;
-    } catch {
-      el.innerHTML = '<div class="card-subtitle">Dienste konnten nicht geladen werden</div>';
-    }
-  }
-
-  // ── Features ──
-
-  async function loadFeatures() {
-    const el = document.getElementById('features-list');
-    try {
-      const features = await Api.getFeatures();
-      if (features.length === 0) {
-        el.innerHTML = '<div class="empty-state">Keine Features verfuegbar</div>';
-        return;
-      }
-      el.innerHTML = '<div class="feature-list">' + features.map(f => `
-        <div class="feature-item">
-          <div class="feature-info">
-            <span class="feature-icon">${f.emoji || '&#9881;'}</span>
-            <div>
-              <div class="feature-name">${escapeHtml(f.name)}</div>
-              <div class="feature-desc">${escapeHtml(f.description)}${!f.available ? ' <span class="badge badge-warning">API-Keys fehlen</span>' : ''}</div>
-            </div>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" ${f.enabled ? 'checked' : ''} ${!f.available ? 'disabled' : ''}
-                   onchange="ProfileView.toggleFeature('${f.id}')">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-      `).join('') + '</div>';
-    } catch {
-      el.innerHTML = '<div class="card-subtitle">Features konnten nicht geladen werden</div>';
-    }
-  }
-
-  async function toggleFeature(featureId) {
-    try {
-      await Api.toggleFeature(featureId);
-    } catch (err) {
-      alert('Fehler: ' + err.message);
-      loadFeatures();
-    }
-  }
-
-  // ── Theme ──
+  /* ── Theme ── */
 
   function getTheme() {
     return localStorage.getItem('dualmind-theme') || 'dark';
@@ -282,14 +596,15 @@ const ProfileView = (() => {
     localStorage.setItem('dualmind-theme', theme);
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = isLight ? '#f5f5f7' : '#7c4dff';
-    // Save to server
     if (window.AppPreferences) {
       window.AppPreferences.save({ appearance: { theme } }).catch(() => {});
     }
   }
 
+  /* ── Logout ── */
+
   function confirmLogout() {
-    if (confirm('Moechtest du dich wirklich abmelden?')) {
+    if (confirm('M\u00f6chtest du dich wirklich abmelden?')) {
       Api.logout();
     }
   }
@@ -304,5 +619,15 @@ const ProfileView = (() => {
     }
   })();
 
-  return { render, toggleFeature, confirmLogout, getTheme, toggleTheme, toggleNavItem, toggleWidget };
+  return {
+    render,
+    toggleFeature,
+    toggleFeatureGroup,
+    togglePrefSection,
+    confirmLogout,
+    getTheme,
+    toggleTheme,
+    toggleNavItem,
+    toggleWidget
+  };
 })();
