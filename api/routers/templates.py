@@ -1,7 +1,7 @@
 """GET/POST/PATCH/DELETE /templates – Wiederverwendbare Vorlagen & Routinen."""
 
 import logging
-from datetime import date, datetime
+from datetime import date
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
