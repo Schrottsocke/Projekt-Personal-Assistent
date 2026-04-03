@@ -166,7 +166,7 @@ footer a:hover{text-decoration:underline}
 <body>
 <h1>DualMind</h1>
 <p>Dein persoenlicher KI-Assistent fuer Alltag und Organisation.
-Termine, Aufgaben, Einkaufslisten, Rezepte und Chat – alles an einem Ort.</p>
+Termine, Aufgaben, Einkaufslisten, Rezepte, Chat, Kontakte, Dokumente, Wetter, Schichtplanung und mehr – alles an einem Ort.</p>
 <a href="/app" class="cta">Zur App &rarr;</a>
 <footer><a href="/docs">API-Dokumentation</a></footer>
 </body>
