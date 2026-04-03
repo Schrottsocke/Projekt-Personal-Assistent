@@ -286,8 +286,8 @@ async def health():
     else:
         checks["sentry"] = "disabled"
 
-    # 3. Kritische Services prüfen (AI, Memory)
-    for name in ("ai", "memory", "calendar"):
+    # 3. Kritische Services prüfen (AI muss laufen, Memory/Calendar optional)
+    for name in ("ai",):
         svc = dependencies._svc.get(name)
         if svc is None:
             checks[name] = "not_initialized"
@@ -295,6 +295,15 @@ async def health():
         elif hasattr(svc, "initialized") and not svc.initialized:
             checks[name] = "init_failed"
             overall_healthy = False
+        else:
+            checks[name] = "ok"
+
+    for name in ("memory", "calendar"):
+        svc = dependencies._svc.get(name)
+        if svc is None:
+            checks[name] = "not_initialized"
+        elif hasattr(svc, "initialized") and not svc.initialized:
+            checks[name] = "init_failed"
         else:
             checks[name] = "ok"
 
