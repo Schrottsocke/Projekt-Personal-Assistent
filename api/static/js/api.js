@@ -342,7 +342,7 @@ const Api = (() => {
     return request(`/drive/files${qs}`);
   }
 
-  async function uploadFile(file) {
+  async function uploadFile(file, path = '/drive/upload') {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -350,7 +350,7 @@ const Api = (() => {
     const token = getToken();
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    let res = await fetch('/drive/upload', { method: 'POST', headers, body: formData });
+    let res = await fetch(path, { method: 'POST', headers, body: formData });
 
     // Auto-refresh on 401
     if (res.status === 401 && getRefreshToken()) {
@@ -360,7 +360,7 @@ const Api = (() => {
       try {
         const newToken = await _refreshing;
         headers['Authorization'] = `Bearer ${newToken}`;
-        res = await fetch('/drive/upload', { method: 'POST', headers, body: formData });
+        res = await fetch(path, { method: 'POST', headers, body: formData });
       } catch {
         clearAuth();
         window.location.hash = '#/login';
@@ -484,6 +484,7 @@ const Api = (() => {
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
     getPreferences, updatePreferences, getPreferencesRegistry,
+    request,
     searchGlobal,
   };
 })();
