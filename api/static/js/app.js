@@ -23,8 +23,6 @@
   Router.register('#/shifts', (c) => ShiftsView.render(c));
   Router.register('#/notifications', (c) => NotificationsView.render(c));
   Router.register('#/focus', (c) => FocusView.render(c));
-  Router.register('#/inbox', (c) => InboxView.render(c));
-  Router.register('#/automation', (c) => AutomationView.render(c));
   Router.register('#/documents', (c) => DocumentsView.render(c));
   Router.register('#/templates', (c) => TemplatesView.render(c));
   Router.register('#/contacts', (c) => ContactsView.render(c));
@@ -58,8 +56,6 @@
     documents: { route: '#/documents', icon: 'scanner', label: 'Dokumente' },
     templates: { route: '#/templates', icon: 'library_books', label: 'Vorlagen' },
     notifications: { route: '#/notifications', icon: 'notifications', label: 'Alerts' },
-    inbox: { route: '#/inbox', icon: 'inbox', label: 'Inbox' },
-    automation: { route: '#/automation', icon: 'smart_toy', label: 'Automation' },
     contacts: { route: '#/contacts', icon: 'contacts', label: 'Kontakte' },
     followups: { route: '#/followups', icon: 'reply_all', label: 'Follow-ups' },
     weather: { route: '#/weather', icon: 'cloud', label: 'Wetter' },

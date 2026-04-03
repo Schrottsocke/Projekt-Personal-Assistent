@@ -417,35 +417,6 @@ const Api = (() => {
     return request('/notifications', { method: 'POST', body: data });
   }
 
-  // Inbox
-  function getInboxItems(params = {}) {
-    const q = new URLSearchParams(params).toString();
-    return request(`/inbox${q ? '?' + q : ''}`);
-  }
-  function getInboxCount() { return request('/inbox/count'); }
-  function addInboxItem(data) {
-    return request('/inbox', { method: 'POST', body: data });
-  }
-  function actionInboxItem(id, action) {
-    return request(`/inbox/${id}/action`, { method: 'POST', body: { action } });
-  }
-
-  // Automation
-  function getAutomationRules(params = {}) {
-    const q = new URLSearchParams(params).toString();
-    return request(`/automation${q ? '?' + q : ''}`);
-  }
-  function createAutomationRule(data) {
-    return request('/automation', { method: 'POST', body: data });
-  }
-  function updateAutomationRule(id, data) {
-    return request(`/automation/${id}`, { method: 'PATCH', body: data });
-  }
-  function toggleAutomationRule(id) {
-    return request(`/automation/${id}/toggle`, { method: 'POST' });
-  }
-  function deleteAutomationRule(id) {
-    return request(`/automation/${id}`, { method: 'DELETE' });
   // Documents
   function getDocuments(params = {}) {
     const qs = new URLSearchParams();
@@ -524,8 +495,6 @@ const Api = (() => {
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
     getPreferences, updatePreferences, getPreferencesRegistry,
-    getInboxItems, getInboxCount, addInboxItem, actionInboxItem,
-    getAutomationRules, createAutomationRule, updateAutomationRule, toggleAutomationRule, deleteAutomationRule,
     searchGlobal,
   };
 })();
