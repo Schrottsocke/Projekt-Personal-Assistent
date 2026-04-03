@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recipe.dart';
 import '../providers/recipe_provider.dart';
-import '../providers/auth_provider.dart';
 import '../providers/shopping_provider.dart';
-import '../services/recipe_service.dart';
 import '../widgets/recipe_card.dart';
 
 class RecipesScreen extends ConsumerStatefulWidget {

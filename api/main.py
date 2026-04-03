@@ -43,6 +43,11 @@ from api.routers import (
     status,
     search,
     preferences,
+    contacts,
+    followups,
+    weather,
+    mobility,
+    sync,
 )
 
 logger = structlog.get_logger(__name__)
@@ -161,7 +166,7 @@ footer a:hover{text-decoration:underline}
 <body>
 <h1>DualMind</h1>
 <p>Dein persoenlicher KI-Assistent fuer Alltag und Organisation.
-Termine, Aufgaben, Einkaufslisten, Rezepte und Chat – alles an einem Ort.</p>
+Termine, Aufgaben, Einkaufslisten, Rezepte, Chat, Kontakte, Dokumente, Wetter, Schichtplanung und mehr – alles an einem Ort.</p>
 <a href="/app" class="cta">Zur App &rarr;</a>
 <footer><a href="/docs">API-Dokumentation</a></footer>
 </body>
@@ -215,6 +220,11 @@ app.include_router(features.router)
 app.include_router(github.router, prefix="/github", tags=["GitHub"])
 app.include_router(search.router, prefix="/search", tags=["Suche"])
 app.include_router(preferences.router, prefix="/preferences", tags=["Preferences"])
+app.include_router(contacts.router, prefix="/contacts", tags=["Kontakte"])
+app.include_router(followups.router, prefix="/followups", tags=["Follow-ups"])
+app.include_router(weather.router, prefix="/weather", tags=["Wetter"])
+app.include_router(mobility.router, prefix="/mobility", tags=["Mobilität"])
+app.include_router(sync.router, prefix="/sync", tags=["Sync"])
 app.include_router(status.router)
 
 

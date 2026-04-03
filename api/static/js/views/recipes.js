@@ -142,6 +142,9 @@ const RecipesView = (() => {
             <div class="recipe-meta">
               ${time > 0 ? `<span><span class="material-symbols-outlined mi-sm">schedule</span> ${time} Min.</span>` : ''}
               ${r.difficulty ? `<span>${escapeHtml(r.difficulty)}</span>` : ''}
+              ${isSaved ? `<button class="btn-icon" onclick="event.stopPropagation();RecipesView.toggleFavorite(${idx})" title="${r.is_favorite ? 'Favorit entfernen' : 'Als Favorit markieren'}" style="margin-left:auto">
+                <span class="material-symbols-outlined" style="color:${r.is_favorite ? 'var(--error)' : 'var(--text-secondary)'};font-size:20px">${r.is_favorite ? 'favorite' : 'favorite_border'}</span>
+              </button>` : ''}
             </div>
           </div>
         </div>
@@ -255,6 +258,16 @@ const RecipesView = (() => {
     }
   }
 
+  async function toggleFavorite(idx) {
+    const r = savedRecipes[idx];
+    if (!r || !r.id) return;
+    try {
+      const result = await Api.toggleFavorite(r.id);
+      r.is_favorite = result.is_favorite;
+      renderSaved();
+    } catch (_) { /* Toast handles error */ }
+  }
+
   async function addToShopping(chefkochId) {
     if (!chefkochId) return;
     try {
@@ -266,5 +279,5 @@ const RecipesView = (() => {
     }
   }
 
-  return { render, switchTab, onSearch, showDetail, updateServings, saveRecipe, addToShopping };
+  return { render, switchTab, onSearch, showDetail, updateServings, saveRecipe, addToShopping, toggleFavorite };
 })();
