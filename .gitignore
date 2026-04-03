@@ -52,6 +52,11 @@ app/.metadata
 # app/pubspec.lock  # Committed for reproducible builds
 *.dart.js
 
+# Android Signing
+keystore.properties
+*.jks
+*.keystore
+
 # OS
 Thumbs.db
 *~
