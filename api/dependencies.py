@@ -192,6 +192,11 @@ def get_drive_service():
     return _require("drive")
 
 
+def get_drive_service_optional():
+    """Drive-Service oder None (kein 503 wenn nicht verfuegbar)."""
+    return _svc.get("drive")
+
+
 def get_notification_service():
     return _require("notification")
 

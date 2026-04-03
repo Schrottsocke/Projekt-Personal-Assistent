@@ -1,11 +1,16 @@
-"""GET /search – Globale Suche ueber Tasks, Kalender, Einkauf, Chat, Rezepte, Dokumente, Notizen."""
+"""GET /search – Globale Suche ueber Tasks, Kalender, Einkauf, Chat, Rezepte, Dokumente, Notizen, Drive."""
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import or_
 
-from api.dependencies import get_current_user
+from api.dependencies import (
+    get_current_user,
+    get_calendar_service_optional,
+    get_drive_service_optional,
+)
 from api.schemas.search import SearchResult
 from src.services.database import (
     Task,
@@ -20,6 +25,7 @@ from src.services.database import (
 )
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get("", response_model=list[SearchResult])
@@ -27,8 +33,10 @@ async def global_search(
     user_key: Annotated[str, Depends(get_current_user)],
     q: str = Query(..., min_length=1),
     limit: int = Query(20, ge=1, le=100),
+    cal_svc=Depends(get_calendar_service_optional),
+    drive_svc=Depends(get_drive_service_optional),
 ):
-    """Sucht uebergreifend in Tasks, Einkauf, Chat, Rezepte, Wochenplan, Notizen, Dokumente, Gedaechtnis."""
+    """Sucht uebergreifend in Tasks, Einkauf, Chat, Rezepte, Wochenplan, Notizen, Dokumente, Kalender, Drive."""
     results: list[SearchResult] = []
     term = f"%{q}%"
     per_source = min(limit, 5)
@@ -227,6 +235,70 @@ async def global_search(
                     route="#/memory",
                 )
             )
+
+    # Calendar events (external Google Calendar API – best-effort)
+    if cal_svc and cal_svc.is_connected(user_key):
+        try:
+            q_lower = q.lower()
+            cal_events = await cal_svc.get_upcoming_events(user_key, days=30, max_results=20)
+            count = 0
+            for ev in cal_events:
+                summary = ev.get("summary", "")
+                location = ev.get("location", "")
+                description = ev.get("description", "")
+                if q_lower not in f"{summary} {location} {description}".lower():
+                    continue
+                start_raw = ev.get("start", {})
+                start_str = start_raw.get("dateTime", start_raw.get("date", "")) if isinstance(start_raw, dict) else str(start_raw)
+                # Format for display
+                subtitle_parts = []
+                if start_str:
+                    subtitle_parts.append(start_str[:16].replace("T", " "))
+                if location:
+                    subtitle_parts.append(location)
+                results.append(
+                    SearchResult(
+                        type="calendar",
+                        title=summary,
+                        subtitle=" · ".join(subtitle_parts),
+                        route="#/calendar",
+                    )
+                )
+                count += 1
+                if count >= per_source:
+                    break
+        except Exception as e:
+            logger.debug("Calendar-Suche uebersprungen: %s", e)
+
+    # Drive files (external Google Drive API – best-effort)
+    if drive_svc and drive_svc.is_connected(user_key):
+        try:
+            drive_files = await drive_svc.search_files(user_key, q, limit=per_source)
+            for f in (drive_files or []):
+                name = f.get("name", "")
+                mime = f.get("mimeType", "")
+                size = f.get("size")
+                subtitle_parts = []
+                if mime:
+                    # Simplify MIME for display
+                    short_mime = mime.split("/")[-1].replace("vnd.google-apps.", "")
+                    subtitle_parts.append(short_mime)
+                if size:
+                    try:
+                        size_mb = int(size) / (1024 * 1024)
+                        subtitle_parts.append(f"{size_mb:.1f} MB" if size_mb >= 1 else f"{int(size) // 1024} KB")
+                    except (ValueError, TypeError):
+                        pass
+                results.append(
+                    SearchResult(
+                        type="drive",
+                        title=name,
+                        subtitle=" · ".join(subtitle_parts),
+                        route="#/drive",
+                    )
+                )
+        except Exception as e:
+            logger.debug("Drive-Suche uebersprungen: %s", e)
 
     # Trim to overall limit
     return results[:limit]

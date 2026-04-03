@@ -2,7 +2,7 @@
  * Command Palette – Globale Suche, Navigation & Schnellaktionen (Ctrl+K / Cmd+K)
  *
  * Schaltzentrale der App: Suche nach Inhalten, springe zu Bereichen,
- * fuehre Aktionen direkt aus.
+ * fuehre Aktionen direkt aus. Mit Fuzzy-Matching und Suchverlauf.
  */
 const CommandPalette = (() => {
   let overlay = null;
@@ -10,9 +10,65 @@ const CommandPalette = (() => {
   let resultsList = null;
   let activeIndex = -1;
   let debounceTimer = null;
-  let currentItems = [];   // flat array of { route?, action?, label }
+  let currentItems = [];   // flat array of { route?, actionFn?, label }
   let isOpen = false;
   let searchRequestId = 0; // prevent stale API results
+
+  // ── Search History (localStorage) ──
+  const HISTORY_KEY = 'dm_search_history';
+  const HISTORY_MAX = 8;
+
+  function getHistory() {
+    try {
+      return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    } catch { return []; }
+  }
+
+  function addToHistory(query) {
+    if (!query || query.length < 2) return;
+    const history = getHistory().filter(h => h !== query);
+    history.unshift(query);
+    if (history.length > HISTORY_MAX) history.length = HISTORY_MAX;
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch {}
+  }
+
+  function clearHistory() {
+    try { localStorage.removeItem(HISTORY_KEY); } catch {}
+  }
+
+  // ── Fuzzy matching ──
+  function fuzzyMatch(text, query) {
+    const tLower = text.toLowerCase();
+    const qLower = query.toLowerCase();
+
+    // Exact substring match = best
+    if (tLower.includes(qLower)) return { match: true, score: 100 };
+
+    // Fuzzy: all query chars must appear in order
+    let ti = 0;
+    let matched = 0;
+    let consecutive = 0;
+    let maxConsecutive = 0;
+
+    for (let qi = 0; qi < qLower.length; qi++) {
+      const found = tLower.indexOf(qLower[qi], ti);
+      if (found === -1) return { match: false, score: 0 };
+      if (found === ti) {
+        consecutive++;
+        maxConsecutive = Math.max(maxConsecutive, consecutive);
+      } else {
+        consecutive = 1;
+      }
+      ti = found + 1;
+      matched++;
+    }
+
+    // Score based on: matched ratio, consecutive bonus, position bonus
+    const ratio = matched / tLower.length;
+    const consecutiveBonus = maxConsecutive / qLower.length;
+    const score = Math.round((ratio * 30) + (consecutiveBonus * 50) + 10);
+    return { match: true, score: Math.min(score, 99) };
+  }
 
   // ── Quick Actions ──
   const quickActions = [
@@ -63,7 +119,6 @@ const CommandPalette = (() => {
   function openQuickCapture(type) {
     if (typeof QuickCapture !== 'undefined' && QuickCapture.open) {
       QuickCapture.open();
-      // selectType is exposed from QuickCapture
       if (QuickCapture.selectType) {
         setTimeout(() => QuickCapture.selectType(type), 50);
       }
@@ -129,11 +184,22 @@ const CommandPalette = (() => {
     isOpen ? close() : open();
   }
 
-  // ── Default view (empty query): Quick Actions + Navigation ──
+  // ── Default view (empty query): History + Quick Actions + Navigation ──
   function renderDefaultView() {
     const navItems = getNavCommands();
+    const history = getHistory();
     const items = [];
     let html = '';
+
+    // Search history section
+    if (history.length > 0) {
+      html += '<div class="command-palette-group cp-group-with-action">Letzte Suchen<button class="cp-clear-history" type="button">Löschen</button></div>';
+      for (const term of history) {
+        const idx = items.length;
+        items.push({ historyTerm: term });
+        html += renderItem('history', term, '', idx);
+      }
+    }
 
     // Quick Actions section
     html += '<div class="command-palette-group">Schnellaktionen</div>';
@@ -155,6 +221,15 @@ const CommandPalette = (() => {
     if (resultsList) {
       resultsList.innerHTML = html;
       bindItemClicks();
+      // Bind clear-history button
+      const clearBtn = resultsList.querySelector('.cp-clear-history');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          clearHistory();
+          renderDefaultView();
+        });
+      }
     }
   }
 
@@ -164,8 +239,11 @@ const CommandPalette = (() => {
     const items = [];
     let html = '';
 
-    // Client-side: matching navigation
-    const navMatches = getNavCommands().filter(n => n.searchText.includes(q));
+    // Client-side: matching navigation (fuzzy)
+    const navMatches = getNavCommands()
+      .map(n => ({ ...n, ...fuzzyMatch(n.searchText, q) }))
+      .filter(n => n.match)
+      .sort((a, b) => b.score - a.score);
     if (navMatches.length > 0) {
       html += '<div class="command-palette-group">Navigation</div>';
       for (const n of navMatches) {
@@ -175,8 +253,11 @@ const CommandPalette = (() => {
       }
     }
 
-    // Client-side: matching quick actions
-    const actionMatches = quickActions.filter(a => a.label.toLowerCase().includes(q));
+    // Client-side: matching quick actions (fuzzy)
+    const actionMatches = quickActions
+      .map(a => ({ ...a, ...fuzzyMatch(a.label, q) }))
+      .filter(a => a.match)
+      .sort((a, b) => b.score - a.score);
     if (actionMatches.length > 0) {
       html += '<div class="command-palette-group">Schnellaktionen</div>';
       for (const a of actionMatches) {
@@ -193,8 +274,7 @@ const CommandPalette = (() => {
         if (!grouped[r.type]) grouped[r.type] = [];
         grouped[r.type].push(r);
       }
-      // Render in defined order
-      const typeOrder = ['task', 'shopping', 'recipe', 'mealplan', 'document', 'note', 'chat', 'memory', 'drive', 'calendar'];
+      const typeOrder = ['task', 'shopping', 'recipe', 'calendar', 'mealplan', 'document', 'drive', 'note', 'chat', 'memory'];
       for (const type of typeOrder) {
         const group = grouped[type];
         if (!group) continue;
@@ -219,7 +299,6 @@ const CommandPalette = (() => {
     }
 
     currentItems = items;
-    // Clamp activeIndex
     if (activeIndex >= items.length) activeIndex = items.length - 1;
 
     if (resultsList) {
@@ -258,6 +337,22 @@ const CommandPalette = (() => {
   function selectItem(idx) {
     if (idx < 0 || idx >= currentItems.length) return;
     const item = currentItems[idx];
+
+    // History item: fill the search input and trigger search
+    if (item.historyTerm) {
+      if (input) {
+        input.value = item.historyTerm;
+        onInput();
+        input.focus();
+      }
+      return;
+    }
+
+    // Save query to history before closing
+    if (input && input.value.trim().length >= 2) {
+      addToHistory(input.value.trim());
+    }
+
     close();
     if (item.actionFn) {
       item.actionFn();
@@ -287,14 +382,12 @@ const CommandPalette = (() => {
     debounceTimer = setTimeout(async () => {
       try {
         const results = await Api.searchGlobal(q);
-        // Only render if this is still the current request and query hasn't changed
         if (reqId === searchRequestId && input && input.value.trim() === q) {
           renderFilteredView(q, results, false);
           setLoadingBar(false);
         }
       } catch (e) {
         if (reqId === searchRequestId && input && input.value.trim() === q) {
-          // Show client-side matches without API results, with error hint
           renderFilteredView(q, null, false);
           if (resultsList) {
             const errorEl = document.createElement('div');

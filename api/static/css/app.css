@@ -3073,6 +3073,24 @@ select:focus-visible,
   flex-direction: column;
 }
 
+.cp-group-with-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.cp-clear-history {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 var(--space-4) 0 0;
+  transition: color var(--transition);
+}
+.cp-clear-history:hover {
+  color: var(--error);
+}
+
 .command-palette-loading-bar {
   height: 2px;
   background: transparent;
