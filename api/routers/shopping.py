@@ -60,6 +60,8 @@ async def update_item(
         db_item = session.query(ShoppingItem).filter_by(id=item_id, user_key=user_key).first()
         if not db_item:
             raise HTTPException(status_code=404, detail="Item nicht gefunden.")
+        if body.name is not None:
+            db_item.name = body.name
         if body.quantity is not None:
             db_item.quantity = body.quantity
         if body.unit is not None:
