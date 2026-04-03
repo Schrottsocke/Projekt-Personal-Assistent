@@ -485,6 +485,13 @@ select option {
 }
 
 /* Dashboard */
+.greeting-date {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+  text-transform: capitalize;
+}
+
 .greeting {
   font-size: var(--text-xl);
   font-weight: 700;
@@ -494,8 +501,63 @@ select option {
 
 .greeting-sub {
   color: var(--text-secondary);
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
   font-size: var(--text-base);
+}
+
+/* Quick Actions */
+.quick-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.quick-actions::-webkit-scrollbar { display: none; }
+
+.quick-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: all var(--transition);
+}
+.quick-action-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.quick-action-btn .material-symbols-outlined { font-size: 1.1rem; }
+
+/* Dashboard Zones */
+.dashboard-zone {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+}
+
+.zone-today {
+  background: rgba(124, 77, 255, 0.04);
+  border: 1px solid rgba(124, 77, 255, 0.12);
+}
+
+.zone-today .section-header:first-child { margin-top: 0; }
+
+.zone-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  margin-bottom: var(--space-3);
 }
 
 .email-badge {
@@ -518,15 +580,36 @@ select option {
 }
 
 .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   text-align: center;
   padding: var(--space-7) var(--space-4);
   color: var(--text-muted);
   font-size: var(--text-base);
-  font-style: italic;
   border: 1px dashed var(--border);
   border-radius: var(--radius-sm);
   margin-bottom: var(--space-3);
 }
+
+.empty-state-icon {
+  font-size: 2rem;
+  color: var(--text-muted);
+}
+
+.empty-state-text {
+  font-style: italic;
+}
+
+.empty-state-cta {
+  font-style: normal;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: none;
+}
+.empty-state-cta:hover { text-decoration: underline; }
 
 /* ── Shopping View ── */
 
