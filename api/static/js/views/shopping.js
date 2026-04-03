@@ -357,13 +357,9 @@ const ShoppingView = (() => {
     const parsed = parseItemInput(raw);
     if (!parsed) return;
 
-    input.value = '';
-
     try {
-      const body = { name: parsed.name };
-      if (parsed.quantity) body.quantity = parsed.quantity;
-      if (parsed.unit) body.unit = parsed.unit;
       const newItem = await Api.addShoppingItem(parsed.name);
+      input.value = '';
       // If we parsed quantity/unit, update right away
       if (parsed.quantity || parsed.unit) {
         const updated = await Api.updateShoppingItem(newItem.id, {
@@ -376,7 +372,19 @@ const ShoppingView = (() => {
       }
       renderList();
     } catch (err) {
-      showToast('Fehler beim Hinzufügen: ' + err.message, 'error');
+      if (err.isOffline && typeof OfflineQueue !== 'undefined') {
+        OfflineQueue.enqueue({
+          type: 'shopping_add',
+          endpoint: '/shopping/items',
+          method: 'POST',
+          body: { name: parsed.name },
+          label: parsed.name,
+        });
+        input.value = '';
+        showToast('Wird synchronisiert, sobald du online bist', 'info');
+      } else {
+        showToast('Fehler beim Hinzuf\u00fcgen: ' + err.message, 'error');
+      }
     }
     input.focus();
   }
@@ -417,8 +425,23 @@ const ShoppingView = (() => {
       if (idx !== -1) items[idx] = updated;
       renderList();
     } catch (err) {
-      showToast('Fehler beim Speichern: ' + err.message, 'error');
-      await loadItems();
+      if (err.isOffline && typeof OfflineQueue !== 'undefined') {
+        OfflineQueue.enqueue({
+          type: 'shopping_update',
+          endpoint: `/shopping/items/${id}`,
+          method: 'PATCH',
+          body: data,
+          label: name,
+        });
+        // Optimistic local update
+        const idx = items.findIndex(i => i.id === id);
+        if (idx !== -1) Object.assign(items[idx], data);
+        renderList();
+        showToast('Wird synchronisiert, sobald du online bist', 'info');
+      } else {
+        showToast('Fehler beim Speichern: ' + err.message, 'error');
+        await loadItems();
+      }
     }
   }
 
@@ -431,10 +454,21 @@ const ShoppingView = (() => {
     try {
       await Api.toggleShoppingItem(id, checked);
     } catch (err) {
-      // Revert on error
-      if (item) item.checked = !checked;
-      renderList();
-      showToast('Fehler: ' + err.message, 'error');
+      if (err.isOffline && typeof OfflineQueue !== 'undefined') {
+        // Keep optimistic update, queue for sync
+        OfflineQueue.enqueue({
+          type: 'shopping_toggle',
+          endpoint: `/shopping/items/${id}`,
+          method: 'PATCH',
+          body: { checked },
+          label: item ? item.name : '',
+        });
+      } else {
+        // Revert on non-offline error
+        if (item) item.checked = !checked;
+        renderList();
+        showToast('Fehler: ' + err.message, 'error');
+      }
     }
   }
 

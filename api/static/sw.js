@@ -1,9 +1,10 @@
-const CACHE_NAME = 'dualmind-v4';
+const CACHE_NAME = 'dualmind-v5';
 const SHELL_ASSETS = [
   '/app',
   '/static/css/app.css',
   '/static/js/utils.js',
   '/static/js/api.js',
+  '/static/js/offlineQueue.js',
   '/static/js/router.js',
   '/static/js/views/calendar.js',
   '/static/js/views/chat.js',

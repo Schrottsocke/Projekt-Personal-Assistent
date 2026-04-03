@@ -46,6 +46,56 @@ const DashboardView = (() => {
     return parts.join(' \u00b7 ');
   }
 
+  // ── Helper: Drive file icon (from drive.js) ──
+  function fileIcon(mimeType) {
+    const mi = (name) => `<span class="material-symbols-outlined">${name}</span>`;
+    if (!mimeType) return mi('draft');
+    if (mimeType.startsWith('image/')) return mi('image');
+    if (mimeType.startsWith('video/')) return mi('videocam');
+    if (mimeType.startsWith('audio/')) return mi('audio_file');
+    if (mimeType.includes('pdf')) return mi('picture_as_pdf');
+    if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return mi('table_chart');
+    if (mimeType.includes('presentation') || mimeType.includes('powerpoint')) return mi('slideshow');
+    if (mimeType.includes('document') || mimeType.includes('word')) return mi('description');
+    if (mimeType.includes('folder')) return mi('folder');
+    return mi('draft');
+  }
+
+  function formatFileSize(bytes) {
+    if (!bytes) return '';
+    const num = parseInt(bytes);
+    if (isNaN(num)) return bytes;
+    if (num < 1024) return num + ' B';
+    if (num < 1048576) return (num / 1024).toFixed(1) + ' KB';
+    return (num / 1048576).toFixed(1) + ' MB';
+  }
+
+  // ── Helper: Weather icon (from weather.js) ──
+  function weatherIcon(desc) {
+    const d = (desc || '').toLowerCase();
+    if (d.includes('regen') || d.includes('rain')) return 'rainy';
+    if (d.includes('schnee') || d.includes('snow')) return 'ac_unit';
+    if (d.includes('wolke') || d.includes('cloud') || d.includes('bewölkt')) return 'cloud';
+    if (d.includes('sonne') || d.includes('klar') || d.includes('sunny') || d.includes('clear')) return 'wb_sunny';
+    if (d.includes('gewitter') || d.includes('thunder')) return 'thunderstorm';
+    if (d.includes('nebel') || d.includes('fog')) return 'foggy';
+    return 'thermostat';
+  }
+
+  function getWeatherHint(temp, desc) {
+    const d = (desc || '').toLowerCase();
+    if ((d.includes('regen') || d.includes('rain')) && temp < 10) return 'Regenjacke und warme Schuhe einpacken';
+    if (d.includes('regen') || d.includes('rain')) return 'Regenschirm nicht vergessen';
+    if (d.includes('schnee') || d.includes('snow')) return 'Warm anziehen \u2013 es schneit!';
+    if (d.includes('gewitter') || d.includes('thunder')) return 'Gewitter erwartet \u2013 lieber drinnen bleiben';
+    if (temp >= 30) return 'Viel trinken und Sonnencreme nicht vergessen';
+    if (temp >= 25 && (d.includes('sonne') || d.includes('klar') || d.includes('sunny') || d.includes('clear'))) return 'Sonnencreme nicht vergessen';
+    if (temp <= 0) return 'Vorsicht Glatteis \u2013 warm anziehen!';
+    if (temp <= 5) return 'Dick einpacken, es ist kalt drau\u00dfen';
+    if (d.includes('nebel') || d.includes('fog')) return 'Vorsicht im Verkehr \u2013 Nebel';
+    return null;
+  }
+
   function renderQuickActions() {
     return `
       <div class="quick-actions">
@@ -204,6 +254,7 @@ const DashboardView = (() => {
 
   const ASYNC_WIDGET_RENDERERS = {
     mealplan: renderMealplanWidget,
+    weather: renderWeatherWidget,
     drive: renderDriveWidget,
     weeklyreview: renderWeeklyReviewWidget,
   };
@@ -407,8 +458,9 @@ const DashboardView = (() => {
       { id: 'tasks', enabled: true, order: 4 },
       { id: 'shopping', enabled: true, order: 5 },
       { id: 'mealplan', enabled: true, order: 6 },
-      { id: 'drive', enabled: true, order: 7 },
-      { id: 'weeklyreview', enabled: true, order: 8 },
+      { id: 'weather', enabled: true, order: 7 },
+      { id: 'drive', enabled: true, order: 8 },
+      { id: 'weeklyreview', enabled: true, order: 9 },
     ];
   }
 
@@ -513,15 +565,49 @@ const DashboardView = (() => {
       html += `<div class="empty-state"><span class="material-symbols-outlined empty-state-icon">folder_open</span><div class="empty-state-text">Keine Dateien</div></div>`;
     } else {
       driveData.files.forEach(f => {
+        const size = formatFileSize(f.size);
+        const date = f.modified_time ? new Date(f.modified_time).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' }) : '';
+        const meta = [size, date].filter(Boolean).join(' \u00b7 ');
         html += `
           <div class="card card-clickable" onclick="Router.navigate('#/drive')">
-            <div class="card-title">${escapeHtml(f.name)}</div>
-            ${f.modified_time ? `<div class="card-subtitle">${new Date(f.modified_time).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' })}</div>` : ''}
+            <div class="drive-widget-file">
+              <span class="drive-widget-icon">${fileIcon(f.mime_type)}</span>
+              <div class="drive-widget-info">
+                <div class="card-title">${escapeHtml(f.name)}</div>
+                ${meta ? `<div class="card-subtitle">${meta}</div>` : ''}
+              </div>
+            </div>
           </div>
         `;
       });
     }
     return html;
+  }
+
+  async function renderWeatherWidget() {
+    try {
+      const data = await Api.get('/weather/current?location=Schwerin');
+      const c = data.current;
+      if (!c) return '';
+
+      const icon = weatherIcon(c.description);
+      const hint = getWeatherHint(c.temp_c, c.description);
+
+      let html = `<a class="section-header section-link" href="#/weather"><span class="section-icon material-symbols-outlined">cloud</span> Wetter <span class="section-arrow">Details &#8594;</span></a>`;
+      html += `<div class="card card-clickable" onclick="Router.navigate('#/weather')">`;
+      html += `<div class="weather-widget-main">`;
+      html += `<span class="material-symbols-outlined weather-widget-icon">${icon}</span>`;
+      html += `<div class="weather-widget-temp">${c.temp_c}\u00b0C</div>`;
+      html += `<div class="weather-widget-desc">${escapeHtml(c.description)}</div>`;
+      html += `</div>`;
+      if (hint) {
+        html += `<div class="weather-widget-hint"><span class="material-symbols-outlined mi-sm">tips_and_updates</span> ${escapeHtml(hint)}</div>`;
+      }
+      html += `</div>`;
+      return html;
+    } catch {
+      return '';
+    }
   }
 
   async function renderWeeklyReviewWidget() {
