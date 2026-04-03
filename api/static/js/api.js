@@ -477,14 +477,21 @@ const Api = (() => {
 
   // Automation
   function getAutomationRules() { return request('/automation'); }
+  function getAutomationMeta() { return request('/automation/meta'); }
   function createAutomationRule(data) {
     return request('/automation', { method: 'POST', body: data });
+  }
+  function updateAutomationRule(id, data) {
+    return request(`/automation/${id}`, { method: 'PATCH', body: data });
   }
   function toggleAutomationRule(id) {
     return request(`/automation/${id}/toggle`, { method: 'POST' });
   }
   function deleteAutomationRule(id) {
     return request(`/automation/${id}`, { method: 'DELETE' });
+  }
+  function evaluateAutomation() {
+    return request('/automation/evaluate', { method: 'POST' });
   }
 
   // Inbox
@@ -567,7 +574,7 @@ const Api = (() => {
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
     getStatusHealth, getStatusDetail,
     getNotifications, getNotificationCount, updateNotification, bulkUpdateNotifications, markAllNotificationsRead, createNotification,
-    getAutomationRules, createAutomationRule, toggleAutomationRule, deleteAutomationRule,
+    getAutomationRules, getAutomationMeta, createAutomationRule, updateAutomationRule, toggleAutomationRule, deleteAutomationRule, evaluateAutomation,
     getInboxItems, getInboxCount, actionInboxItem,
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
