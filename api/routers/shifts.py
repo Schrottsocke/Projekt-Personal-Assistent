@@ -155,11 +155,7 @@ async def delete_shift_type(
             raise HTTPException(status_code=404, detail="Diensttyp nicht gefunden.")
         # Atomar: Eintraege zaehlen und entscheiden in einer Transaktion.
         # SQLite serialisiert Writes; bei PostgreSQL-Migration .with_for_update() auf ShiftType ergaenzen.
-        entry_count = (
-            session.query(ShiftEntry)
-            .filter_by(shift_type_id=type_id, user_key=user_key)
-            .count()
-        )
+        entry_count = session.query(ShiftEntry).filter_by(shift_type_id=type_id, user_key=user_key).count()
         if entry_count > 0:
             row.is_active = False
         else:
