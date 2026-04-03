@@ -1,7 +1,8 @@
-"""GET /dashboard/today – Tages-Übersicht"""
+"""GET /dashboard/today – Tages-Übersicht, GET /dashboard/weekly-review – Wochenrückblick"""
 
 import asyncio
 import logging
+from datetime import datetime as _dt, timedelta, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
@@ -87,4 +88,64 @@ async def dashboard_today(
         "reminders_today": reminders,
         "unread_emails": unread_count,
         "email_connected": email_svc.is_connected(user_key),
+    }
+
+
+@router.get("/weekly-review")
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
+async def weekly_review(
+    request: Request,
+    user_key: Annotated[str, Depends(get_current_user)],
+    calendar_svc=Depends(get_calendar_service),
+    task_svc=Depends(get_task_service),
+    shopping_svc=Depends(get_shopping_service),
+):
+    """Kompakter Wochenrückblick: erledigte Tasks, Termine, Einkäufe."""
+
+    async def safe(coro, default):
+        try:
+            return await coro
+        except Exception as e:
+            logger.warning("Weekly-Review Teilfehler: %s", e)
+            return default
+
+    since = _dt.now(timezone.utc) - timedelta(days=7)
+
+    completed_tasks, shopping_items, events = await asyncio.gather(
+        safe(task_svc.get_completed_tasks_since(user_key, since), []),
+        safe(shopping_svc.get_items(user_key, include_checked=True), []),
+        safe(
+            calendar_svc.get_upcoming_events(user_key, days=0)
+            if not calendar_svc.is_connected(user_key)
+            else calendar_svc.get_upcoming_events(user_key, days=0),
+            [],
+        ),
+    )
+
+    # Count events from this week via calendar week endpoint
+    week_events = 0
+    try:
+        if calendar_svc.is_connected(user_key):
+            week_events_list = await calendar_svc.get_upcoming_events(user_key, days=7)
+            week_events = len(week_events_list)
+    except Exception as e:
+        logger.warning("Weekly-Review Kalender-Fehler: %s", e)
+
+    # Shopping: count checked items (approximation – items checked this week)
+    items_shopped = sum(1 for i in shopping_items if i.get("checked"))
+
+    # Build highlights from completed tasks
+    highlights = []
+    for t in completed_tasks[:5]:
+        label = t["title"]
+        if t.get("recurrence"):
+            recur_labels = {"daily": "täglich", "weekly": "wöchentlich", "monthly": "monatlich"}
+            label += f" ({recur_labels.get(t['recurrence'], t['recurrence'])})"
+        highlights.append(label)
+
+    return {
+        "completed_tasks": len(completed_tasks),
+        "events_attended": week_events,
+        "items_shopped": items_shopped,
+        "highlights": highlights,
     }
