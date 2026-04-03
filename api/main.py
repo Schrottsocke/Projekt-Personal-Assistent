@@ -54,6 +54,7 @@ from api.routers import (
     suggestions,
     memories,
     templates,
+    automation,
 )
 
 logger = structlog.get_logger(__name__)
@@ -245,6 +246,7 @@ app.include_router(sync.router, prefix="/sync", tags=["Sync"])
 app.include_router(suggestions.router, prefix="/suggestions", tags=["Suggestions"])
 app.include_router(memories.router, prefix="/memories", tags=["Memories"])
 app.include_router(templates.router, prefix="/templates", tags=["Vorlagen"])
+app.include_router(automation.router, prefix="/automation", tags=["Automation"])
 app.include_router(status.router)
 
 

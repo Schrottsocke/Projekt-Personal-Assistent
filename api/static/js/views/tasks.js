@@ -213,20 +213,51 @@ const TasksView = (() => {
       document.getElementById('task-form-area').innerHTML = '';
       renderList();
     } catch (err) {
-      alert('Fehler: ' + err.message);
+      if (err.isOffline && typeof OfflineQueue !== 'undefined') {
+        OfflineQueue.enqueue({
+          type: 'task_create',
+          endpoint: '/tasks',
+          method: 'POST',
+          body: data,
+          label: title,
+        });
+        showForm = false;
+        document.getElementById('task-form-area').innerHTML = '';
+        Toast.show('Aufgabe wird synchronisiert, sobald du online bist', 'info');
+      } else {
+        Toast.show('Fehler: ' + err.message, 'error');
+      }
     }
   }
 
   async function toggleStatus(id, checked) {
     const newStatus = checked ? 'done' : 'open';
+    // Optimistic update
+    const idx = tasks.findIndex(t => t.id === id);
+    const prevStatus = idx >= 0 ? tasks[idx].status : null;
+    if (idx >= 0) tasks[idx].status = newStatus;
+    renderList();
+
     try {
       const updated = await Api.updateTaskStatus(id, newStatus);
-      const idx = tasks.findIndex(t => t.id === id);
       if (updated && idx >= 0) tasks[idx] = updated;
       renderList();
     } catch (err) {
-      alert('Fehler: ' + err.message);
-      await loadTasks();
+      if (err.isOffline && typeof OfflineQueue !== 'undefined') {
+        OfflineQueue.enqueue({
+          type: 'task_toggle',
+          endpoint: `/tasks/${id}`,
+          method: 'PATCH',
+          body: { status: newStatus },
+          label: idx >= 0 ? tasks[idx].title : '',
+        });
+        // Keep optimistic update
+      } else {
+        // Revert on non-offline error
+        if (idx >= 0 && prevStatus) tasks[idx].status = prevStatus;
+        renderList();
+        Toast.show('Fehler: ' + err.message, 'error');
+      }
     }
   }
 

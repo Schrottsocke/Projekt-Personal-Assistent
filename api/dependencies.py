@@ -69,6 +69,17 @@ async def startup():
         ("pdf", PdfService),
         ("template", TemplateService),
     ]
+
+    # AutomationService (JSON-basiert, kein DB-Init noetig)
+    from src.services.automation_service import AutomationService
+
+    try:
+        auto_svc = AutomationService()
+        await auto_svc.initialize()
+        _svc["automation"] = auto_svc
+        logger.info("API Service 'automation' initialisiert.")
+    except Exception as e:
+        logger.warning("API Service 'automation' Init-Fehler: %s", e)
     for name, cls in _constructors:
         try:
             pending[name] = cls()
@@ -195,6 +206,11 @@ def get_drive_service():
     return _require("drive")
 
 
+def get_drive_service_optional():
+    """Drive-Service oder None (kein 503 wenn nicht verfuegbar)."""
+    return _svc.get("drive")
+
+
 def get_notification_service():
     return _require("notification")
 
@@ -230,6 +246,10 @@ def get_pdf_service():
 
 def get_template_service():
     return _require("template")
+
+
+def get_automation_service():
+    return _require("automation")
 
 
 def get_bot_shim():
