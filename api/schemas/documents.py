@@ -17,6 +17,7 @@ class DocumentOut(BaseModel):
     summary: Optional[str] = None
     sender: Optional[str] = None
     amount: Optional[str] = None
+    ocr_text: Optional[str] = None
     drive_link: Optional[str] = None
     drive_file_id: Optional[str] = None
     scanned_at: Optional[datetime] = None

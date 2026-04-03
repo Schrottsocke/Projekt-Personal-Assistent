@@ -188,6 +188,7 @@ class ScannedDocument(Base):
     summary = Column(Text, nullable=True)
     sender = Column(String(200), nullable=True)
     amount = Column(String(50), nullable=True)  # Betrag falls Rechnung
+    ocr_text = Column(Text, nullable=True)  # Vollstaendiger OCR-Text
     scanned_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -341,6 +342,7 @@ def init_db():
                     "ALTER TABLE user_profiles ADD COLUMN preferences_json TEXT",
                     "ALTER TABLE tasks ADD COLUMN recurrence VARCHAR(20)",
                     "ALTER TABLE tasks ADD COLUMN last_completed_at DATETIME",
+                    "ALTER TABLE scanned_documents ADD COLUMN ocr_text TEXT",
                 ]:
                     try:
                         conn.execute(sa_text(col_sql))

@@ -242,6 +242,25 @@ class AIService:
                 last_exc = e
         raise last_exc
 
+    async def analyze_image(self, image_bytes: bytes, prompt: str) -> str:
+        """Analysiert ein Bild via Vision-API (Gemini Flash) und gibt die Textantwort zurueck."""
+        import base64
+
+        image_b64 = base64.b64encode(image_bytes).decode("utf-8")
+        messages = [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": f"data:image/jpeg;base64,{image_b64}"},
+                    },
+                ],
+            }
+        ]
+        return await self._complete(messages=messages, model=settings.VISION_MODEL)
+
     async def _complete_stream(self, messages: list[dict], model: str = None):
         """Streaming-Variante von _complete(). Yields Token-Chunks."""
         primary = model or self._model_chat

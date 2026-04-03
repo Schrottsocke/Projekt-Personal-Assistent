@@ -39,6 +39,8 @@ async def startup():
     from src.services.followup_service import FollowUpService
     from src.services.weather_service import WeatherService
     from src.services.mobility_service import MobilityService
+    from src.services.ocr_service import OcrService
+    from src.services.pdf_service import PdfService
     from src.services.database import init_db
 
     init_db()
@@ -62,6 +64,8 @@ async def startup():
         ("followup", FollowUpService),
         ("weather", WeatherService),
         ("mobility", MobilityService),
+        ("ocr", OcrService),
+        ("pdf", PdfService),
     ]
     for name, cls in _constructors:
         try:
@@ -71,7 +75,7 @@ async def startup():
 
     # Async-Initialisierung – nur erfolgreich initialisierte Services uebernehmen
     # Services ohne async init (ai, shopping, chefkoch) werden direkt uebernommen
-    for name in ("ai", "shopping", "chefkoch", "weather", "mobility"):
+    for name in ("ai", "shopping", "chefkoch", "weather", "mobility", "ocr", "pdf"):
         if name in pending:
             _svc[name] = pending[name]
             logger.info("API Service '%s' registriert (sync).", name)
@@ -125,6 +129,8 @@ async def startup():
             chefkoch_service=_svc["chefkoch"],
             email_service=_svc["email"],
             drive_service=_svc["drive"],
+            ocr_service=_svc.get("ocr"),
+            pdf_service=_svc.get("pdf"),
         )
     logger.info("API Initialisierung abgeschlossen.")
 
@@ -209,6 +215,14 @@ def get_weather_service_optional():
 
 def get_mobility_service():
     return _require("mobility")
+
+
+def get_ocr_service():
+    return _require("ocr")
+
+
+def get_pdf_service():
+    return _require("pdf")
 
 
 def get_bot_shim():
