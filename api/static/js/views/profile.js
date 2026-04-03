@@ -80,9 +80,12 @@ const ProfileView = (() => {
     { id: 'drive', emoji: '\ud83d\udcbe', name: 'Google Drive', desc: 'Dateien speichern und teilen', connKey: 'drive_connected' }
   ];
 
+  let _devDataLoaded = false;
+
   /* ── Render ── */
 
   async function render(container) {
+    _devDataLoaded = false;
     const user = Api.getUserKey() || '';
     const initial = user.charAt(0).toUpperCase();
     const name = user.charAt(0).toUpperCase() + user.slice(1);
@@ -224,13 +227,37 @@ const ProfileView = (() => {
               <span class="material-symbols-outlined collapse-icon" id="pref-dev-icon">chevron_right</span>
             </div>
             <div class="pref-section-content collapsed" id="pref-dev">
-              <div class="pref-section-inner">
-                <a href="#/issues" style="text-decoration:none;color:inherit">
-                  <div class="settings-item" style="cursor:pointer">
-                    <span class="settings-item-label"><span class="material-symbols-outlined mi-sm">bug_report</span> GitHub Issues</span>
-                    <span class="material-symbols-outlined mi-sm" style="color:var(--text-muted)">chevron_right</span>
+              <div class="pref-section-inner dev-widgets">
+                <!-- Health Monitor Widget -->
+                <div class="dev-widget" id="dev-health-widget">
+                  <div class="dev-widget-header">
+                    <span class="dev-widget-title">
+                      <span class="material-symbols-outlined mi-sm">monitor_heart</span>
+                      API Health
+                    </span>
+                    <button class="btn-icon btn-icon-sm" onclick="ProfileView.refreshHealth()" title="Aktualisieren">
+                      <span class="material-symbols-outlined mi-sm">refresh</span>
+                    </button>
                   </div>
-                </a>
+                  <div id="dev-health-content">
+                    <div class="loading"><div class="spinner"></div></div>
+                  </div>
+                </div>
+                <!-- GitHub Issues Widget -->
+                <div class="dev-widget" id="dev-issues-widget">
+                  <div class="dev-widget-header">
+                    <span class="dev-widget-title">
+                      <span class="material-symbols-outlined mi-sm">bug_report</span>
+                      Offene Issues
+                    </span>
+                    <a href="#/issues" class="btn-icon btn-icon-sm" title="Alle Issues">
+                      <span class="material-symbols-outlined mi-sm">open_in_new</span>
+                    </a>
+                  </div>
+                  <div id="dev-issues-content">
+                    <div class="loading"><div class="spinner"></div></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -452,6 +479,7 @@ const ProfileView = (() => {
     if (!isCollapsed) {
       if (contentId === 'pref-nav') loadNavConfig();
       if (contentId === 'pref-widgets') loadWidgetConfig();
+      if (contentId === 'pref-dev') loadDevWidgets();
     }
   }
 
@@ -619,6 +647,117 @@ const ProfileView = (() => {
     }
   })();
 
+  /* ── Developer Widgets ── */
+
+  async function loadDevWidgets() {
+    if (_devDataLoaded) return;
+    _devDataLoaded = true;
+    await Promise.all([loadDevHealth(), loadDevIssues()]);
+  }
+
+  async function loadDevHealth() {
+    const el = document.getElementById('dev-health-content');
+    if (!el) return;
+    try {
+      const [health, detail] = await Promise.all([
+        Api.getStatusHealth(),
+        Api.getStatusDetail()
+      ]);
+      renderHealthWidget(el, health, detail);
+    } catch {
+      el.innerHTML = '<div class="empty-state">Health-Daten nicht verf\u00fcgbar</div>';
+    }
+  }
+
+  function renderHealthWidget(el, health, detail) {
+    const now = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+    function dot(ok) {
+      return `<span class="health-dot ${ok ? 'health-dot-ok' : 'health-dot-err'}"></span>`;
+    }
+    function row(name, ok, meta) {
+      return `<div class="health-row">${dot(ok)}<span class="health-svc-name">${escapeHtml(name)}</span><span class="health-svc-meta">${escapeHtml(meta)}</span></div>`;
+    }
+
+    const db = health.services.database || {};
+    const mem = health.services.memory || {};
+    const svcs = detail.services || {};
+
+    let rows = '';
+    rows += row('Database', db.status === 'healthy', db.response_ms ? `${db.response_ms}ms` : db.status || '?');
+    rows += row('Memory', mem.status === 'healthy', mem.response_ms ? `${mem.response_ms}ms` : mem.status || '?');
+
+    for (const [key, label] of [['personal-assistant', 'Bot'], ['personal-assistant-api', 'API'], ['personal-assistant-webhook', 'Webhook']]) {
+      const s = svcs[key];
+      if (s) {
+        rows += row(label, s.active, s.active ? 'active' : 'inactive');
+      }
+    }
+
+    const okClass = health.overall === 'healthy' ? 'health-dot-ok' : 'health-dot-err';
+    el.innerHTML = `
+      <div class="health-summary">
+        <span class="health-dot ${okClass}"></span>
+        <span>${health.overall === 'healthy' ? 'Alle Systeme OK' : 'Probleme erkannt'}</span>
+        <span class="health-meta">Uptime: ${escapeHtml(detail.uptime || '?')}</span>
+      </div>
+      <div class="health-rows">${rows}</div>
+      <div class="health-footer">
+        <span class="health-meta">${escapeHtml((detail.git || {}).branch || '?')}@${escapeHtml((detail.git || {}).commit || '?')}</span>
+        <span class="health-meta">Gepr\u00fcft: ${now}</span>
+      </div>`;
+  }
+
+  async function refreshHealth() {
+    const el = document.getElementById('dev-health-content');
+    if (!el) return;
+    el.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+    await loadDevHealth();
+  }
+
+  async function loadDevIssues() {
+    const el = document.getElementById('dev-issues-content');
+    if (!el) return;
+    try {
+      const [issuesRes, labelsRes] = await Promise.allSettled([
+        Api.getGitHubIssues(),
+        Api.getGitHubLabels()
+      ]);
+      const labels = labelsRes.status === 'fulfilled' ? labelsRes.value : [];
+      const issues = issuesRes.status === 'fulfilled' ? issuesRes.value : null;
+      if (!issues) {
+        el.innerHTML = '<div class="empty-state">Issues nicht verf\u00fcgbar</div>';
+        return;
+      }
+      renderIssuesWidget(el, issues, labels);
+    } catch {
+      el.innerHTML = '<div class="empty-state">Issues nicht verf\u00fcgbar</div>';
+    }
+  }
+
+  function renderIssuesWidget(el, issues, labels) {
+    if (issues.length === 0) {
+      el.innerHTML = '<div class="empty-state">Keine offenen Issues</div>';
+      return;
+    }
+    function badge(name) {
+      const ld = labels.find(l => l.name === name);
+      if (ld && ld.color) {
+        return `<span class="badge" style="background:#${ld.color}33;color:#${ld.color}">${escapeHtml(name)}</span>`;
+      }
+      return `<span class="badge badge-accent">${escapeHtml(name)}</span>`;
+    }
+    const shown = issues.slice(0, 8);
+    const remaining = issues.length - shown.length;
+    el.innerHTML = shown.map(iss => `
+      <a href="${escapeHtml(iss.html_url)}" target="_blank" rel="noopener" class="dev-issue-row">
+        <span class="dev-issue-num">#${iss.number}</span>
+        <span class="dev-issue-title">${escapeHtml(iss.title)}</span>
+        ${iss.labels.length ? `<span class="dev-issue-labels">${iss.labels.map(l => badge(l)).join('')}</span>` : ''}
+      </a>`).join('') +
+      (remaining > 0 ? `<a href="#/issues" class="dev-issues-more">+${remaining} weitere &rarr;</a>` : '');
+  }
+
   return {
     render,
     toggleFeature,
@@ -628,6 +767,7 @@ const ProfileView = (() => {
     getTheme,
     toggleTheme,
     toggleNavItem,
-    toggleWidget
+    toggleWidget,
+    refreshHealth
   };
 })();
