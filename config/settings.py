@@ -107,6 +107,9 @@ class Settings:
     # Database
     DATABASE_URL: str = os.getenv("DATABASE_URL", f"sqlite:///{BASE_DIR}/data/assistant.db")
 
+    # Data directory (JSON-basierte Services: Invoices, Contacts, Inbox, etc.)
+    DATA_DIR: Path = BASE_DIR / "data"
+
     # Document Generation
     DOCUMENTS_DIR: Path = BASE_DIR / "data" / "documents"
 
