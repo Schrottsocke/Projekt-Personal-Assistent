@@ -298,8 +298,8 @@ const NotificationBell = (() => {
       return;
     }
     try {
-      const data = await Api.getNotificationCount();
-      updateBadge(data.unread || 0);
+      const data = await Api.getUnifiedInboxCount();
+      updateBadge(data.total || 0);
     } catch (_) {
       // Silent fail – don't show toast for background polling
     }

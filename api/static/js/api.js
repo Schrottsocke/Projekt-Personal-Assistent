@@ -508,6 +508,18 @@ const Api = (() => {
     return request(`/inbox/${id}/action`, { method: 'POST', body: { action } });
   }
 
+  // Unified Inbox
+  function getUnifiedInbox(params = {}) {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => { if (v != null) qs.set(k, String(v)); });
+    const q = qs.toString();
+    return request(`/inbox/unified${q ? '?' + q : ''}`);
+  }
+  function getUnifiedInboxCount() { return request('/inbox/unified/count'); }
+  function unifiedInboxAction(unifiedId, action) {
+    return request(`/inbox/unified/${unifiedId}/action`, { method: 'POST', body: { action } });
+  }
+
   // Shifts / Dienstplan
   function getShiftTypes(all = false) {
     return request(`/shifts/types${all ? '?all=true' : ''}`);
@@ -576,6 +588,7 @@ const Api = (() => {
     getNotifications, getNotificationCount, updateNotification, bulkUpdateNotifications, markAllNotificationsRead, createNotification,
     getAutomationRules, getAutomationMeta, createAutomationRule, updateAutomationRule, toggleAutomationRule, deleteAutomationRule, evaluateAutomation,
     getInboxItems, getInboxCount, actionInboxItem,
+    getUnifiedInbox, getUnifiedInboxCount, unifiedInboxAction,
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
     getPreferences, updatePreferences, getPreferencesRegistry,
