@@ -179,29 +179,65 @@ _LANDING_PAGE_HTML = """\
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DualMind – Dein persoenlicher KI-Assistent</title>
+<title>DualMind – Dein Tag. Auf einen Blick.</title>
 <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-background:#121212;color:#e0e0e0;min-height:100vh;display:flex;flex-direction:column;
-align-items:center;justify-content:center;text-align:center;padding:20px}
-h1{font-size:3rem;font-weight:800;color:#7c4dff;margin-bottom:12px;letter-spacing:-1px}
-p{font-size:1.15rem;color:#a0a0a0;max-width:460px;margin-bottom:32px;line-height:1.6}
+background:#121212;color:#e0e0e0;min-height:100vh;padding:0}
+.hero{min-height:80vh;display:flex;flex-direction:column;align-items:center;
+justify-content:center;text-align:center;padding:40px 20px}
+h1{font-size:2.8rem;font-weight:800;color:#e0e0e0;margin-bottom:12px;letter-spacing:-1px}
+h1 span{color:#7c4dff}
+.sub{font-size:1.15rem;color:#a0a0a0;max-width:480px;margin-bottom:36px;line-height:1.7}
 .cta{display:inline-block;padding:14px 40px;background:#7c4dff;color:#fff;
 text-decoration:none;border-radius:10px;font-size:1rem;font-weight:600;
 transition:background .2s}
 .cta:hover{background:#651fff}
-footer{position:fixed;bottom:20px;font-size:.8rem;color:#666}
+.scenes{max-width:560px;margin:0 auto;padding:0 20px 60px}
+.scenes h2{font-size:1.1rem;font-weight:700;color:#7c4dff;margin-bottom:24px;
+text-transform:uppercase;letter-spacing:1px;text-align:center}
+.scene{margin-bottom:28px;padding:20px;background:#1e1e1e;border-radius:12px;
+border-left:3px solid #7c4dff}
+.scene-time{font-size:.8rem;font-weight:600;color:#7c4dff;margin-bottom:6px;
+text-transform:uppercase;letter-spacing:.5px}
+.scene p{font-size:.95rem;color:#b0b0b0;line-height:1.6}
+.cta2{text-align:center;padding:0 20px 60px}
+footer{text-align:center;padding:20px;font-size:.8rem;color:#666}
 footer a{color:#7c4dff;text-decoration:none}
 footer a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
-<h1>DualMind</h1>
-<p>Dein persoenlicher KI-Assistent fuer Alltag und Organisation.
-Termine, Aufgaben, Einkaufslisten, Rezepte, Chat, Kontakte, Dokumente, Wetter, Schichtplanung und mehr – alles an einem Ort.</p>
-<a href="/app" class="cta">Zur App &rarr;</a>
+<div class="hero">
+  <h1>Dein Tag. <span>Auf einen Blick.</span></h1>
+  <p class="sub">DualMind buendelt Termine, Aufgaben, Einkauf und Kochen
+  in einem persoenlichen Assistenten &ndash; damit du den Kopf frei hast.</p>
+  <a href="/app" class="cta">App oeffnen &rarr;</a>
+</div>
+
+<div class="scenes">
+  <h2>Ein Tag mit DualMind</h2>
+  <div class="scene">
+    <div class="scene-time">Morgens</div>
+    <p>Du oeffnest DualMind und siehst: Fruehschicht ab 6:00, 14&deg;C mit Regen,
+    2 offene Aufgaben. Ein Satz, kein Scrollen.</p>
+  </div>
+  <div class="scene">
+    <div class="scene-time">Mittags</div>
+    <p>Du fragst den Assistenten: &bdquo;Was koche ich heute Abend?&ldquo; &ndash;
+    er schlaegt ein Rezept vor und setzt die Zutaten auf die Einkaufsliste.</p>
+  </div>
+  <div class="scene">
+    <div class="scene-time">Abends</div>
+    <p>Du hakst den Einkauf ab, checkst morgen kurz ab und legst das Handy weg. Fertig.</p>
+  </div>
+</div>
+
+<div class="cta2">
+  <a href="/app" class="cta">App oeffnen &rarr;</a>
+</div>
+
 <footer><a href="/docs">API-Dokumentation</a></footer>
 </body>
 </html>
