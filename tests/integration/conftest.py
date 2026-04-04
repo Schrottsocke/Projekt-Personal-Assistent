@@ -32,7 +32,7 @@ def _setup_test_db():
         poolclass=StaticPool,
     )
     db_mod._engine = engine
-    db_mod._SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+    db_mod._SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False, expire_on_commit=False)
     db_mod.Base.metadata.create_all(bind=engine)
 
     return engine
@@ -143,9 +143,21 @@ def client():
     _reset_db()
 
 
+def _ensure_user_profile(user_key: str) -> None:
+    """Stellt sicher, dass ein UserProfile in der Test-DB existiert."""
+    from src.services.database import UserProfile, get_db
+
+    with get_db()() as db:
+        existing = db.query(UserProfile).filter_by(user_key=user_key).first()
+        if not existing:
+            db.add(UserProfile(user_key=user_key))
+            db.flush()
+
+
 @pytest.fixture
 def auth_headers(client):
     """Login als 'taake' und Bearer-Token-Header zurückgeben."""
+    _ensure_user_profile("taake")
     resp = client.post("/auth/login", json={"username": "taake", "password": TEST_PASSWORD})
     assert resp.status_code == 200
     token = resp.json()["access_token"]
@@ -155,6 +167,7 @@ def auth_headers(client):
 @pytest.fixture
 def auth_headers_nina(client):
     """Login als 'nina' und Bearer-Token-Header zurückgeben."""
+    _ensure_user_profile("nina")
     resp = client.post("/auth/login", json={"username": "nina", "password": TEST_PASSWORD})
     assert resp.status_code == 200
     token = resp.json()["access_token"]

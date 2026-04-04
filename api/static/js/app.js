@@ -41,6 +41,8 @@
   // Neue Hub-Views
   Router.register('#/planen', (c) => PlanenView.render(c));
   Router.register('#/mehr', (c) => MehrView.render(c));
+  // Onboarding
+  Router.register('#/onboarding', (c) => OnboardingView.render(c));
 
   // ── Feste 4-Tab Navigation ──
   const FIXED_NAV = [
@@ -150,6 +152,15 @@
     }
     // Load preferences in background (updates nav when ready)
     await loadPreferences();
+    // Check onboarding status — redirect if not onboarded
+    if (Api.isLoggedIn() && window.location.hash !== '#/onboarding') {
+      try {
+        const obStatus = await Api.get('/onboarding/status');
+        if (obStatus && !obStatus.is_onboarded) {
+          window.location.hash = '#/onboarding';
+        }
+      } catch { /* ignore */ }
+    }
     // Init notification bell (polling + badge)
     if (Api.isLoggedIn()) {
       document.querySelector('.notification-bell')?.classList.remove('hidden');

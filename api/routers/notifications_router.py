@@ -1,6 +1,5 @@
 """Notifications V2 Router: Events, Preferences, History."""
 
-import json
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal, Optional
 

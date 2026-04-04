@@ -54,6 +54,61 @@ async def health():
     return {"status": "ok", "module": "finance"}
 
 
+# --- Widget Summary ---
+
+
+@router.get("/widget-summary")
+async def widget_summary(
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    from datetime import datetime
+
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+        now = datetime.utcnow()
+        month_start = datetime(now.year, now.month, 1)
+
+        # Spending this month
+        txns = (
+            db.query(Transaction)
+            .filter(Transaction.user_id == uid, Transaction.date >= month_start, Transaction.amount < 0)
+            .all()
+        )
+        spending = round(abs(sum(t.amount for t in txns)), 2)
+
+        # Budget total
+        budgets = db.query(Budget).filter(Budget.user_id == uid).all()
+        budget_total = round(sum(b.monthly_limit for b in budgets), 2)
+
+        # Next payment (contract with nearest next_billing)
+        from datetime import date as date_type
+
+        next_contract = (
+            db.query(Contract)
+            .filter(
+                Contract.user_id == uid,
+                Contract.status == "active",
+                Contract.next_billing != None,  # noqa: E711
+                Contract.next_billing >= date_type.today(),
+            )
+            .order_by(Contract.next_billing.asc())
+            .first()
+        )
+
+        # Open invoices
+        open_invoices = (
+            db.query(FinanceInvoice).filter(FinanceInvoice.user_id == uid, FinanceInvoice.status == "open").count()
+        )
+
+        return {
+            "spending_this_month": spending,
+            "budget_total": budget_total,
+            "next_payment_date": next_contract.next_billing.isoformat() if next_contract else None,
+            "next_payment_amount": next_contract.amount if next_contract else None,
+            "open_invoices_count": open_invoices,
+        }
+
+
 # --- Transactions (static routes first) ---
 
 
@@ -64,15 +119,22 @@ async def upload_csv(
     file: UploadFile,
     user_key: Annotated[str, Depends(get_current_user)],
 ):
+    from datetime import datetime as dt
+
     content = (await file.read()).decode("utf-8")
     reader = csv.DictReader(io.StringIO(content), delimiter=";")
     with get_db()() as db:
         uid = _resolve_user_id(db, user_key)
         created = []
         for row in reader:
+            date_str = row.get("date", row.get("Buchungsdatum", ""))
+            try:
+                parsed_date = dt.fromisoformat(date_str)
+            except (ValueError, TypeError):
+                parsed_date = dt.utcnow()
             txn = Transaction(
                 user_id=uid,
-                date=row.get("date", row.get("Buchungsdatum", "")),
+                date=parsed_date,
                 amount=float(row.get("amount", row.get("Betrag", "0")).replace(",", ".")),
                 description=row.get("description", row.get("Verwendungszweck", "")),
                 category=row.get("category"),

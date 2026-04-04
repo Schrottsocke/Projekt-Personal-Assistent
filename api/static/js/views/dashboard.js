@@ -242,6 +242,9 @@ const DashboardView = (() => {
     weather: renderWeatherWidget,
     drive: renderDriveWidget,
     weeklyreview: renderWeeklyReviewWidget,
+    finance: renderFinanceWidget,
+    inventory: renderInventoryWidget,
+    family: renderFamilyWidget,
   };
 
   // ── Main Render ──
@@ -302,6 +305,9 @@ const DashboardView = (() => {
       { id: 'weather', enabled: true, order: 7 },
       { id: 'drive', enabled: true, order: 8 },
       { id: 'weeklyreview', enabled: true, order: 9 },
+      { id: 'finance', enabled: false, order: 10 },
+      { id: 'inventory', enabled: false, order: 11 },
+      { id: 'family', enabled: false, order: 12 },
     ];
   }
 
@@ -484,6 +490,89 @@ const DashboardView = (() => {
 
     html += `</div>`;
     return html;
+  }
+
+  // ── Produktlinien-Widgets ──
+
+  async function renderFinanceWidget() {
+    try {
+      const data = await Api.get('/finance/widget-summary');
+      let html = `<a class="section-header section-link" href="#/finance"><span class="section-icon material-symbols-outlined">account_balance</span> Finanzhub <span class="section-arrow">Details &#8594;</span></a>`;
+      html += `<div class="card card-clickable" onclick="Router.navigate('#/finance')">`;
+      html += `<div class="card-title">Ausgaben diesen Monat</div>`;
+      const pct = data.budget_total > 0 ? Math.min(100, Math.round(data.spending_this_month / data.budget_total * 100)) : 0;
+      html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">`;
+      html += `<span style="font-size:1.3em;font-weight:600">${data.spending_this_month.toFixed(2)} \u20ac</span>`;
+      if (data.budget_total > 0) {
+        html += `<span class="card-subtitle">/ ${data.budget_total.toFixed(2)} \u20ac Budget (${pct}%)</span>`;
+      }
+      html += `</div>`;
+      if (data.budget_total > 0) {
+        html += `<div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+      }
+      if (data.next_payment_date) {
+        html += `<div class="card-subtitle" style="margin-top:8px">N\u00e4chste Zahlung: ${new Date(data.next_payment_date).toLocaleDateString('de-DE')} \u2013 ${data.next_payment_amount.toFixed(2)} \u20ac</div>`;
+      }
+      if (data.open_invoices_count > 0) {
+        html += `<div class="card-subtitle">${data.open_invoices_count} offene Rechnung${data.open_invoices_count > 1 ? 'en' : ''}</div>`;
+      }
+      html += `</div>`;
+      return html;
+    } catch {
+      return '';
+    }
+  }
+
+  async function renderInventoryWidget() {
+    try {
+      const data = await Api.get('/inventory/widget-summary');
+      let html = `<a class="section-header section-link" href="#/inventory"><span class="section-icon material-symbols-outlined">inventory_2</span> Haushaltsordner <span class="section-arrow">Details &#8594;</span></a>`;
+      html += `<div class="card card-clickable" onclick="Router.navigate('#/inventory')">`;
+      const items = [];
+      if (data.expiring_warranties_count > 0) {
+        items.push(`${data.expiring_warranties_count} Garantie${data.expiring_warranties_count > 1 ? 'n' : ''} laufen bald ab`);
+      }
+      if (data.unprocessed_documents_count > 0) {
+        items.push(`${data.unprocessed_documents_count} unbearbeitete${data.unprocessed_documents_count > 1 ? '' : 's'} Dokument${data.unprocessed_documents_count > 1 ? 'e' : ''}`);
+      }
+      if (data.next_deadline) {
+        items.push(`N\u00e4chste Frist: ${new Date(data.next_deadline).toLocaleDateString('de-DE')}${data.next_deadline_doc ? ' (' + escapeHtml(data.next_deadline_doc) + ')' : ''}`);
+      }
+      if (items.length === 0) {
+        html += `<div class="card-subtitle">Alles im gr\u00fcnen Bereich</div>`;
+      } else {
+        items.forEach(item => {
+          html += `<div class="card-subtitle" style="margin-bottom:4px">${item}</div>`;
+        });
+      }
+      html += `</div>`;
+      return html;
+    } catch {
+      return '';
+    }
+  }
+
+  async function renderFamilyWidget() {
+    try {
+      const data = await Api.get('/family/widget-summary');
+      let html = `<a class="section-header section-link" href="#/family"><span class="section-icon material-symbols-outlined">family_restroom</span> Familien-Hub <span class="section-arrow">Details &#8594;</span></a>`;
+      html += `<div class="card card-clickable" onclick="Router.navigate('#/family')">`;
+      if (data.todays_routines && data.todays_routines.length > 0) {
+        html += `<div class="card-title">Deine Aufgaben heute</div>`;
+        data.todays_routines.forEach(r => {
+          html += `<div class="card-subtitle" style="margin-bottom:4px"><span class="material-symbols-outlined mi-sm">task_alt</span> ${escapeHtml(r.name)}</div>`;
+        });
+      } else {
+        html += `<div class="card-subtitle">Keine Aufgaben f\u00fcr heute</div>`;
+      }
+      if (data.workspace_count > 0) {
+        html += `<div class="card-subtitle" style="margin-top:4px">${data.workspace_count} Workspace${data.workspace_count > 1 ? 's' : ''}</div>`;
+      }
+      html += `</div>`;
+      return html;
+    } catch {
+      return '';
+    }
   }
 
   // ── Proaktive Vorschlaege ──
