@@ -13,6 +13,7 @@ const MehrView = (() => {
     {
       label: 'Werkzeuge',
       items: [
+        { id: 'invoices', icon: 'receipt_long', label: 'Rechnungen', route: '#/invoices', desc: 'Rechnungen erstellen und verwalten' },
         { id: 'documents', icon: 'scanner', label: 'Dokumente', route: '#/documents', desc: 'Scannen, OCR, Ablage' },
         { id: 'drive', icon: 'folder', label: 'Drive', route: '#/drive', desc: 'Dateien und Uploads' },
         { id: 'contacts', icon: 'contacts', label: 'Kontakte', route: '#/contacts', desc: 'Adressbuch verwalten' },

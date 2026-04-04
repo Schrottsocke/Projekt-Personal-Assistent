@@ -585,6 +585,22 @@ const Api = (() => {
     return request(`/memories/${id}`, { method: 'DELETE' });
   }
 
+  // Invoices / Rechnungen
+  function getInvoices(status) {
+    const qs = status ? `?status=${encodeURIComponent(status)}` : '';
+    return request(`/invoices${qs}`);
+  }
+  function getInvoice(id) { return request(`/invoices/${id}`); }
+  function createInvoice(data) {
+    return request('/invoices', { method: 'POST', body: data });
+  }
+  function updateInvoice(id, data) {
+    return request(`/invoices/${id}`, { method: 'PATCH', body: data });
+  }
+  function deleteInvoice(id) {
+    return request(`/invoices/${id}`, { method: 'DELETE' });
+  }
+
   // Generic convenience methods
   function get(path, opts = {}) {
     return request(path, { ...opts, method: 'GET' });
@@ -621,6 +637,7 @@ const Api = (() => {
     updateShiftEntry, confirmShiftEntry, getShiftReport, getShiftReportCsvUrl, getPendingShifts,
     getPreferences, updatePreferences, getPreferencesRegistry,
     getChatSuggestions, getProactiveSuggestions,
+    getInvoices, getInvoice, createInvoice, updateInvoice, deleteInvoice,
     getMemories, searchMemories, deleteMemory,
     request,
     searchGlobal,

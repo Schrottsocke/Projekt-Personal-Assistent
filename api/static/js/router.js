@@ -49,7 +49,7 @@ const Router = (() => {
       '#/profile': '#/mehr', '#/documents': '#/mehr', '#/drive': '#/mehr',
       '#/contacts': '#/mehr', '#/shifts': '#/mehr', '#/automation': '#/mehr',
       '#/memory': '#/mehr', '#/weather': '#/mehr', '#/mobility': '#/mehr',
-      '#/issues': '#/mehr',
+      '#/issues': '#/mehr', '#/invoices': '#/mehr',
     };
     const activeNav = ROUTE_PARENTS[hash] || hash;
     document.querySelectorAll('.nav-item').forEach(item => {
