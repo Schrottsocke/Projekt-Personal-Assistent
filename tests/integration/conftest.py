@@ -76,12 +76,16 @@ def client():
     # Echte DB-backed Services
     from src.services.task_service import TaskService
     from src.services.shopping_service import ShoppingService
+    from src.services.notification_service import NotificationService
     from src.services.database import get_db
 
     task_svc = TaskService()
     task_svc._db = get_db()
 
     shopping_svc = ShoppingService()
+
+    notif_svc = NotificationService()
+    notif_svc._db = get_db()
 
     # Mock-Services für externe APIs
     ai_svc = AsyncMock()
@@ -124,6 +128,7 @@ def client():
         "chefkoch": chefkoch_svc,
         "email": email_svc,
         "drive": drive_svc,
+        "notification": notif_svc,
         "bot_shim": bot_shim,
     }
 
