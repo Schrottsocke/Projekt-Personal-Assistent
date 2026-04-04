@@ -3,7 +3,11 @@
 import os
 
 import pytest
-from playwright.sync_api import Page
+
+try:
+    from playwright.sync_api import Page
+except ImportError:
+    Page = None
 
 
 BASE_URL = os.getenv("E2E_BASE_URL", "http://localhost:8000")
