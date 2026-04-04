@@ -16,6 +16,7 @@ const MehrView = (() => {
         { id: 'invoices', icon: 'receipt_long', label: 'Rechnungen', route: '#/invoices', desc: 'Rechnungen erstellen und verwalten' },
         { id: 'documents', icon: 'scanner', label: 'Dokumente', route: '#/documents', desc: 'Scannen, OCR, Ablage' },
         { id: 'drive', icon: 'folder', label: 'Drive', route: '#/drive', desc: 'Dateien und Uploads' },
+        { id: 'email', icon: 'mail', label: 'E-Mail', route: '#/email', desc: 'Gmail Posteingang' },
         { id: 'contacts', icon: 'contacts', label: 'Kontakte', route: '#/contacts', desc: 'Adressbuch verwalten' },
         { id: 'templates', icon: 'library_books', label: 'Vorlagen', route: '#/templates', desc: 'Einkauf, Aufgaben, Routinen' },
         { id: 'shifts', icon: 'work', label: 'Schichtplaner', route: '#/shifts', desc: 'Diensttypen und Kalender' },

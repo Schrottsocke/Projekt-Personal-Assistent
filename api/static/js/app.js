@@ -19,6 +19,7 @@
   Router.register('#/tasks', (c) => TasksView.render(c));
   Router.register('#/mealplan', (c) => MealPlanView.render(c));
   Router.register('#/drive', (c) => DriveView.render(c));
+  Router.register('#/email', (c) => EmailView.render(c));
   Router.register('#/issues', (c) => IssuesView.render(c));
   Router.register('#/shifts', (c) => ShiftsView.render(c));
   // Redirect: Focus → Dashboard (Focus View wurde ins Dashboard integriert)
@@ -64,6 +65,7 @@
     tasks: { route: '#/tasks', icon: 'check_circle', label: 'Aufgaben' },
     mealplan: { route: '#/mealplan', icon: 'restaurant_menu', label: 'Wochenplan' },
     drive: { route: '#/drive', icon: 'folder', label: 'Drive' },
+    email: { route: '#/email', icon: 'mail', label: 'E-Mail' },
     shifts: { route: '#/shifts', icon: 'work', label: 'Dienste' },
     issues: { route: '#/issues', icon: 'bug_report', label: 'Issues' },
     focus: { route: '#/dashboard', icon: 'center_focus_strong', label: 'Heute' },
