@@ -44,17 +44,13 @@ class InvoiceService:
         if inv_type == "kleinunternehmer":
             for item in data.get("items", []):
                 if item.get("tax_rate") and item["tax_rate"] > 0:
-                    raise ValueError(
-                        "Kleinunternehmer-Rechnungen duerfen keine Umsatzsteuer ausweisen."
-                    )
+                    raise ValueError("Kleinunternehmer-Rechnungen duerfen keine Umsatzsteuer ausweisen.")
 
         # Regelbesteuerung muss Steuersatz haben
         if inv_type == "regelbesteuerung":
             for item in data.get("items", []):
                 if not item.get("tax_rate") or item["tax_rate"] <= 0:
-                    raise ValueError(
-                        "Regelbesteuerung erfordert einen gueltigen Steuersatz pro Position."
-                    )
+                    raise ValueError("Regelbesteuerung erfordert einen gueltigen Steuersatz pro Position.")
 
         now = datetime.now(timezone.utc).isoformat()
         invoice = {
@@ -108,23 +104,30 @@ class InvoiceService:
         if inv_type == "kleinunternehmer":
             for item in items:
                 if item.get("tax_rate") and item["tax_rate"] > 0:
-                    raise ValueError(
-                        "Kleinunternehmer-Rechnungen duerfen keine Umsatzsteuer ausweisen."
-                    )
+                    raise ValueError("Kleinunternehmer-Rechnungen duerfen keine Umsatzsteuer ausweisen.")
         if inv_type == "regelbesteuerung":
             for item in items:
                 if not item.get("tax_rate") or item["tax_rate"] <= 0:
-                    raise ValueError(
-                        "Regelbesteuerung erfordert einen gueltigen Steuersatz pro Position."
-                    )
+                    raise ValueError("Regelbesteuerung erfordert einen gueltigen Steuersatz pro Position.")
 
         # Felder aktualisieren
         updatable = [
-            "invoice_type", "status", "sender_name", "sender_address",
-            "sender_tax_id", "sender_vat_id", "sender_bank",
-            "recipient_name", "recipient_address",
-            "invoice_date", "delivery_date", "delivery_period",
-            "payment_terms", "items", "notes", "invoice_number",
+            "invoice_type",
+            "status",
+            "sender_name",
+            "sender_address",
+            "sender_tax_id",
+            "sender_vat_id",
+            "sender_bank",
+            "recipient_name",
+            "recipient_address",
+            "invoice_date",
+            "delivery_date",
+            "delivery_period",
+            "payment_terms",
+            "items",
+            "notes",
+            "invoice_number",
         ]
         for key in updatable:
             if key in data:
@@ -184,7 +187,7 @@ class InvoiceService:
             num_str = inv.get("invoice_number", "")
             if num_str.startswith(prefix):
                 try:
-                    n = int(num_str[len(prefix):])
+                    n = int(num_str[len(prefix) :])
                     max_num = max(max_num, n)
                 except ValueError:
                     pass

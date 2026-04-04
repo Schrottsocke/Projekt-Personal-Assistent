@@ -59,9 +59,7 @@ async def update_invoice(
     invoice_svc=Depends(get_invoice_service),
 ):
     try:
-        result = await invoice_svc.update_invoice(
-            user_key, invoice_id, body.model_dump(exclude_unset=True)
-        )
+        result = await invoice_svc.update_invoice(user_key, invoice_id, body.model_dump(exclude_unset=True))
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
     if not result:
