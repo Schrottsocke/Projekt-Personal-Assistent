@@ -3072,7 +3072,6 @@ select:focus-visible,
   padding: 0 var(--space-2);
 }
 
-.nav-config-grid,
 .widget-config-grid {
   display: flex;
   flex-direction: column;
@@ -3080,7 +3079,6 @@ select:focus-visible,
   margin-bottom: var(--space-4);
 }
 
-.nav-config-item,
 .widget-config-item {
   display: flex;
   align-items: center;
@@ -3091,26 +3089,14 @@ select:focus-visible,
   transition: opacity 0.2s;
 }
 
-.nav-config-item.disabled,
 .widget-config-item.disabled {
   opacity: 0.5;
 }
 
-.nav-config-info,
 .widget-config-info {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.nav-config-label {
-  font-weight: 500;
-}
-
-.nav-config-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
 }
 
 .btn-icon {
