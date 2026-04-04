@@ -81,4 +81,6 @@ class ApiConfig {
   static const String chatStreamPath = '/chat/message/stream';
   static const String chatVoicePath = '/chat/voice';
   static const String chatSuggestionsPath = '/suggestions/chat';
+  static const String shiftTypesPath = '/shifts/types';
+  static const String shiftEntriesPath = '/shifts/entries';
 }
