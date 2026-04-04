@@ -52,3 +52,12 @@ def get_workspace_access(
             return {"workspace": workspace, "role": member.role, "user_id": profile.id}
 
         raise HTTPException(status_code=403, detail="Kein Zugriff auf diesen Workspace.")
+
+
+def resolve_user_id(user_key: str) -> int:
+    """Standalone helper: user_key → user_profiles.id. Not a FastAPI dependency."""
+    with get_db()() as db:
+        profile = db.query(UserProfile).filter(UserProfile.user_key == user_key).first()
+        if not profile:
+            raise HTTPException(status_code=404, detail="User-Profil nicht gefunden.")
+        return profile.id
