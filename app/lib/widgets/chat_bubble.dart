@@ -3,7 +3,9 @@ import '../models/chat_message.dart';
 
 class ChatBubble extends StatelessWidget {
   final ChatMessage message;
-  const ChatBubble({super.key, required this.message});
+  final bool isStreaming;
+
+  const ChatBubble({super.key, required this.message, this.isStreaming = false});
 
   @override
   Widget build(BuildContext context) {
@@ -37,15 +39,73 @@ class ChatBubble extends StatelessWidget {
                   bottomRight: Radius.circular(isUser ? 4 : 16),
                 ),
               ),
-              child: Text(
-                message.content,
-                style: TextStyle(color: isUser ? Colors.white : theme.colorScheme.onSurface),
-              ),
+              child: isStreaming
+                  ? _StreamingText(
+                      text: message.content,
+                      style: TextStyle(color: isUser ? Colors.white : theme.colorScheme.onSurface),
+                    )
+                  : Text(
+                      message.content,
+                      style: TextStyle(color: isUser ? Colors.white : theme.colorScheme.onSurface),
+                    ),
             ),
           ),
           if (isUser) const SizedBox(width: 8),
         ],
       ),
+    );
+  }
+}
+
+/// Zeigt Text mit blinkendem Cursor am Ende waehrend des Streamings.
+class _StreamingText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+
+  const _StreamingText({required this.text, this.style});
+
+  @override
+  State<_StreamingText> createState() => _StreamingTextState();
+}
+
+class _StreamingTextState extends State<_StreamingText> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) {
+        return Text.rich(
+          TextSpan(
+            text: widget.text,
+            style: widget.style,
+            children: [
+              TextSpan(
+                text: '\u258c',
+                style: widget.style?.copyWith(
+                  color: widget.style?.color?.withValues(alpha: _controller.value),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

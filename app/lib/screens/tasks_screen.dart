@@ -12,8 +12,9 @@ class TasksScreen extends ConsumerStatefulWidget {
 
 class _TasksScreenState extends ConsumerState<TasksScreen> {
   final _addController = TextEditingController();
-  String _filter = 'open'; // 'open', 'done', 'all'
+  String _filter = 'open'; // 'open', 'in_progress', 'done', 'all'
   String _newPriority = 'medium';
+  String? _newRecurrence;
 
   @override
   void dispose() {
@@ -35,6 +36,7 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             onSelected: (v) => setState(() => _filter = v),
             itemBuilder: (_) => [
               PopupMenuItem(value: 'open', child: Text('Offen${_filter == 'open' ? ' \u2713' : ''}')),
+              PopupMenuItem(value: 'in_progress', child: Text('In Bearbeitung${_filter == 'in_progress' ? ' \u2713' : ''}')),
               PopupMenuItem(value: 'done', child: Text('Erledigt${_filter == 'done' ? ' \u2713' : ''}')),
               PopupMenuItem(value: 'all', child: Text('Alle${_filter == 'all' ? ' \u2713' : ''}')),
             ],
@@ -125,6 +127,37 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
             ],
           ),
           const SizedBox(width: 8),
+          // Wiederholung
+          PopupMenuButton<String?>(
+            tooltip: 'Wiederholung',
+            onSelected: (v) => setState(() => _newRecurrence = v),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade600),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.repeat,
+                    size: 16,
+                    color: _newRecurrence != null ? Theme.of(context).colorScheme.primary : Colors.grey,
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.arrow_drop_down, size: 18),
+                ],
+              ),
+            ),
+            itemBuilder: (_) => [
+              PopupMenuItem(value: null, child: Text('Keine${_newRecurrence == null ? ' \u2713' : ''}')),
+              PopupMenuItem(value: 'daily', child: Text('Taeglich${_newRecurrence == 'daily' ? ' \u2713' : ''}')),
+              PopupMenuItem(value: 'weekly', child: Text('Woechentlich${_newRecurrence == 'weekly' ? ' \u2713' : ''}')),
+              PopupMenuItem(value: 'monthly', child: Text('Monatlich${_newRecurrence == 'monthly' ? ' \u2713' : ''}')),
+            ],
+          ),
+          const SizedBox(width: 8),
           FilledButton(onPressed: _addTask, child: const Icon(Icons.add)),
         ],
       ),
@@ -135,27 +168,30 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
     final title = _addController.text.trim();
     if (title.isEmpty) return;
     _addController.clear();
-    await ref.read(taskProvider.notifier).addTask(title, priority: _newPriority);
+    await ref.read(taskProvider.notifier).addTask(title, priority: _newPriority, recurrence: _newRecurrence);
   }
 
   Widget _buildList(List<Task> tasks) {
     final filtered = tasks.where((t) {
-      if (_filter == 'open') return !t.isDone;
+      if (_filter == 'open') return !t.isDone && !t.isInProgress;
+      if (_filter == 'in_progress') return t.isInProgress;
       if (_filter == 'done') return t.isDone;
       return true;
     }).toList();
 
     if (filtered.isEmpty) {
+      final label = switch (_filter) {
+        'done' => 'Keine erledigten Aufgaben',
+        'in_progress' => 'Keine Aufgaben in Bearbeitung',
+        _ => 'Keine offenen Aufgaben',
+      };
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.check_box_outlined, size: 48, color: Colors.grey),
             const SizedBox(height: 16),
-            Text(
-              _filter == 'done' ? 'Keine erledigten Aufgaben' : 'Keine offenen Aufgaben',
-              style: const TextStyle(color: Colors.grey),
-            ),
+            Text(label, style: const TextStyle(color: Colors.grey)),
           ],
         ),
       );
@@ -168,7 +204,8 @@ class _TasksScreenState extends ConsumerState<TasksScreen> {
         itemCount: filtered.length,
         itemBuilder: (_, i) => TaskCard(
           task: filtered[i],
-          onComplete: () => ref.read(taskProvider.notifier).completeTask(filtered[i].id),
+          onStatusChange: (status) => ref.read(taskProvider.notifier).updateStatus(filtered[i].id, status),
+          onTitleEdit: (title) => ref.read(taskProvider.notifier).updateTask(filtered[i].id, title: title),
           onDelete: () async {
             final ok = await showDialog<bool>(
               context: context,
