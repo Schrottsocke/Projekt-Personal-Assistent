@@ -85,6 +85,50 @@ class BudgetOut(BaseModel):
         from_attributes = True
 
 
+# --- Contract Update ---
+
+
+class ContractUpdate(BaseModel):
+    name: Optional[str] = None
+    amount: Optional[float] = None
+    interval: Optional[Literal["monthly", "yearly", "quarterly"]] = None
+    start_date: Optional[date] = None
+    cancellation_deadline: Optional[date] = None
+    next_billing: Optional[date] = None
+    status: Optional[Literal["active", "cancelled", "expired"]] = None
+
+
+# --- Contract Summary ---
+
+
+class ContractSummary(BaseModel):
+    total_monthly_cost: float
+    active_count: int
+    expiring_soon: list[ContractOut]
+
+
+# --- Budget Alert ---
+
+
+class BudgetAlert(BaseModel):
+    category: str
+    monthly_limit: float
+    spent: float
+    percentage: float
+    over_limit: bool
+
+
+# --- Monthly Overview ---
+
+
+class MonthlyOverview(BaseModel):
+    year: int
+    month: int
+    total_income: float
+    total_expenses: float
+    by_category: dict[str, float]
+
+
 # --- FinanceInvoice ---
 
 
@@ -108,3 +152,11 @@ class FinanceInvoiceOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# --- FinanceInvoice Update ---
+
+
+class FinanceInvoiceUpdate(BaseModel):
+    status: Optional[Literal["open", "paid", "overdue"]] = None
+    pdf_path: Optional[str] = Field(None, max_length=500)
