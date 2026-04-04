@@ -16,7 +16,11 @@ from sqlalchemy import (
     Integer,
     Boolean,
     DateTime,
+    Date,
+    Float,
     Text,
+    ForeignKey,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
@@ -189,6 +193,10 @@ class ScannedDocument(Base):
     sender = Column(String(200), nullable=True)
     amount = Column(String(50), nullable=True)  # Betrag falls Rechnung
     ocr_text = Column(Text, nullable=True)  # Vollstaendiger OCR-Text
+    category = Column(String(50), nullable=True)  # rechnung, vertrag, garantie, kassenbon, brief
+    deadline = Column(Date, nullable=True)
+    ocr_confidence = Column(Float, nullable=True)
+    storage_location = Column(String(20), nullable=True)  # local, google_drive, server
     scanned_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -229,22 +237,53 @@ class MealPlanEntry(Base):
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
-class Notification(Base):
-    """Zentrale Benachrichtigung fuer Systemereignisse, Warnungen, Erinnerungen."""
+class NotificationEvent(Base):
+    """Benachrichtigungsereignis mit Kanal- und Referenz-Tracking.
 
-    __tablename__ = "notifications"
+    Ersetzt das alte Notification-Model. Enthaelt Rueckwaertskompatibilitaetsfelder
+    (user_key, title, status, link) fuer bestehenden Code.
+    """
+
+    __tablename__ = "notification_events"
 
     id = Column(Integer, primary_key=True)
-    user_key = Column(String(50), nullable=False)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=True)
+    # Rueckwaertskompatibilitaet: user_key fuer bestehenden NotificationService
+    user_key = Column(String(50), nullable=True)
     type = Column(String(30), nullable=False)  # reminder, follow_up, document, inbox, weather, system
-    title = Column(String(300), nullable=False)
+    title = Column(String(300), nullable=True)
+    reference_id = Column(Integer, nullable=True)
+    reference_type = Column(String(50), nullable=True)
     message = Column(Text, nullable=True)
     status = Column(String(20), default="new")  # new, read, completed, hidden
-    link = Column(String(500), nullable=True)  # Deep-Link zum zugehoerigen Modul
+    link = Column(String(500), nullable=True)
+    sent_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    channel = Column(String(10), default="inapp")  # push, email, inapp
+    read_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
     )
+
+
+# Rueckwaertskompatibilitaet: Alias fuer bestehenden Code
+Notification = NotificationEvent
+
+
+class NotificationPreference(Base):
+    """Benachrichtigungseinstellungen pro User und Kategorie."""
+
+    __tablename__ = "notification_preferences"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    category = Column(String(50), nullable=False)
+    push_enabled = Column(Boolean, default=True)
+    email_enabled = Column(Boolean, default=True)
+    quiet_start = Column(String(5), default="22:00")  # HH:MM
+    quiet_end = Column(String(5), default="07:00")  # HH:MM
+
+    __table_args__ = (UniqueConstraint("user_id", "category", name="uq_notification_pref_user_category"),)
 
 
 class ShiftType(Base):
@@ -303,6 +342,157 @@ class ShiftEntry(Base):
     reminder_sent = Column(Boolean, default=False)
     reminder_count = Column(Integer, default=0)
     next_reminder_at = Column(DateTime, nullable=True)
+
+
+# ---------------------------------------------------------------------------
+# Produktlinien-Models: Finance, Inventory, Family
+# ---------------------------------------------------------------------------
+
+
+class Transaction(Base):
+    """Finanztransaktion (Import, manuell oder Scan)."""
+
+    __tablename__ = "transactions"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    date = Column(DateTime, nullable=False)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(10), default="EUR")
+    category = Column(String(50), nullable=True)
+    description = Column(Text, nullable=True)
+    source = Column(String(10), default="manual")  # csv, manual, scan
+    raw_text = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Budget(Base):
+    """Monatsbudget pro Kategorie."""
+
+    __tablename__ = "budgets"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    category = Column(String(50), nullable=False)
+    monthly_limit = Column(Float, nullable=False)
+    alert_threshold = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Contract(Base):
+    """Laufender Vertrag mit Kuendigungsfrist-Tracking."""
+
+    __tablename__ = "contracts"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    name = Column(String(200), nullable=False)
+    amount = Column(Float, nullable=False)
+    interval = Column(String(20), default="monthly")  # monthly, yearly, quarterly
+    start_date = Column(Date, nullable=False)
+    cancellation_deadline = Column(Date, nullable=True)
+    next_billing = Column(Date, nullable=True)
+    status = Column(String(20), default="active")  # active, cancelled, expired
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class FinanceInvoice(Base):
+    """Privatkunden-Rechnung (nicht zu verwechseln mit Kleinunternehmer-Rechnungen)."""
+
+    __tablename__ = "finance_invoices"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    recipient = Column(String(200), nullable=False)
+    total = Column(Float, nullable=False)
+    due_date = Column(Date, nullable=False)
+    status = Column(String(20), default="open")  # open, paid, overdue
+    pdf_path = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class HouseholdWorkspace(Base):
+    """Haushalt / geteilter Workspace fuer Family-Features."""
+
+    __tablename__ = "household_workspaces"
+
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    owner_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class WorkspaceMember(Base):
+    """Mitgliedschaft in einem Workspace mit Rollenmodell."""
+
+    __tablename__ = "workspace_members"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("household_workspaces.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    role = Column(String(20), default="viewer")  # admin, editor, viewer
+    invited_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    accepted_at = Column(DateTime, nullable=True)
+
+
+class Routine(Base):
+    """Wiederkehrende Aufgabe im Haushalt."""
+
+    __tablename__ = "routines"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("household_workspaces.id"), nullable=False)
+    name = Column(String(200), nullable=False)
+    interval = Column(String(20), default="weekly")  # daily, weekly, monthly
+    assignee_strategy = Column(String(20), default="fixed")  # fixed, rotation
+    current_assignee_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class RoutineCompletion(Base):
+    """Erledigungsnachweis fuer eine Routine."""
+
+    __tablename__ = "routine_completions"
+
+    id = Column(Integer, primary_key=True)
+    routine_id = Column(Integer, ForeignKey("routines.id"), nullable=False)
+    completed_by = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    completed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    photo_url = Column(String(500), nullable=True)
+
+
+class InventoryItem(Base):
+    """Gegenstand im Haushaltsinventar."""
+
+    __tablename__ = "inventory_items"
+
+    id = Column(Integer, primary_key=True)
+    workspace_id = Column(Integer, ForeignKey("household_workspaces.id"), nullable=True)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    name = Column(String(200), nullable=False)
+    description = Column(Text, nullable=True)
+    room = Column(String(100), nullable=True)
+    photo_url = Column(String(500), nullable=True)
+    value = Column(Float, nullable=True)
+    purchase_date = Column(Date, nullable=True)
+    receipt_doc_id = Column(Integer, ForeignKey("scanned_documents.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class Warranty(Base):
+    """Garantie-Eintrag mit Ablauf-Tracking."""
+
+    __tablename__ = "warranties"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    product_name = Column(String(200), nullable=False)
+    purchase_date = Column(Date, nullable=True)
+    warranty_end = Column(Date, nullable=True)
+    vendor = Column(String(200), nullable=True)
+    receipt_doc_id = Column(Integer, ForeignKey("scanned_documents.id"), nullable=True)
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 # Engine & Session Setup
@@ -386,6 +576,11 @@ def init_db():
                     "ALTER TABLE shift_entries ADD COLUMN reminder_sent BOOLEAN DEFAULT 0",
                     "ALTER TABLE shift_entries ADD COLUMN reminder_count INTEGER DEFAULT 0",
                     "ALTER TABLE shift_entries ADD COLUMN next_reminder_at DATETIME",
+                    # ScannedDocument: Produktlinien-Erweiterung
+                    "ALTER TABLE scanned_documents ADD COLUMN category VARCHAR(50)",
+                    "ALTER TABLE scanned_documents ADD COLUMN deadline DATE",
+                    "ALTER TABLE scanned_documents ADD COLUMN ocr_confidence FLOAT",
+                    "ALTER TABLE scanned_documents ADD COLUMN storage_location VARCHAR(20)",
                 ]:
                     try:
                         conn.execute(sa_text(col_sql))
