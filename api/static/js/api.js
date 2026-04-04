@@ -138,6 +138,17 @@ const Api = (() => {
 
     if (res.status === 204) return null;
 
+    // Service unavailable – eigener Fehlerpfad mit Warning-Toast
+    if (res.status === 503) {
+      const err = await res.json().catch(() => ({ detail: res.statusText }));
+      const msg = err.detail || 'Service nicht verfügbar';
+      Toast.show(msg, 'warning');
+      const e = new Error(msg);
+      e.isServiceDown = true;
+      e.status = 503;
+      throw e;
+    }
+
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
       const msg = err.detail || `HTTP ${res.status}`;
