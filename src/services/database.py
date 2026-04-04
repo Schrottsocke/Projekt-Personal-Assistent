@@ -540,7 +540,7 @@ def init_db():
         if is_sqlite:
             event.listen(_engine, "connect", _set_sqlite_pragmas)
 
-        _SessionLocal = sessionmaker(bind=_engine, autocommit=False, autoflush=False)
+        _SessionLocal = sessionmaker(bind=_engine, autocommit=False, autoflush=False, expire_on_commit=False)
 
         # Tabellen erstellen
         Base.metadata.create_all(bind=_engine)

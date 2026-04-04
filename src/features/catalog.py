@@ -181,6 +181,36 @@ CATALOG: list[Feature] = [
         required_settings=[],
         default_enabled=False,
     ),
+    Feature(
+        id="finance",
+        emoji="💰",
+        name="Finanzhub",
+        description="Ausgaben, Verträge, Budgets und Rechnungen verwalten",
+        intents=[],
+        commands=[],
+        required_settings=[],
+        default_enabled=False,
+    ),
+    Feature(
+        id="inventory",
+        emoji="📦",
+        name="Haushaltsordner",
+        description="Inventar, Garantien und Dokumente organisieren",
+        intents=[],
+        commands=[],
+        required_settings=[],
+        default_enabled=False,
+    ),
+    Feature(
+        id="family",
+        emoji="👨‍👩‍👧‍👦",
+        name="Familien-Modus",
+        description="Gemeinsamer Workspace mit Aufgaben-Rotation",
+        intents=[],
+        commands=[],
+        required_settings=[],
+        default_enabled=False,
+    ),
 ]
 
 # Schnell-Lookup: feature_id → Feature

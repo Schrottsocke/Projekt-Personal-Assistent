@@ -42,6 +42,40 @@ def _resolve_user_id(db, user_key: str) -> int:
     return profile.id
 
 
+# --- Widget Summary ---
+
+
+@router.get("/widget-summary")
+async def widget_summary(user_key: Annotated[str, Depends(get_current_user)]):
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+
+        # Find user's workspaces (owned or member)
+        owned = db.query(HouseholdWorkspace).filter(HouseholdWorkspace.owner_id == uid).all()
+        member_ws_ids = [m.workspace_id for m in db.query(WorkspaceMember).filter(WorkspaceMember.user_id == uid).all()]
+        all_ws_ids = list({w.id for w in owned} | set(member_ws_ids))
+
+        # Today's routines assigned to user
+        todays_routines = []
+        next_routine_due = None
+        if all_ws_ids:
+            routines = (
+                db.query(Routine).filter(Routine.workspace_id.in_(all_ws_ids), Routine.current_assignee_id == uid).all()
+            )
+            for r in routines:
+                todays_routines.append({"name": r.name, "interval": r.interval})
+            # Next routine (any assignee) in user's workspaces
+            any_routine = db.query(Routine).filter(Routine.workspace_id.in_(all_ws_ids)).first()
+            if any_routine:
+                next_routine_due = any_routine.name
+
+        return {
+            "todays_routines": todays_routines,
+            "workspace_count": len(all_ws_ids),
+            "next_routine_due": next_routine_due,
+        }
+
+
 def _check_workspace_access(db, workspace_id: int, user_id: int) -> HouseholdWorkspace:
     ws = db.query(HouseholdWorkspace).filter(HouseholdWorkspace.id == workspace_id).first()
     if not ws:

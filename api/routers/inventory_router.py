@@ -44,6 +44,57 @@ async def health():
     return {"status": "ok", "module": "inventory"}
 
 
+# --- Widget Summary ---
+
+
+@router.get("/widget-summary")
+async def widget_summary(user_key: Annotated[str, Depends(get_current_user)]):
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+        cutoff = date.today() + timedelta(days=30)
+
+        # Expiring warranties (within 30 days)
+        expiring = (
+            db.query(Warranty)
+            .filter(
+                Warranty.user_id == uid,
+                Warranty.warranty_end != None,  # noqa: E711
+                Warranty.warranty_end <= cutoff,
+                Warranty.warranty_end >= date.today(),
+            )
+            .count()
+        )
+
+        # Unprocessed documents (no category assigned)
+        unprocessed = (
+            db.query(ScannedDocument)
+            .filter(
+                ScannedDocument.user_key == user_key,
+                ScannedDocument.category == None,  # noqa: E711
+            )
+            .count()
+        )
+
+        # Next deadline from documents
+        next_doc = (
+            db.query(ScannedDocument)
+            .filter(
+                ScannedDocument.user_key == user_key,
+                ScannedDocument.deadline != None,  # noqa: E711
+                ScannedDocument.deadline >= date.today(),
+            )
+            .order_by(ScannedDocument.deadline.asc())
+            .first()
+        )
+
+        return {
+            "expiring_warranties_count": expiring,
+            "unprocessed_documents_count": unprocessed,
+            "next_deadline": next_doc.deadline.isoformat() if next_doc else None,
+            "next_deadline_doc": next_doc.filename if next_doc else None,
+        }
+
+
 # --- Items ---
 
 

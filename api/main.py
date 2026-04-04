@@ -62,6 +62,8 @@ from api.routers import (
     inventory_router,
     family_router,
     notifications_router,
+    gdpr_router,
+    onboarding_router,
 )
 
 logger = structlog.get_logger(__name__)
@@ -335,6 +337,8 @@ app.include_router(finance_router.router, prefix="/finance", tags=["Finance"])
 app.include_router(inventory_router.router, prefix="/inventory", tags=["Inventory"])
 app.include_router(family_router.router, prefix="/family", tags=["Family"])
 app.include_router(notifications_router.router, prefix="/notifications-v2", tags=["Notifications V2"])
+app.include_router(gdpr_router.router, prefix="/gdpr", tags=["GDPR"])
+app.include_router(onboarding_router.router, prefix="/onboarding", tags=["Onboarding"])
 app.include_router(status.router)
 
 

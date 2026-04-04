@@ -120,6 +120,15 @@ DASHBOARD_WIDGETS_REGISTRY = [
     {"id": "shopping", "label": "Einkaufsliste", "icon": "shopping_cart", "default_enabled": True, "default_order": 4},
     {"id": "mealplan", "label": "Wochenplan", "icon": "restaurant", "default_enabled": True, "default_order": 5},
     {"id": "drive", "label": "Drive", "icon": "folder", "default_enabled": True, "default_order": 6},
+    {"id": "finance", "label": "Finanzhub", "icon": "account_balance", "default_enabled": False, "default_order": 7},
+    {
+        "id": "inventory",
+        "label": "Haushaltsordner",
+        "icon": "inventory_2",
+        "default_enabled": False,
+        "default_order": 8,
+    },
+    {"id": "family", "label": "Familien-Hub", "icon": "family_restroom", "default_enabled": False, "default_order": 9},
 ]
 
 MAX_PINNED_NAV = 5
