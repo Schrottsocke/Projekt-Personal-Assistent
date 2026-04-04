@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../providers/features_provider.dart';
 import '../providers/preferences_provider.dart';
+import '../providers/theme_provider.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
@@ -101,6 +102,7 @@ class ProfileScreen extends ConsumerWidget {
           // Sonstige Einstellungen
           Text('Sonstige Einstellungen', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
+          _ThemeToggleTile(),
           const ListTile(
             leading: Icon(Icons.schedule),
             title: Text('Briefing-Zeit'),
@@ -160,6 +162,7 @@ class _NavConfigSection extends ConsumerWidget {
     'mealplan': {'label': 'Wochenplan', 'icon': Icons.restaurant},
     'drive': {'label': 'Drive', 'icon': Icons.folder},
     'shifts': {'label': 'Dienste', 'icon': Icons.work},
+    'notifications': {'label': 'Mitteilungen', 'icon': Icons.notifications},
     'issues': {'label': 'Issues', 'icon': Icons.bug_report},
   };
 
@@ -328,6 +331,33 @@ class _FeaturesSection extends ConsumerWidget {
 }
 
 // ── Service Status Tile ──
+
+class _ThemeToggleTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(themeModeProvider);
+    return ListTile(
+      leading: const Icon(Icons.brightness_6),
+      title: const Text('Theme'),
+      dense: true,
+      trailing: SegmentedButton<ThemeMode>(
+        segments: const [
+          ButtonSegment(value: ThemeMode.system, label: Text('System', style: TextStyle(fontSize: 11))),
+          ButtonSegment(value: ThemeMode.light, label: Text('Hell', style: TextStyle(fontSize: 11))),
+          ButtonSegment(value: ThemeMode.dark, label: Text('Dunkel', style: TextStyle(fontSize: 11))),
+        ],
+        selected: {current},
+        onSelectionChanged: (selection) {
+          ref.read(themeModeProvider.notifier).setMode(selection.first);
+        },
+        style: ButtonStyle(
+          visualDensity: VisualDensity.compact,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+      ),
+    );
+  }
+}
 
 class _ServiceTile extends StatelessWidget {
   final IconData icon;
