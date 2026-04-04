@@ -84,8 +84,11 @@ async def status():
 async def status_health():
     """
     Oeffentlicher Health-Check mit Service-Status.
-    Prueft Datenbank und Memory-Service einzeln und misst Antwortzeiten.
+    Prueft Datenbank und alle registrierten Services mit Antwortzeiten.
     """
+    from api import dependencies
+    from api.main import _COMMIT_HASH, _STARTUP_TIME
+
     services = {}
     overall_healthy = True
 
@@ -108,29 +111,35 @@ async def status_health():
         services["database"] = {"status": "down", "error": str(exc), "response_ms": elapsed}
         overall_healthy = False
 
-    # 2. Memory-Service-Check
-    try:
-        from api import dependencies
-
+    # 2. Alle registrierten Services pruefen
+    critical_services = {"ai"}
+    for name, svc in sorted(dependencies._svc.items()):
+        if name == "bot_shim":
+            continue
         t0 = time.monotonic()
-        mem_svc = dependencies._svc.get("memory")
-        if mem_svc is None:
-            services["memory"] = {"status": "down", "error": "not_initialized"}
-            overall_healthy = False
-        elif hasattr(mem_svc, "initialized") and not mem_svc.initialized:
+        if hasattr(svc, "initialized") and not svc.initialized:
             elapsed = round((time.monotonic() - t0) * 1000, 1)
-            services["memory"] = {"status": "down", "error": "init_failed", "response_ms": elapsed}
-            overall_healthy = False
+            services[name] = {"status": "down", "error": "init_failed", "response_ms": elapsed}
+            if name in critical_services:
+                overall_healthy = False
         else:
             elapsed = round((time.monotonic() - t0) * 1000, 1)
-            services["memory"] = {"status": "healthy", "response_ms": elapsed}
-    except Exception as exc:
-        elapsed = round((time.monotonic() - t0) * 1000, 1)
-        services["memory"] = {"status": "down", "error": str(exc), "response_ms": elapsed}
-        overall_healthy = False
+            services[name] = {"status": "healthy", "response_ms": elapsed}
+
+    # Kritische Services die gar nicht registriert sind
+    for name in critical_services:
+        if name not in services:
+            services[name] = {"status": "down", "error": "not_registered"}
+            overall_healthy = False
 
     overall = "healthy" if overall_healthy else "unhealthy"
-    return {"services": services, "overall": overall}
+    return {
+        "services": services,
+        "overall": overall,
+        "uptime": _uptime_str(),
+        "commit": _COMMIT_HASH,
+        "deployed_at": _STARTUP_TIME,
+    }
 
 
 @router.get("/status/detail")

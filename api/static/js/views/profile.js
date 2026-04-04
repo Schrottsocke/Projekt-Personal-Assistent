@@ -744,11 +744,16 @@ const ProfileView = (() => {
     const el = document.getElementById('dev-health-content');
     if (!el) return;
     try {
-      const [health, detail] = await Promise.all([
+      const [health, detailRes] = await Promise.allSettled([
         Api.getStatusHealth(),
         Api.getStatusDetail()
       ]);
-      renderHealthWidget(el, health, detail);
+      if (health.status !== 'fulfilled') {
+        el.innerHTML = '<div class="empty-state">Health-Daten nicht verf\u00fcgbar</div>';
+        return;
+      }
+      const detail = detailRes.status === 'fulfilled' ? detailRes.value : null;
+      renderHealthWidget(el, health.value, detail);
     } catch {
       el.innerHTML = '<div class="empty-state">Health-Daten nicht verf\u00fcgbar</div>';
     }
@@ -757,38 +762,52 @@ const ProfileView = (() => {
   function renderHealthWidget(el, health, detail) {
     const now = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
-    function dot(ok) {
-      return `<span class="health-dot ${ok ? 'health-dot-ok' : 'health-dot-err'}"></span>`;
+    function dot(status) {
+      const cls = status === 'healthy' ? 'health-dot-ok' : 'health-dot-err';
+      return `<span class="health-dot ${cls}"></span>`;
     }
-    function row(name, ok, meta) {
-      return `<div class="health-row">${dot(ok)}<span class="health-svc-name">${escapeHtml(name)}</span><span class="health-svc-meta">${escapeHtml(meta)}</span></div>`;
+    function row(name, svc) {
+      const meta = svc.response_ms != null ? `${svc.response_ms}ms` : (svc.error || svc.status || '?');
+      return `<div class="health-row">${dot(svc.status)}<span class="health-svc-name">${escapeHtml(name)}</span><span class="health-svc-meta">${escapeHtml(meta)}</span></div>`;
     }
 
-    const db = health.services.database || {};
-    const mem = health.services.memory || {};
-    const svcs = detail.services || {};
+    // Alle Services aus Health-Response rendern
+    const svcEntries = Object.entries(health.services || {});
+    const healthyRows = svcEntries.filter(([, s]) => s.status === 'healthy');
+    const downRows = svcEntries.filter(([, s]) => s.status !== 'healthy');
 
     let rows = '';
-    rows += row('Database', db.status === 'healthy', db.response_ms ? `${db.response_ms}ms` : db.status || '?');
-    rows += row('Memory', mem.status === 'healthy', mem.response_ms ? `${mem.response_ms}ms` : mem.status || '?');
+    // Down-Services zuerst (wichtiger)
+    for (const [name, svc] of downRows) rows += row(name, svc);
+    for (const [name, svc] of healthyRows) rows += row(name, svc);
 
-    for (const [key, label] of [['personal-assistant', 'Bot'], ['personal-assistant-api', 'API'], ['personal-assistant-webhook', 'Webhook']]) {
-      const s = svcs[key];
-      if (s) {
-        rows += row(label, s.active, s.active ? 'active' : 'inactive');
+    // Systemd-Services aus /status/detail (falls verfuegbar)
+    if (detail && detail.services) {
+      for (const [key, label] of [['personal-assistant', 'Bot'], ['personal-assistant-api', 'API'], ['personal-assistant-webhook', 'Webhook']]) {
+        const s = detail.services[key];
+        if (s) {
+          const svcObj = { status: s.active ? 'healthy' : 'down' };
+          rows += row(label, svcObj);
+        }
       }
     }
 
     const okClass = health.overall === 'healthy' ? 'health-dot-ok' : 'health-dot-err';
+    const uptime = health.uptime || (detail && detail.uptime) || '?';
+    const commit = health.commit || (detail && detail.git && detail.git.commit) || '?';
+    const branch = (detail && detail.git && detail.git.branch) || '';
+    const branchInfo = branch ? `${branch}@${commit}` : commit;
+
     el.innerHTML = `
       <div class="health-summary">
         <span class="health-dot ${okClass}"></span>
         <span>${health.overall === 'healthy' ? 'Alle Systeme OK' : 'Probleme erkannt'}</span>
-        <span class="health-meta">Uptime: ${escapeHtml(detail.uptime || '?')}</span>
+        <span class="health-meta">Uptime: ${escapeHtml(uptime)}</span>
       </div>
       <div class="health-rows">${rows}</div>
       <div class="health-footer">
-        <span class="health-meta">${escapeHtml((detail.git || {}).branch || '?')}@${escapeHtml((detail.git || {}).commit || '?')}</span>
+        <span class="health-meta">${escapeHtml(branchInfo)}</span>
+        <span class="health-meta">${escapeHtml(String(healthyRows.length))}/${escapeHtml(String(svcEntries.length))} Services OK</span>
         <span class="health-meta">Gepr\u00fcft: ${now}</span>
       </div>`;
   }

@@ -146,6 +146,18 @@ async def startup():
             ocr_service=_svc.get("ocr"),
             pdf_service=_svc.get("pdf"),
         )
+    # Startup Readiness Summary
+    all_expected = [n for n, _ in _constructors] + ["automation"]
+    ok_services = [n for n in all_expected if n in _svc]
+    failed_services = [n for n in all_expected if n not in _svc]
+    logger.info(
+        "startup_readiness",
+        services_ok=ok_services,
+        services_failed=failed_services,
+        total_ok=len(ok_services),
+        total_failed=len(failed_services),
+        bot_shim="bot_shim" in _svc,
+    )
     logger.info("API Initialisierung abgeschlossen.")
 
 
