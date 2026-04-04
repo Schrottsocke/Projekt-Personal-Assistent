@@ -111,12 +111,14 @@ class BaseAssistantBot:
         from src.handlers.message_handlers import register_message_handlers
         from src.handlers.onboarding import register_onboarding_handler
         from src.handlers.proposal_handlers import register_proposal_handlers
+        from src.handlers.shift_callbacks import register_shift_handlers
 
         self.app = Application.builder().token(self.token).build()
         self.app.bot_data["bot_instance"] = self
 
-        # Reihenfolge wichtig: Proposal-Callbacks zuerst, dann ConversationHandler
+        # Reihenfolge wichtig: Callbacks zuerst, dann ConversationHandler
         register_proposal_handlers(self.app)
+        register_shift_handlers(self.app)
         register_onboarding_handler(self.app)
         register_command_handlers(self.app)
         register_message_handlers(self.app)
