@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 
 # --- Transaction ---
 
+
 class TransactionCreate(BaseModel):
     date: datetime
     amount: float
@@ -35,6 +36,7 @@ class TransactionOut(BaseModel):
 
 
 # --- Contract ---
+
 
 class ContractCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
@@ -64,6 +66,7 @@ class ContractOut(BaseModel):
 
 # --- Budget ---
 
+
 class BudgetCreate(BaseModel):
     category: str = Field(..., min_length=1, max_length=50)
     monthly_limit: float = Field(..., gt=0)
@@ -83,6 +86,7 @@ class BudgetOut(BaseModel):
 
 
 # --- FinanceInvoice ---
+
 
 class FinanceInvoiceCreate(BaseModel):
     recipient: str = Field(..., min_length=1, max_length=200)

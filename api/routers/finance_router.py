@@ -35,12 +35,14 @@ def _resolve_user_id(db, user_key: str) -> int:
 
 # --- Health ---
 
+
 @router.get("/health")
 async def health():
     return {"status": "ok", "module": "finance"}
 
 
 # --- Transactions ---
+
 
 @router.get("/transactions", response_model=list[TransactionOut])
 async def list_transactions(
@@ -72,6 +74,7 @@ async def create_transaction(
 
 
 # --- Contracts ---
+
 
 @router.get("/contracts", response_model=list[ContractOut])
 async def list_contracts(

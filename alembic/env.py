@@ -49,12 +49,22 @@ def run_migrations_online() -> None:
         # muessen existieren bevor FKs der neuen Tabellen angelegt werden.
         # Nur fehlende Tabellen anlegen (checkfirst=True ist Default).
         from sqlalchemy import inspect as sa_inspect
+
         existing = set(sa_inspect(connection).get_table_names())
         # Nur pre-existing tables anlegen, nicht die neuen Produktlinien-Tabellen
         new_tables = {
-            "household_workspaces", "workspace_members", "routines", "routine_completions",
-            "inventory_items", "warranties", "transactions", "budgets", "contracts",
-            "finance_invoices", "notification_events", "notification_preferences",
+            "household_workspaces",
+            "workspace_members",
+            "routines",
+            "routine_completions",
+            "inventory_items",
+            "warranties",
+            "transactions",
+            "budgets",
+            "contracts",
+            "finance_invoices",
+            "notification_events",
+            "notification_preferences",
         }
         for table in target_metadata.sorted_tables:
             if table.name not in existing and table.name not in new_tables:
