@@ -113,14 +113,23 @@ const ContactsView = (() => {
         ${c.tags && c.tags.length ? `<p><strong>Tags:</strong> ${c.tags.map(t => `<span class="badge">${Utils.escapeHtml(t)}</span>`).join(' ')}</p>` : ''}
       </div>
     `;
-    detail.querySelector('#contact-delete-btn')?.addEventListener('click', async () => {
-      if (!confirm('Kontakt wirklich loeschen?')) return;
-      try {
-        await Api.delete(`/contacts/${c.id}`);
-        await loadContacts();
-      } catch (e) {
-        alert('Fehler beim Loeschen.');
-      }
+    detail.querySelector('#contact-delete-btn')?.addEventListener('click', () => {
+      detail.innerHTML = '';
+      let cancelled = false;
+      Toast.showUndo('Kontakt gelöscht', () => {
+        cancelled = true;
+        showDetail(c);
+      });
+      setTimeout(async () => {
+        if (cancelled) return;
+        try {
+          await Api.delete(`/contacts/${c.id}`);
+          await loadContacts();
+        } catch (e) {
+          showDetail(c);
+          Toast.show('Löschen fehlgeschlagen', 'error');
+        }
+      }, 5000);
     });
     detail.querySelector('#contact-edit-btn')?.addEventListener('click', () => showEditForm(c));
   }

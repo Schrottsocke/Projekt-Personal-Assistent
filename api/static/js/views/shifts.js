@@ -738,14 +738,22 @@ const ShiftsView = (() => {
   }
 
   async function removeEntry(entryId) {
-    if (!confirm('Eintrag wirklich loeschen?')) return;
     closeModal();
-    try {
-      await Api.deleteShiftEntry(entryId);
-      await renderCalendar(document.getElementById('shifts-content'));
-    } catch (e) {
-      Toast.show('Fehler: ' + e.message);
-    }
+    let cancelled = false;
+    Toast.showUndo('Eintrag gelöscht', () => {
+      cancelled = true;
+      renderCalendar(document.getElementById('shifts-content'));
+    });
+    setTimeout(async () => {
+      if (cancelled) return;
+      try {
+        await Api.deleteShiftEntry(entryId);
+        await renderCalendar(document.getElementById('shifts-content'));
+      } catch (e) {
+        Toast.show('Löschen fehlgeschlagen: ' + e.message, 'error');
+        await renderCalendar(document.getElementById('shifts-content'));
+      }
+    }, 5000);
   }
 
   // ─── Report / Auswertung Tab ──────────────────────────────

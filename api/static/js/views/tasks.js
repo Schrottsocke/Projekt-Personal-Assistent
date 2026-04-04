@@ -263,15 +263,30 @@ const TasksView = (() => {
   }
 
   async function deleteTask(id) {
-    if (!confirm('Aufgabe löschen?')) return;
-    try {
-      await Api.deleteTask(id);
-      tasks = tasks.filter(t => t.id !== id);
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    // Optimistic remove
+    tasks = tasks.filter(t => t.id !== id);
+    renderList();
+
+    let cancelled = false;
+    Toast.showUndo('Aufgabe gelöscht', () => {
+      cancelled = true;
+      tasks.push(task);
       renderList();
-    } catch (err) {
-      alert('Fehler beim Löschen: ' + err.message);
-      await loadTasks();
-    }
+    });
+
+    setTimeout(async () => {
+      if (cancelled) return;
+      try {
+        await Api.deleteTask(id);
+      } catch (err) {
+        tasks.push(task);
+        renderList();
+        Toast.show('Löschen fehlgeschlagen: ' + err.message, 'error');
+      }
+    }, 5000);
   }
 
   async function saveAsTemplate(id) {

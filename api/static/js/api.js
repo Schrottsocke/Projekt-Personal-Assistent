@@ -28,7 +28,30 @@ const Toast = (() => {
     }, 5000);
   }
 
-  return { show };
+  function showUndo(message, undoCallback, timeoutMs = 5000) {
+    const c = ensureContainer();
+    const el = document.createElement('div');
+    el.className = 'toast toast-undo';
+    const span = document.createElement('span');
+    span.textContent = message;
+    const btn = document.createElement('button');
+    btn.textContent = 'Rückgängig';
+    btn.onclick = () => {
+      clearTimeout(timer);
+      el.remove();
+      if (undoCallback) undoCallback();
+    };
+    el.appendChild(span);
+    el.appendChild(btn);
+    c.appendChild(el);
+    const timer = setTimeout(() => {
+      el.style.opacity = '0';
+      el.style.transition = '0.3s ease';
+      setTimeout(() => el.remove(), 300);
+    }, timeoutMs);
+  }
+
+  return { show, showUndo };
 })();
 
 const Api = (() => {

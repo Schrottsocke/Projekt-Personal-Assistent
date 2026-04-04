@@ -593,14 +593,22 @@ const TemplatesView = (() => {
           } else if (action === 'edit') {
             showForm(tpl);
           } else if (action === 'delete') {
-            if (!confirm(`Vorlage "${tpl.name}" wirklich loeschen?`)) return;
-            try {
-              await Api.request(`/templates/${id}`, { method: 'DELETE' });
-              Toast.show('Vorlage geloescht', 'success');
-              await load();
-            } catch (err) {
-              Toast.show(err.message || 'Fehler beim Loeschen');
-            }
+            card.style.display = 'none';
+            let cancelled = false;
+            Toast.showUndo(`Vorlage "${tpl.name}" gelöscht`, () => {
+              cancelled = true;
+              card.style.display = '';
+            });
+            setTimeout(async () => {
+              if (cancelled) return;
+              try {
+                await Api.request(`/templates/${id}`, { method: 'DELETE' });
+                await load();
+              } catch (err) {
+                card.style.display = '';
+                Toast.show(err.message || 'Löschen fehlgeschlagen');
+              }
+            }, 5000);
           }
         });
       });
