@@ -17,6 +17,10 @@ import 'screens/calendar_screen.dart';
 import 'screens/mealplan_screen.dart';
 import 'screens/notifications_screen.dart';
 import 'providers/theme_provider.dart';
+import 'screens/weather_screen.dart';
+import 'screens/drive_screen.dart';
+import 'screens/shifts_screen.dart';
+import 'screens/contacts_screen.dart';
 
 void main() {
   FlutterError.onError = (details) {
@@ -73,6 +77,10 @@ final List<NavArea> allNavAreas = [
   NavArea(id: 'calendar', path: '/calendar', label: 'Kalender', icon: Icons.calendar_today_outlined, selectedIcon: Icons.calendar_today, screen: const CalendarScreen()),
   NavArea(id: 'mealplan', path: '/mealplan', label: 'Wochenplan', icon: Icons.restaurant_outlined, selectedIcon: Icons.restaurant, screen: const MealPlanScreen()),
   NavArea(id: 'notifications', path: '/notifications', label: 'Mitteilungen', icon: Icons.notifications_outlined, selectedIcon: Icons.notifications, screen: const NotificationsScreen()),
+  NavArea(id: 'weather', path: '/weather', label: 'Wetter', icon: Icons.wb_sunny_outlined, selectedIcon: Icons.wb_sunny, screen: const WeatherScreen()),
+  NavArea(id: 'drive', path: '/drive', label: 'Drive', icon: Icons.folder_outlined, selectedIcon: Icons.folder, screen: const DriveScreen()),
+  NavArea(id: 'shifts', path: '/shifts', label: 'Dienste', icon: Icons.work_outline, selectedIcon: Icons.work, screen: const ShiftsScreen()),
+  NavArea(id: 'contacts', path: '/contacts', label: 'Kontakte', icon: Icons.contacts_outlined, selectedIcon: Icons.contacts, screen: const ContactsScreen()),
   NavArea(id: 'profile', path: '/profile', label: 'Profil', icon: Icons.person_outline, selectedIcon: Icons.person, screen: const ProfileScreen()),
 ];
 
