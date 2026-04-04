@@ -83,4 +83,7 @@ class ApiConfig {
   static const String chatSuggestionsPath = '/suggestions/chat';
   static const String shiftTypesPath = '/shifts/types';
   static const String shiftEntriesPath = '/shifts/entries';
+  static const String documentsPath = '/documents';
+  static const String documentsUploadPath = '/documents/upload';
+  static const String searchPath = '/search';
 }
