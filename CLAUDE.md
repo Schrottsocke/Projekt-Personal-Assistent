@@ -21,8 +21,10 @@ Web-App (api/static/):
 - `api/static/app.html` – HTML-Einstiegspunkt, Script-Tags, Bottom-Nav
 - `api/static/js/app.js` – Router-Registrierung
 - `api/static/js/router.js` – Hash-Router
-- `api/static/js/api.js` – API-Client (JWT, Auto-Refresh)
-- `api/static/js/views/` – IIFE-View-Module (dashboard, shopping, recipes, chat, profile, calendar, tasks, mealplan, drive)
+- `api/static/js/api.js` – API-Client (JWT, Auto-Refresh, Toast.show/showUndo)
+- `api/static/js/offlineQueue.js` – Offline-Queue (enqueue, sync, Cache-Helpers)
+- `api/static/js/views/` – IIFE-View-Module (dashboard, shopping, recipes, chat, profile, calendar, tasks, mealplan, drive, email, search, shifts, contacts, templates, documents, issues, weather, memory, planen, mehr, invoices, mobility, onboarding)
+- `api/static/sw.js` – Service Worker (stale-while-revalidate fuer API GETs)
 - `api/static/css/app.css` – Alle Styles (Dark Theme, CSS Custom Properties)
 
 Wichtig:

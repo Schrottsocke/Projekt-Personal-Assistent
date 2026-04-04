@@ -17,6 +17,8 @@ Flutter-App, API-Integration, plattformspezifische Erkenntnisse.
 - **VPS-Projektpfad**: `/home/assistant/projekt-personal-assistent` – User `assistant`, venv mit Python 3.12 (nicht 3.11, Ubuntu 24.04). Services: `personal-assistant`, `personal-assistant-api`, `personal-assistant-webhook`. (2026-04-01)
 - **VPS .env Setup**: `.env` wird aus `.env.example` kopiert. Platzhalter muessen manuell gesetzt werden: `API_SECRET_KEY` (token_hex(32)), `API_PASSWORD_TAAKE/NINA` (token_urlsafe(16)), `GITHUB_TOKEN`. API startet nicht mit unsicherem API_SECRET_KEY-Platzhalter. (2026-04-01)
 - **Webapp GitHub Issues**: `GET /github/issues` Endpoint mit 5-Min-Cache. View zeigt Issue-Liste + Erstellformular. Labels zuerst laden (fuer Farbdaten), dann Issues. Cache-Invalidierung nach Erstellung. (2026-04-01)
+- **Parallel-Agent Shared-Utility-Bug**: Wenn mehrere Agents parallel Views aendern und eine gemeinsame Utility nutzen (z.B. `Toast.showUndo`), muss genau ein Agent die Utility definieren. Workaround: Shared Utilities in separatem Batch VOR den Views implementieren, oder manuell nach Agent-Completion pruefen. (2026-04-04)
+- **Webapp Undo/Offline Patterns**: `Toast.showUndo(msg, cb, ms)` in `api.js` fuer optimistic-delete mit 5s Undo. `OfflineQueue.enqueue*(...)` in `offlineQueue.js` fuer offline-queuing. `localStorage` stale-while-revalidate in Dashboard, Calendar, Chat, Inbox. (2026-04-04)
 - Zuletzt geprueft: 2026-04-01
 - Review bis: 2026-06-28
 - Max Eintraege: 20
