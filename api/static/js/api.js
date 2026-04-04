@@ -553,6 +553,22 @@ const Api = (() => {
   function deleteShiftEntry(id) {
     return request(`/shifts/entries/${id}`, { method: 'DELETE' });
   }
+  function updateShiftEntry(id, data) {
+    return request(`/shifts/entries/${id}`, { method: 'PATCH', body: data });
+  }
+  function confirmShiftEntry(id, data) {
+    return request(`/shifts/entries/${id}/confirm`, { method: 'POST', body: data });
+  }
+  function getShiftReport(month) {
+    return request(`/shifts/report?month=${encodeURIComponent(month)}`);
+  }
+  function getShiftReportCsvUrl(month) {
+    const token = getToken();
+    return `/shifts/report/csv?month=${encodeURIComponent(month)}&token=${encodeURIComponent(token)}`;
+  }
+  function getPendingShifts() {
+    return request('/shifts/pending');
+  }
 
   // Suggestions
   function getChatSuggestions() { return request('/suggestions/chat'); }
@@ -618,6 +634,7 @@ const Api = (() => {
     getUnifiedInbox, getUnifiedInboxCount, unifiedInboxAction,
     getShiftTypes, createShiftType, updateShiftType, deleteShiftType,
     getShiftEntries, createShiftEntry, deleteShiftEntry,
+    updateShiftEntry, confirmShiftEntry, getShiftReport, getShiftReportCsvUrl, getPendingShifts,
     getPreferences, updatePreferences, getPreferencesRegistry,
     getChatSuggestions, getProactiveSuggestions,
     getInvoices, getInvoice, createInvoice, updateInvoice, deleteInvoice,

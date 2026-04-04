@@ -44,6 +44,7 @@ async def startup():
     from src.services.template_service import TemplateService
     from src.services.inbox_service import InboxService
     from src.services.invoice_service import InvoiceService
+    from src.services.shift_tracking_service import ShiftTrackingService
     from src.services.database import init_db
 
     init_db()
@@ -72,6 +73,7 @@ async def startup():
         ("template", TemplateService),
         ("inbox", InboxService),
         ("invoice", InvoiceService),
+        ("shift_tracking", ShiftTrackingService),
     ]
 
     # AutomationService (JSON-basiert, kein DB-Init noetig)
@@ -111,6 +113,7 @@ async def startup():
         "template",
         "inbox",
         "invoice",
+        "shift_tracking",
     ):
         if name not in pending:
             continue
@@ -276,6 +279,10 @@ def get_invoice_service():
 
 def get_automation_service():
     return _require("automation")
+
+
+def get_shift_tracking_service():
+    return _require("shift_tracking")
 
 
 def get_bot_shim():
