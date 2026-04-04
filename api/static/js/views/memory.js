@@ -145,20 +145,45 @@ const MemoryView = (() => {
     Router.navigate('#/chat');
   }
 
-  async function remove(id) {
+  function remove(id) {
     if (!id) return;
-    try {
-      await Api.deleteMemory(id);
-      const card = document.querySelector(`.memory-card[data-id="${id}"]`);
-      if (card) {
-        card.style.opacity = '0';
-        card.style.transform = 'translateX(20px)';
-        setTimeout(() => card.remove(), 200);
+    const card = document.querySelector(`.memory-card[data-id="${id}"]`);
+    if (!card) return;
+
+    // Optimistic: hide card immediately
+    const parent = card.parentNode;
+    const nextSibling = card.nextSibling;
+    card.remove();
+
+    let cancelled = false;
+    Toast.showUndo('Erinnerung gelöscht', () => {
+      cancelled = true;
+      // Restore card into its original position
+      if (parent) {
+        if (nextSibling) {
+          parent.insertBefore(card, nextSibling);
+        } else {
+          parent.appendChild(card);
+        }
       }
-      Toast.show('Erinnerung geloescht', 'info');
-    } catch (err) {
-      Toast.show('Fehler beim Loeschen', 'error');
-    }
+    });
+
+    setTimeout(async () => {
+      if (cancelled) return;
+      try {
+        await Api.deleteMemory(id);
+      } catch (err) {
+        // Restore on error
+        if (parent) {
+          if (nextSibling) {
+            parent.insertBefore(card, nextSibling);
+          } else {
+            parent.appendChild(card);
+          }
+        }
+        Toast.show('Löschen fehlgeschlagen: ' + err.message, 'error');
+      }
+    }, 5000);
   }
 
   function loadMore() {
