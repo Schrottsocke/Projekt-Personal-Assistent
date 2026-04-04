@@ -134,20 +134,14 @@
     FIXED_NAV,
   };
 
-  // Global keyboard shortcut: Ctrl+K / Cmd+K for Command Palette
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      e.preventDefault();
-      CommandPalette.toggle();
-    }
-  });
+  // Ctrl+K wird vom AssistantSheet selbst gehandelt (in assistantSheet.js init)
 
   // Init router on DOM ready, then load preferences + Quick Capture
   async function startup() {
     // Feste 4-Tab Navigation aufbauen
     buildNav();
     Router.init();
-    QuickCapture.init();
+    AssistantSheet.init();
     // Init offline queue (status tracking + auto-sync)
     if (typeof OfflineQueue !== 'undefined') {
       OfflineQueue.init();

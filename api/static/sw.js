@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dualmind-v7';
+const CACHE_NAME = 'dualmind-v8';
 const SHELL_ASSETS = [
   '/app',
   '/static/css/app.css',
@@ -8,7 +8,7 @@ const SHELL_ASSETS = [
   '/static/js/router.js',
   '/static/js/views/calendar.js',
   '/static/js/views/chat.js',
-  '/static/js/views/commandPalette.js',
+  '/static/js/views/assistantSheet.js',
   '/static/js/views/dashboard.js',
   '/static/js/views/documents.js',
   '/static/js/views/drive.js',
@@ -20,7 +20,6 @@ const SHELL_ASSETS = [
   '/static/js/views/memory.js',
   '/static/js/views/mobility.js',
   '/static/js/views/profile.js',
-  '/static/js/views/quickCapture.js',
   '/static/js/views/recipes.js',
   '/static/js/views/shifts.js',
   '/static/js/views/shopping.js',
