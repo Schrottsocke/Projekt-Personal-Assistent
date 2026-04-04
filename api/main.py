@@ -4,6 +4,7 @@ Läuft auf Port 8000, getrennt vom Telegram-Bot.
 """
 
 import sys
+import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -85,15 +86,29 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
             path=request.url.path,
         )
 
+        t0 = time.monotonic()
         response: Response = await call_next(request)
+        duration_ms = round((time.monotonic() - t0) * 1000, 1)
+
         response.headers["X-Request-ID"] = request_id
+        response.headers["X-Response-Time"] = f"{duration_ms}ms"
 
         logger.info(
             "request_finished",
             method=request.method,
             path=request.url.path,
             status_code=response.status_code,
+            duration_ms=duration_ms,
         )
+
+        if duration_ms > 5000:
+            logger.warning(
+                "slow_request",
+                method=request.method,
+                path=request.url.path,
+                status_code=response.status_code,
+                duration_ms=duration_ms,
+            )
 
         structlog.contextvars.clear_contextvars()
         return response
@@ -201,6 +216,31 @@ app = FastAPI(
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """Fängt unbehandelte Exceptions ab – keine Stack-Traces an Clients."""
+    request_id = request.headers.get("X-Request-ID", "unknown")
+    logger.error(
+        "unhandled_exception",
+        exc_type=type(exc).__name__,
+        exc_msg=str(exc),
+        path=request.url.path,
+        method=request.method,
+        request_id=request_id,
+        exc_info=exc,
+    )
+    if sentry_sdk is not None:
+        try:
+            sentry_sdk.capture_exception(exc)
+        except Exception:
+            pass
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Interner Serverfehler", "request_id": request_id},
+    )
+
 
 # CORS – Flutter App darf zugreifen
 origins = settings.API_CORS_ORIGINS
