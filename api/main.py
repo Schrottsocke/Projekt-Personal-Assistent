@@ -58,6 +58,10 @@ from api.routers import (
     automation,
     inbox,
     invoices,
+    finance_router,
+    inventory_router,
+    family_router,
+    notifications_router,
 )
 
 logger = structlog.get_logger(__name__)
@@ -327,6 +331,10 @@ app.include_router(templates.router, prefix="/templates", tags=["Vorlagen"])
 app.include_router(automation.router, prefix="/automation", tags=["Automation"])
 app.include_router(inbox.router, prefix="/inbox", tags=["Inbox"])
 app.include_router(invoices.router, prefix="/invoices", tags=["Rechnungen"])
+app.include_router(finance_router.router, prefix="/finance", tags=["Finance"])
+app.include_router(inventory_router.router, prefix="/inventory", tags=["Inventory"])
+app.include_router(family_router.router, prefix="/family", tags=["Family"])
+app.include_router(notifications_router.router, prefix="/notifications-v2", tags=["Notifications V2"])
 app.include_router(status.router)
 
 
