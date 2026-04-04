@@ -232,7 +232,7 @@ async def unified_inbox(
 
     total = len(items)
     actionable = sum(1 for i in items if i["status"] == "actionable")
-    items = items[offset: offset + limit]
+    items = items[offset : offset + limit]
 
     return {
         "items": items,
@@ -312,6 +312,7 @@ async def unified_inbox_action(
         elif action == "snooze":
             # Snooze: due_date um 3 Tage verschieben
             from datetime import timedelta
+
             new_due = (datetime.now() + timedelta(days=3)).strftime("%Y-%m-%d")
             result = await followup_svc.update_followup(user_key, source_id, {"due_date": new_due})
         else:
