@@ -75,4 +75,21 @@ class ApiConfig {
   static const String mobilityDailyFlowPath = '/mobility/daily-flow';
   static const String syncStatusPath = '/sync/status';
   static const String syncBatchPath = '/sync/batch';
+  static const String notificationsPath = '/notifications';
+  static const String notificationsCountPath = '/notifications/count';
+  static const String notificationsMarkAllReadPath = '/notifications/mark-all-read';
+  static const String chatStreamPath = '/chat/message/stream';
+  static const String chatVoicePath = '/chat/voice';
+  static const String chatSuggestionsPath = '/suggestions/chat';
+  static const String shiftTypesPath = '/shifts/types';
+  static const String shiftEntriesPath = '/shifts/entries';
+  static const String documentsPath = '/documents';
+  static const String documentsUploadPath = '/documents/upload';
+  static const String searchPath = '/search';
+  static const String templatesPath = '/templates';
+  static const String automationsPath = '/automations';
+  static const String inboxPath = '/inbox';
+  static const String memoryPath = '/memory';
+  static const String githubIssuesPath = '/github/issues';
+  static const String githubLabelsPath = '/github/labels';
 }

@@ -6,6 +6,7 @@ import '../providers/auth_provider.dart';
 import '../providers/dashboard_provider.dart';
 import '../widgets/event_card.dart';
 import '../widgets/task_card.dart';
+import '../widgets/quick_capture_sheet.dart';
 import '../models/calendar_event.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -45,10 +46,14 @@ class HomeScreen extends ConsumerWidget {
         )),
         data: (data) => _buildContent(context, ref, data),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/chat'),
-        icon: const Icon(Icons.chat),
-        label: const Text('Chat'),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          builder: (_) => const QuickCaptureSheet(),
+        ),
+        tooltip: 'Schnelleingabe',
+        child: const Icon(Icons.add),
       ),
     );
   }

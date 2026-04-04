@@ -8,6 +8,8 @@ class Task {
   final DateTime? dueDate;
   final String? assignedBy;
   final DateTime createdAt;
+  final String? recurrence;
+  final DateTime? lastCompleted;
 
   const Task({
     required this.id,
@@ -19,6 +21,8 @@ class Task {
     this.dueDate,
     this.assignedBy,
     required this.createdAt,
+    this.recurrence,
+    this.lastCompleted,
   });
 
   factory Task.fromJson(Map<String, dynamic> j) => Task(
@@ -31,6 +35,10 @@ class Task {
         dueDate: j['due_date'] != null ? DateTime.parse(j['due_date'] as String) : null,
         assignedBy: j['assigned_by'] as String?,
         createdAt: DateTime.parse(j['created_at'] as String),
+        recurrence: j['recurrence'] as String?,
+        lastCompleted: j['last_completed'] != null
+            ? DateTime.parse(j['last_completed'] as String)
+            : null,
       );
 
   String get priorityLabel => switch (priority) {
@@ -39,5 +47,13 @@ class Task {
         _ => '🟡 Mittel',
       };
 
+  String get statusLabel => switch (status) {
+        'done' => 'Erledigt',
+        'in_progress' => 'In Bearbeitung',
+        _ => 'Offen',
+      };
+
   bool get isDone => status == 'done';
+  bool get isInProgress => status == 'in_progress';
+  bool get isRecurring => recurrence != null;
 }
