@@ -151,6 +151,7 @@ const TasksView = (() => {
             ${lastDone ? `<span class="task-last-completed"><span class="material-symbols-outlined mi-sm">check</span> ${lastDone}</span>` : ''}
           </div>
         </div>
+        <button class="btn-icon" onclick="TasksView.editTask(${t.id})" title="Bearbeiten"><span class="material-symbols-outlined">edit</span></button>
         <button class="btn-icon" onclick="TasksView.saveAsTemplate(${t.id})" title="Als Vorlage speichern"><span class="material-symbols-outlined">library_add</span></button>
         <button class="item-delete" onclick="TasksView.deleteTask(${t.id})" title="Löschen"><span class="material-symbols-outlined">delete</span></button>
       </div>
@@ -286,5 +287,74 @@ const TasksView = (() => {
     }
   }
 
-  return { render, setFilter, toggleForm, createTask, toggleStatus, deleteTask, saveAsTemplate };
+  function editTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const dueVal = task.due_date ? new Date(task.due_date).toISOString().split('T')[0] : '';
+
+    document.getElementById('task-form-area').innerHTML = `
+      <div class="card event-create-form">
+        <div class="section-header" style="font-size:0.9rem;margin-bottom:8px">Aufgabe bearbeiten</div>
+        <input type="text" id="edit-task-title" value="${escapeHtml(task.title)}" placeholder="Aufgabe" class="mb-8">
+        <input type="text" id="edit-task-desc" value="${escapeHtml(task.description || '')}" placeholder="Beschreibung (optional)" class="mb-8">
+        <div class="input-group mb-8">
+          <select id="edit-task-priority">
+            <option value="high" ${task.priority === 'high' ? 'selected' : ''}>Hoch</option>
+            <option value="medium" ${task.priority === 'medium' ? 'selected' : ''}>Mittel</option>
+            <option value="low" ${task.priority === 'low' ? 'selected' : ''}>Niedrig</option>
+          </select>
+          <input type="date" id="edit-task-due" value="${dueVal}">
+        </div>
+        <div class="input-group mb-8">
+          <select id="edit-task-recurrence">
+            <option value="">Einmalig</option>
+            <option value="daily" ${task.recurrence === 'daily' ? 'selected' : ''}>Täglich</option>
+            <option value="weekly" ${task.recurrence === 'weekly' ? 'selected' : ''}>Wöchentlich</option>
+            <option value="monthly" ${task.recurrence === 'monthly' ? 'selected' : ''}>Monatlich</option>
+          </select>
+        </div>
+        <div class="flex-between">
+          <button class="btn btn-sm btn-secondary" onclick="TasksView.cancelEdit()">Abbrechen</button>
+          <button class="btn btn-sm btn-primary" onclick="TasksView.saveEdit(${task.id})">Speichern</button>
+        </div>
+      </div>
+    `;
+    showForm = true;
+  }
+
+  async function saveEdit(id) {
+    const title = document.getElementById('edit-task-title').value.trim();
+    if (!title) { document.getElementById('edit-task-title').classList.add('input-error'); return; }
+
+    const data = {
+      title,
+      description: document.getElementById('edit-task-desc').value.trim(),
+      priority: document.getElementById('edit-task-priority').value,
+      recurrence: document.getElementById('edit-task-recurrence').value || null,
+    };
+
+    const due = document.getElementById('edit-task-due').value;
+    if (due) data.due_date = new Date(due).toISOString();
+    else data.due_date = null;
+
+    try {
+      const updated = await Api.updateTask(id, data);
+      const idx = tasks.findIndex(t => t.id === id);
+      if (idx >= 0 && updated) tasks[idx] = updated;
+      showForm = false;
+      document.getElementById('task-form-area').innerHTML = '';
+      renderList();
+      Toast.show('Aufgabe aktualisiert', 'success');
+    } catch (err) {
+      Toast.show('Fehler: ' + err.message, 'error');
+    }
+  }
+
+  function cancelEdit() {
+    showForm = false;
+    document.getElementById('task-form-area').innerHTML = '';
+  }
+
+  return { render, setFilter, toggleForm, createTask, toggleStatus, deleteTask, saveAsTemplate, editTask, saveEdit, cancelEdit };
 })();

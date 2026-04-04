@@ -344,6 +344,9 @@ const Api = (() => {
   function updateTaskStatus(id, status) {
     return request(`/tasks/${id}`, { method: 'PATCH', body: { status } });
   }
+  function updateTask(id, data) {
+    return request(`/tasks/${id}`, { method: 'PATCH', body: data });
+  }
   function deleteTask(id) {
     return request(`/tasks/${id}`, { method: 'DELETE' });
   }
@@ -623,7 +626,7 @@ const Api = (() => {
     getChatHistory, sendMessage, sendMessageStream, transcribeVoice,
     getFeatures, toggleFeature,
     getCalendarToday, getCalendarWeek, createCalendarEvent,
-    getTasks, createTask, updateTaskStatus, deleteTask, getWeeklyReview,
+    getTasks, createTask, updateTaskStatus, updateTask, deleteTask, getWeeklyReview,
     getMealPlanWeek, createMealPlan, deleteMealPlan,
     getDriveFiles, uploadFile, uploadFiles,
     getGitHubLabels, getGitHubIssues, createGitHubIssue,
