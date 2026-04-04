@@ -86,4 +86,10 @@ class ApiConfig {
   static const String documentsPath = '/documents';
   static const String documentsUploadPath = '/documents/upload';
   static const String searchPath = '/search';
+  static const String templatesPath = '/templates';
+  static const String automationsPath = '/automations';
+  static const String inboxPath = '/inbox';
+  static const String memoryPath = '/memory';
+  static const String githubIssuesPath = '/github/issues';
+  static const String githubLabelsPath = '/github/labels';
 }
