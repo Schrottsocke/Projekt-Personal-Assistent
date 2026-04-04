@@ -154,12 +154,12 @@ async def startup():
     ok_services = [n for n in all_expected if n in _svc]
     failed_services = [n for n in all_expected if n not in _svc]
     logger.info(
-        "startup_readiness",
-        services_ok=ok_services,
-        services_failed=failed_services,
-        total_ok=len(ok_services),
-        total_failed=len(failed_services),
-        bot_shim="bot_shim" in _svc,
+        "startup_readiness: %d/%d services OK=%s, failed=%s, bot_shim=%s",
+        len(ok_services),
+        len(all_expected),
+        ok_services,
+        failed_services,
+        "bot_shim" in _svc,
     )
     logger.info("API Initialisierung abgeschlossen.")
 
