@@ -45,9 +45,17 @@ const ContactsView = (() => {
     container.innerHTML = `
       <div class="view-header">
         <h2>Kontakte</h2>
-        <button class="btn btn-primary btn-sm" id="contact-add-btn">
-          <span class="material-symbols-outlined">person_add</span> Neu
-        </button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="btn btn-sm btn-ghost" id="contact-import-btn" title="CSV importieren">
+            <span class="material-symbols-outlined">upload</span> Import
+          </button>
+          <button class="btn btn-sm btn-ghost" id="contact-export-btn" title="CSV exportieren">
+            <span class="material-symbols-outlined">download</span> Export
+          </button>
+          <button class="btn btn-primary btn-sm" id="contact-add-btn">
+            <span class="material-symbols-outlined">person_add</span> Neu
+          </button>
+        </div>
       </div>
       <div class="search-bar" style="margin-bottom:16px">
         <input type="text" id="contact-search" class="input" placeholder="Kontakt suchen..."
@@ -76,6 +84,10 @@ const ContactsView = (() => {
         if (c) showDetail(c);
       });
     });
+
+    // Event: Import / Export
+    container.querySelector('#contact-export-btn')?.addEventListener('click', exportCSV);
+    container.querySelector('#contact-import-btn')?.addEventListener('click', showImport);
 
     // Event: Neu
     container.querySelector('#contact-add-btn')?.addEventListener('click', showCreateForm);
@@ -187,11 +199,50 @@ const ContactsView = (() => {
     });
   }
 
+  // ─── CSV Export / Import ──────────────────────────────────
+
+  async function exportCSV() {
+    try {
+      const resp = await fetch('/contacts/export', {
+        headers: { 'Authorization': `Bearer ${Api.getToken()}` }
+      });
+      if (!resp.ok) throw new Error('Export fehlgeschlagen');
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'contacts.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      Toast.show('Kontakte exportiert', 'success');
+    } catch (err) {
+      Toast.show(err.message, 'error');
+    }
+  }
+
+  function showImport() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.csv';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const result = await Api.uploadFile(file, '/contacts/import');
+        Toast.show(`${result.imported} importiert, ${result.skipped} uebersprungen`, 'success');
+        await loadContacts();
+      } catch (err) {
+        Toast.show('Import fehlgeschlagen: ' + err.message, 'error');
+      }
+    };
+    input.click();
+  }
+
   async function render(c) {
     container = c;
     container.innerHTML = '<p class="empty-state">Lade Kontakte...</p>';
     await loadContacts();
   }
 
-  return { render };
+  return { render, exportCSV, showImport };
 })();

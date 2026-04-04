@@ -497,6 +497,11 @@ const ShiftsView = (() => {
     // Actions
     html += '<div class="shift-modal-actions">';
 
+    html += `
+        <button class="btn btn-secondary" onclick="ShiftsView.showEntryEditForm(${entry.id})">
+          <span class="mi-sm material-symbols-outlined">edit</span> Eintrag bearbeiten
+        </button>`;
+
     if (isPending) {
       html += `
         <button class="btn btn-primary" onclick="ShiftsView.confirmEntry(${entry.id}, 'confirm')">
@@ -511,7 +516,7 @@ const ShiftsView = (() => {
     } else {
       html += `
         <button class="btn btn-secondary" onclick="ShiftsView.showEditForm(${entry.id})">
-          <span class="mi-sm material-symbols-outlined">edit</span> Zeiten bearbeiten
+          <span class="mi-sm material-symbols-outlined">schedule</span> Zeiten bearbeiten
         </button>`;
     }
 
@@ -667,6 +672,71 @@ const ShiftsView = (() => {
     }
   }
 
+  // ─── Entry Edit Form (type, date, note) ────────────────────
+
+  function showEntryEditForm(entryId) {
+    const entry = shiftEntries.find(e => e.id === entryId);
+    if (!entry) return;
+
+    const extra = document.getElementById('shift-modal-extra');
+    if (!extra) return;
+
+    const activeTypes = shiftTypes.filter(t => t.is_active);
+    const typeOptions = activeTypes.map(t =>
+      `<option value="${t.id}" ${t.id === entry.shift_type_id ? 'selected' : ''}>${escapeHtml(t.short_name)} – ${escapeHtml(t.name)}</option>`
+    ).join('');
+
+    extra.innerHTML = `
+      <div class="card" style="margin-top:16px;padding:16px">
+        <h4 style="margin:0 0 12px">Eintrag bearbeiten</h4>
+        <div class="input-group">
+          <div style="flex:2">
+            <label>Diensttyp</label>
+            <select id="entry-edit-type" class="input">${typeOptions}</select>
+          </div>
+          <div style="flex:1">
+            <label>Datum</label>
+            <input id="entry-edit-date" type="date" class="input" value="${entry.date}">
+          </div>
+        </div>
+        <div style="margin-top:8px">
+          <label>Notiz</label>
+          <input id="entry-edit-note" class="input" value="${escapeHtml(entry.note || '')}" placeholder="Optional">
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="ShiftsView.submitEntryEdit(${entryId})">Speichern</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('shift-modal-extra').innerHTML=''">Abbrechen</button>
+        </div>
+      </div>
+    `;
+  }
+
+  async function submitEntryEdit(entryId) {
+    const data = {};
+    const typeId = parseInt(document.getElementById('entry-edit-type').value);
+    const date = document.getElementById('entry-edit-date').value;
+    const note = document.getElementById('entry-edit-note').value.trim();
+
+    const entry = shiftEntries.find(e => e.id === entryId);
+    if (typeId && (!entry || typeId !== entry.shift_type_id)) data.shift_type_id = typeId;
+    if (date && (!entry || date !== entry.date)) data.date = date;
+    data.note = note || null;
+
+    if (Object.keys(data).length === 0) {
+      Toast.show('Keine Aenderungen');
+      return;
+    }
+
+    try {
+      await Api.updateShiftEntry(entryId, data);
+      closeModal();
+      Toast.show('Eintrag aktualisiert', 'success');
+      await renderCalendar(document.getElementById('shifts-content'));
+    } catch (e) {
+      Toast.show('Fehler: ' + e.message);
+    }
+  }
+
   async function removeEntry(entryId) {
     if (!confirm('Eintrag wirklich loeschen?')) return;
     closeModal();
@@ -786,6 +856,7 @@ const ShiftsView = (() => {
     openEntryAction, closeModal, confirmEntry,
     showDeviationForm, submitDeviation,
     showEditForm, submitEdit,
+    showEntryEditForm, submitEntryEdit,
     prevReportMonth, nextReportMonth,
   };
 })();
