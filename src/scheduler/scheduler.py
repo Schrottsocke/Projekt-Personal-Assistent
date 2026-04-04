@@ -423,16 +423,20 @@ class AssistantScheduler:
 
                 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-                keyboard = InlineKeyboardMarkup([
+                keyboard = InlineKeyboardMarkup(
                     [
-                        InlineKeyboardButton("Normal beendet", callback_data=f"shift_confirm:{entry_id}:ok"),
-                        InlineKeyboardButton("Abweichungen", callback_data=f"shift_confirm:{entry_id}:deviation"),
-                    ],
-                    [
-                        InlineKeyboardButton("Sp\u00e4ter erinnern", callback_data=f"shift_confirm:{entry_id}:snooze"),
-                        InlineKeyboardButton("Ausgefallen", callback_data=f"shift_confirm:{entry_id}:cancel"),
-                    ],
-                ])
+                        [
+                            InlineKeyboardButton("Normal beendet", callback_data=f"shift_confirm:{entry_id}:ok"),
+                            InlineKeyboardButton("Abweichungen", callback_data=f"shift_confirm:{entry_id}:deviation"),
+                        ],
+                        [
+                            InlineKeyboardButton(
+                                "Sp\u00e4ter erinnern", callback_data=f"shift_confirm:{entry_id}:snooze"
+                            ),
+                            InlineKeyboardButton("Ausgefallen", callback_data=f"shift_confirm:{entry_id}:cancel"),
+                        ],
+                    ]
+                )
 
                 text = (
                     f"*Dienst-R\u00fcckmeldung*\n\n"

@@ -57,7 +57,9 @@ class ShiftTrackingService:
         """
         p_start = entry.planned_start or (shift_type.start_time if shift_type else None)
         p_end = entry.planned_end or (shift_type.end_time if shift_type else None)
-        brk = entry.break_minutes if entry.break_minutes is not None else (shift_type.break_minutes if shift_type else 0)
+        brk = (
+            entry.break_minutes if entry.break_minutes is not None else (shift_type.break_minutes if shift_type else 0)
+        )
         return p_start, p_end, brk or 0
 
     def _entry_to_dict(self, entry, shift_type=None) -> dict:
@@ -203,9 +205,15 @@ class ShiftTrackingService:
         """Manuelle Bearbeitung der Ist-Zeiten und anderer Felder."""
         self._ensure_db()
         ALLOWED_FIELDS = {
-            "actual_start", "actual_end", "actual_break_minutes",
-            "planned_start", "planned_end", "break_minutes",
-            "deviation_note", "note", "confirmation_status",
+            "actual_start",
+            "actual_end",
+            "actual_break_minutes",
+            "planned_start",
+            "planned_end",
+            "break_minutes",
+            "deviation_note",
+            "note",
+            "confirmation_status",
         }
 
         with self._db() as session:
@@ -418,25 +426,38 @@ class ShiftTrackingService:
         writer = csv.writer(output, delimiter=";")
 
         # Header
-        writer.writerow([
-            "Datum", "Typ", "Soll-Beginn", "Soll-Ende", "Ist-Beginn", "Ist-Ende",
-            "Soll-Dauer (Min)", "Ist-Dauer (Min)", "Abweichung (Min)", "Status", "Notiz",
-        ])
+        writer.writerow(
+            [
+                "Datum",
+                "Typ",
+                "Soll-Beginn",
+                "Soll-Ende",
+                "Ist-Beginn",
+                "Ist-Ende",
+                "Soll-Dauer (Min)",
+                "Ist-Dauer (Min)",
+                "Abweichung (Min)",
+                "Status",
+                "Notiz",
+            ]
+        )
 
         for e in report["entries"]:
-            writer.writerow([
-                e["date"],
-                e["shift_type"],
-                e["planned_start"] or "",
-                e["planned_end"] or "",
-                e["actual_start"] or "",
-                e["actual_end"] or "",
-                e["planned_duration"] or "",
-                e["actual_duration"] or "",
-                e["delta_minutes"] if e["delta_minutes"] is not None else "",
-                e["status"],
-                e["note"],
-            ])
+            writer.writerow(
+                [
+                    e["date"],
+                    e["shift_type"],
+                    e["planned_start"] or "",
+                    e["planned_end"] or "",
+                    e["actual_start"] or "",
+                    e["actual_end"] or "",
+                    e["planned_duration"] or "",
+                    e["actual_duration"] or "",
+                    e["delta_minutes"] if e["delta_minutes"] is not None else "",
+                    e["status"],
+                    e["note"],
+                ]
+            )
 
         # Summenzeile
         s = report["summary"]

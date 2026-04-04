@@ -32,9 +32,11 @@ def get_bot(context: ContextTypes.DEFAULT_TYPE):
 
 def _get_tracking_service():
     from src.services.shift_tracking_service import ShiftTrackingService
+
     svc = ShiftTrackingService()
     # Synchron initialisieren (init_db ist idempotent)
     from src.services.database import init_db, get_db
+
     init_db()
     svc._db = get_db()
     return svc
@@ -75,16 +77,14 @@ async def handle_shift_callback(update: Update, context: ContextTypes.DEFAULT_TY
             result = svc.cancel_shift(entry_id, user_key, source="bot")
             shift_name = result.get("shift_type_name", "Dienst")
             await query.edit_message_text(
-                f"*Dienst ausgefallen*\n\n"
-                f"{shift_name} am {result.get('date', '')} wurde als ausgefallen markiert.",
+                f"*Dienst ausgefallen*\n\n{shift_name} am {result.get('date', '')} wurde als ausgefallen markiert.",
                 parse_mode="Markdown",
             )
 
         elif action == "snooze":
             result = svc.snooze_reminder(entry_id, user_key, minutes=60)
             await query.edit_message_text(
-                "*Später erinnern*\n\n"
-                "Ich erinnere dich in 60 Minuten nochmal.",
+                "*Später erinnern*\n\nIch erinnere dich in 60 Minuten nochmal.",
                 parse_mode="Markdown",
             )
 
@@ -93,8 +93,7 @@ async def handle_shift_callback(update: Update, context: ContextTypes.DEFAULT_TY
             context.user_data["shift_deviation_entry_id"] = entry_id
             context.user_data["shift_deviation_data"] = {}
             await query.edit_message_text(
-                "*Abweichung erfassen*\n\n"
-                "Wann hast du angefangen? _(Format: HH:MM)_",
+                "*Abweichung erfassen*\n\nWann hast du angefangen? _(Format: HH:MM)_",
                 parse_mode="Markdown",
             )
             return ASK_START

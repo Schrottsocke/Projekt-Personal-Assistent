@@ -273,7 +273,8 @@ async def confirm_shift_entry(
             if not body.actual_start or not body.actual_end:
                 raise HTTPException(status_code=400, detail="actual_start und actual_end sind Pflicht bei Abweichung.")
             return svc.record_deviation(
-                entry_id, user_key,
+                entry_id,
+                user_key,
                 actual_start=body.actual_start,
                 actual_end=body.actual_end,
                 actual_break=body.actual_break_minutes or 0,
