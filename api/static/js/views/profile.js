@@ -218,23 +218,6 @@ const ProfileView = (() => {
             </div>
           </div>
 
-          <!-- Navigation -->
-          <div class="pref-section">
-            <div class="pref-section-header" onclick="ProfileView.togglePrefSection('pref-nav')">
-              <div class="pref-section-label">
-                <span class="material-symbols-outlined">menu</span>
-                Navigation anpassen
-              </div>
-              <span class="material-symbols-outlined collapse-icon" id="pref-nav-icon">chevron_right</span>
-            </div>
-            <div class="pref-section-content collapsed" id="pref-nav">
-              <div class="pref-section-inner">
-                <div class="settings-hint">Bereiche ein-/ausschalten und in die Navbar pinnen (max. 5).</div>
-                <div id="nav-config-list"><div class="loading"><div class="spinner"></div></div></div>
-              </div>
-            </div>
-          </div>
-
           <!-- Dashboard Widgets -->
           <div class="pref-section">
             <div class="pref-section-header" onclick="ProfileView.togglePrefSection('pref-widgets')">
@@ -309,7 +292,7 @@ const ProfileView = (() => {
       </div>
     `;
 
-    await Promise.allSettled([loadServices(), loadFeatures(), loadNavConfig(), loadWidgetConfig()]);
+    await Promise.allSettled([loadServices(), loadFeatures(), loadWidgetConfig()]);
     _initProactiveToggle();
   }
 
@@ -522,81 +505,11 @@ const ProfileView = (() => {
     const isCollapsed = content.classList.toggle('collapsed');
     if (icon) icon.textContent = isCollapsed ? 'chevron_right' : 'expand_more';
 
-    // Lazy-load nav/widget config when first opened
+    // Lazy-load widget config when first opened
     if (!isCollapsed) {
-      if (contentId === 'pref-nav') loadNavConfig();
       if (contentId === 'pref-widgets') loadWidgetConfig();
       if (contentId === 'pref-dev') loadDevWidgets();
       if (contentId === 'pref-notifications') syncNotifToggle();
-    }
-  }
-
-  /* ── Nav Configuration ── */
-
-  async function loadNavConfig() {
-    const el = document.getElementById('nav-config-list');
-    if (!el) return;
-    try {
-      const prefs = window.AppPreferences ? window.AppPreferences.getCached() : null;
-      const data = prefs || await Api.getPreferences();
-      const items = (data.nav && data.nav.items) || [];
-      const maxPinned = (data.nav && data.nav.maxPinned) || 5;
-      const meta = window.AppPreferences ? window.AppPreferences.NAV_META : {};
-
-      items.sort((a, b) => (a.order || 0) - (b.order || 0));
-
-      el.innerHTML = '<div class="nav-config-grid">' + items.map(item => {
-        const m = meta[item.id] || {};
-        const icon = m.icon || item.icon || 'circle';
-        const label = m.label || item.label || item.id;
-        const enabled = item.enabled !== false;
-        const pinned = item.pinned || false;
-        const pinnedCount = items.filter(i => i.enabled !== false && i.pinned).length;
-        const canPin = pinned || pinnedCount < maxPinned;
-
-        return `
-          <div class="nav-config-item ${enabled ? '' : 'disabled'}">
-            <div class="nav-config-info">
-              <span class="material-symbols-outlined mi-sm">${icon}</span>
-              <span class="nav-config-label">${label}</span>
-            </div>
-            <div class="nav-config-actions">
-              <label class="toggle toggle-sm" title="Bereich aktivieren">
-                <input type="checkbox" ${enabled ? 'checked' : ''}
-                       onchange="ProfileView.toggleNavItem('${item.id}', 'enabled', this.checked)">
-                <span class="toggle-slider"></span>
-              </label>
-              <button class="btn-icon ${pinned ? 'active' : ''} ${!enabled || !canPin ? 'btn-disabled' : ''}"
-                      title="${pinned ? 'Aus Navbar entfernen' : 'In Navbar pinnen'}"
-                      onclick="ProfileView.toggleNavItem('${item.id}', 'pinned', ${!pinned})"
-                      ${!enabled || (!pinned && !canPin) ? 'disabled' : ''}>
-                <span class="material-symbols-outlined mi-sm">push_pin</span>
-              </button>
-            </div>
-          </div>
-        `;
-      }).join('') + '</div>';
-    } catch {
-      el.innerHTML = '<div class="empty-state">Navigation konnte nicht geladen werden</div>';
-    }
-  }
-
-  async function toggleNavItem(itemId, field, value) {
-    try {
-      const prefs = window.AppPreferences ? window.AppPreferences.getCached() : await Api.getPreferences();
-      const items = (prefs.nav && prefs.nav.items) || [];
-      const item = items.find(i => i.id === itemId);
-      if (!item) return;
-
-      item[field] = value;
-      if (field === 'enabled' && !value) {
-        item.pinned = false;
-      }
-
-      await window.AppPreferences.save({ nav: { items } });
-      await loadNavConfig();
-    } catch (err) {
-      Toast.show('Fehler: ' + err.message);
     }
   }
 
@@ -870,7 +783,6 @@ const ProfileView = (() => {
     confirmLogout,
     getTheme,
     toggleTheme,
-    toggleNavItem,
     toggleWidget,
     refreshHealth,
     toggleProactive,
