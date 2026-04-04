@@ -267,7 +267,7 @@ class ShiftType(Base):
 
 
 class ShiftEntry(Base):
-    """Diensteintrag: Zuweisung eines Diensttyps zu einem Datum."""
+    """Diensteintrag: Zuweisung eines Diensttyps zu einem Datum mit Soll/Ist-Tracking."""
 
     __tablename__ = "shift_entries"
 
@@ -277,6 +277,32 @@ class ShiftEntry(Base):
     date = Column(String(10), nullable=False)  # YYYY-MM-DD
     note = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Soll-Zeiten (Override von ShiftType-Defaults, nullable)
+    planned_start = Column(String(5), nullable=True)  # HH:MM
+    planned_end = Column(String(5), nullable=True)  # HH:MM
+    break_minutes = Column(Integer, nullable=True)  # Override ShiftType-Default
+
+    # Ist-Zeiten
+    actual_start = Column(String(5), nullable=True)  # HH:MM
+    actual_end = Column(String(5), nullable=True)  # HH:MM
+    actual_break_minutes = Column(Integer, nullable=True)
+
+    # Berechnete Dauern (auf Write berechnet)
+    planned_duration_minutes = Column(Integer, nullable=True)
+    actual_duration_minutes = Column(Integer, nullable=True)
+    delta_minutes = Column(Integer, nullable=True)  # actual - planned
+
+    # Bestaetigungsstatus
+    confirmation_status = Column(String(20), default="pending")  # pending/confirmed/deviation/cancelled
+    confirmation_source = Column(String(20), nullable=True)  # bot/manual/web/auto
+    confirmation_timestamp = Column(DateTime, nullable=True)
+    deviation_note = Column(String(500), nullable=True)
+
+    # Reminder-Tracking
+    reminder_sent = Column(Boolean, default=False)
+    reminder_count = Column(Integer, default=0)
+    next_reminder_at = Column(DateTime, nullable=True)
 
 
 # Engine & Session Setup
@@ -343,6 +369,23 @@ def init_db():
                     "ALTER TABLE tasks ADD COLUMN recurrence VARCHAR(20)",
                     "ALTER TABLE tasks ADD COLUMN last_completed_at DATETIME",
                     "ALTER TABLE scanned_documents ADD COLUMN ocr_text TEXT",
+                    # Shift-Tracking: Soll/Ist-Zeiten + Bestaetigungsstatus
+                    "ALTER TABLE shift_entries ADD COLUMN planned_start VARCHAR(5)",
+                    "ALTER TABLE shift_entries ADD COLUMN planned_end VARCHAR(5)",
+                    "ALTER TABLE shift_entries ADD COLUMN break_minutes INTEGER",
+                    "ALTER TABLE shift_entries ADD COLUMN actual_start VARCHAR(5)",
+                    "ALTER TABLE shift_entries ADD COLUMN actual_end VARCHAR(5)",
+                    "ALTER TABLE shift_entries ADD COLUMN actual_break_minutes INTEGER",
+                    "ALTER TABLE shift_entries ADD COLUMN planned_duration_minutes INTEGER",
+                    "ALTER TABLE shift_entries ADD COLUMN actual_duration_minutes INTEGER",
+                    "ALTER TABLE shift_entries ADD COLUMN delta_minutes INTEGER",
+                    "ALTER TABLE shift_entries ADD COLUMN confirmation_status VARCHAR(20) DEFAULT 'pending'",
+                    "ALTER TABLE shift_entries ADD COLUMN confirmation_source VARCHAR(20)",
+                    "ALTER TABLE shift_entries ADD COLUMN confirmation_timestamp DATETIME",
+                    "ALTER TABLE shift_entries ADD COLUMN deviation_note VARCHAR(500)",
+                    "ALTER TABLE shift_entries ADD COLUMN reminder_sent BOOLEAN DEFAULT 0",
+                    "ALTER TABLE shift_entries ADD COLUMN reminder_count INTEGER DEFAULT 0",
+                    "ALTER TABLE shift_entries ADD COLUMN next_reminder_at DATETIME",
                 ]:
                     try:
                         conn.execute(sa_text(col_sql))

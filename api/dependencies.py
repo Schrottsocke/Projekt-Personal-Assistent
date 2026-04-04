@@ -43,6 +43,7 @@ async def startup():
     from src.services.pdf_service import PdfService
     from src.services.template_service import TemplateService
     from src.services.inbox_service import InboxService
+    from src.services.shift_tracking_service import ShiftTrackingService
     from src.services.database import init_db
 
     init_db()
@@ -70,6 +71,7 @@ async def startup():
         ("pdf", PdfService),
         ("template", TemplateService),
         ("inbox", InboxService),
+        ("shift_tracking", ShiftTrackingService),
     ]
 
     # AutomationService (JSON-basiert, kein DB-Init noetig)
@@ -108,6 +110,7 @@ async def startup():
         "followup",
         "template",
         "inbox",
+        "shift_tracking",
     ):
         if name not in pending:
             continue
@@ -269,6 +272,10 @@ def get_inbox_service():
 
 def get_automation_service():
     return _require("automation")
+
+
+def get_shift_tracking_service():
+    return _require("shift_tracking")
 
 
 def get_bot_shim():

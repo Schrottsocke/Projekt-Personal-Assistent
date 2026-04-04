@@ -93,6 +93,15 @@ class AssistantScheduler:
             name="E-Mail-Check",
         )
 
+        # Shift-Reminder: 30 Min nach Dienstende fragen (jede Minute pruefen)
+        self.scheduler.add_job(
+            self._check_shift_reminders,
+            IntervalTrigger(minutes=1),
+            id="shift_reminder_check",
+            replace_existing=True,
+            name="Dienst-Erinnerungs-Check",
+        )
+
         self.scheduler.start()
         logger.info(
             f"Scheduler gestartet: Briefing {settings.MORNING_BRIEFING_TIME}, "
@@ -378,3 +387,88 @@ class AssistantScheduler:
         except Exception as e:
             logger.warning(f"Fokus-Modus-Check-Fehler: {e}")
             return False
+
+    async def _check_shift_reminders(self):
+        """Prueft auf Dienste, die 30 Min nach Dienstende eine Erinnerung brauchen."""
+        if not self._bots:
+            return
+
+        try:
+            from src.services.shift_tracking_service import ShiftTrackingService
+
+            svc = ShiftTrackingService()
+            await svc.initialize()
+
+            tz = pytz.timezone(settings.TIMEZONE)
+            now_local = datetime.now(tz)
+
+            due_shifts = await asyncio.to_thread(svc.get_due_shift_reminders, now_local)
+
+            for shift in due_shifts:
+                user_key = shift.get("user_key")
+                entry_id = shift.get("id")
+                shift_name = shift.get("shift_type_name", "Dienst")
+                shift_date = shift.get("date", "")
+
+                if not user_key or not entry_id:
+                    continue
+
+                if await asyncio.to_thread(self._is_focus_mode, user_key):
+                    continue
+
+                chat_id = await self._get_chat_id(user_key)
+                app = self._applications.get(user_key)
+                if not chat_id or not app:
+                    continue
+
+                from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+
+                keyboard = InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton("Normal beendet", callback_data=f"shift_confirm:{entry_id}:ok"),
+                            InlineKeyboardButton("Abweichungen", callback_data=f"shift_confirm:{entry_id}:deviation"),
+                        ],
+                        [
+                            InlineKeyboardButton(
+                                "Sp\u00e4ter erinnern", callback_data=f"shift_confirm:{entry_id}:snooze"
+                            ),
+                            InlineKeyboardButton("Ausgefallen", callback_data=f"shift_confirm:{entry_id}:cancel"),
+                        ],
+                    ]
+                )
+
+                text = (
+                    f"*Dienst-R\u00fcckmeldung*\n\n"
+                    f"{shift_name} am {shift_date}\n\n"
+                    f"Hast du deinen Dienst normal beendet?"
+                )
+
+                try:
+                    await asyncio.to_thread(svc.mark_reminder_sent, entry_id)
+                    await app.bot.send_message(
+                        chat_id=chat_id,
+                        text=text,
+                        parse_mode="Markdown",
+                        reply_markup=keyboard,
+                    )
+                    logger.info(f"Dienst-Erinnerung gesendet an '{user_key}' fuer Entry #{entry_id}.")
+
+                    try:
+                        first_bot = next(iter(self._bots.values()))
+                        if hasattr(first_bot, "notification_service") and first_bot.notification_service:
+                            await first_bot.notification_service.create(
+                                user_key=user_key,
+                                type="reminder",
+                                title=f"Dienst-R\u00fcckmeldung: {shift_name}",
+                                message=f"Bitte best\u00e4tige deinen Dienst am {shift_date}.",
+                                link="#/shifts",
+                            )
+                    except Exception:
+                        pass
+
+                except Exception as e:
+                    logger.error(f"Dienst-Erinnerung-Fehler fuer '{user_key}': {e}")
+
+        except Exception as e:
+            logger.error(f"Shift-Reminder-Check-Fehler: {e}")

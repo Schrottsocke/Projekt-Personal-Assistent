@@ -1,15 +1,19 @@
-"""CRUD /shifts/types und /shifts/entries – Dienstplan-Verwaltung."""
+"""CRUD /shifts/types und /shifts/entries – Dienstplan-Verwaltung + Tracking."""
 
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from api.dependencies import get_current_user
+from api.dependencies import get_current_user, get_shift_tracking_service
 from api.schemas.shift import (
+    ShiftConfirmRequest,
     ShiftEntryCreate,
     ShiftEntryOut,
+    ShiftEntryUpdate,
+    ShiftReportOut,
     ShiftTypeCreate,
     ShiftTypeOut,
     ShiftTypeUpdate,
@@ -61,10 +65,11 @@ def get_shift_events_for_range(user_key: str, start: str, end: str) -> list[dict
         for entry, stype in entries:
             if not stype:
                 continue
-            st = stype.start_time or "00:00"
-            et = stype.end_time or "23:59"
+            st = entry.planned_start or stype.start_time or "00:00"
+            et = entry.planned_end or stype.end_time or "23:59"
             summary = f"{stype.name} ({stype.short_name})"
             note = entry.note or stype.default_note or ""
+            conf_status = entry.confirmation_status or "pending"
             result.append(
                 {
                     "id": f"shift_{entry.id}",
@@ -78,6 +83,9 @@ def get_shift_events_for_range(user_key: str, start: str, end: str) -> list[dict
                     "shift_short_name": stype.short_name if stype else "?",
                     "shift_category": stype.category if stype else "work",
                     "shift_entry_id": entry.id,
+                    "confirmation_status": conf_status,
+                    "actual_start": entry.actual_start,
+                    "actual_end": entry.actual_end,
                 }
             )
     return result
@@ -224,3 +232,95 @@ async def delete_shift_entry(
         if not entry:
             raise HTTPException(status_code=404, detail="Diensteintrag nicht gefunden.")
         session.delete(entry)
+
+
+# ─── Shift Tracking ─────────────────────────────────────────
+
+
+@router.patch("/entries/{entry_id}", response_model=ShiftEntryOut)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def update_shift_entry(
+    request: Request,
+    entry_id: int,
+    body: ShiftEntryUpdate,
+    user_key: Annotated[str, Depends(get_current_user)],
+    svc=Depends(get_shift_tracking_service),
+):
+    """Manuelle Bearbeitung eines Diensteintrags (Ist-Zeiten, Status, Notizen)."""
+    try:
+        updates = body.model_dump(exclude_unset=True)
+        if not updates:
+            raise HTTPException(status_code=400, detail="Keine Aenderungen angegeben.")
+        return svc.update_entry(entry_id, user_key, updates)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.post("/entries/{entry_id}/confirm")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def confirm_shift_entry(
+    request: Request,
+    entry_id: int,
+    body: ShiftConfirmRequest,
+    user_key: Annotated[str, Depends(get_current_user)],
+    svc=Depends(get_shift_tracking_service),
+):
+    """Quick-Confirm: Dienst bestaetigen, Abweichung melden, snoozen oder absagen."""
+    try:
+        if body.action == "confirm":
+            return svc.confirm_shift(entry_id, user_key, source="web")
+        elif body.action == "deviation":
+            if not body.actual_start or not body.actual_end:
+                raise HTTPException(status_code=400, detail="actual_start und actual_end sind Pflicht bei Abweichung.")
+            return svc.record_deviation(
+                entry_id,
+                user_key,
+                actual_start=body.actual_start,
+                actual_end=body.actual_end,
+                actual_break=body.actual_break_minutes or 0,
+                note=body.deviation_note,
+                source="web",
+            )
+        elif body.action == "cancel":
+            return svc.cancel_shift(entry_id, user_key, source="web")
+        elif body.action == "snooze":
+            return svc.snooze_reminder(entry_id, user_key, minutes=body.snooze_minutes)
+    except ValueError as e:
+        raise HTTPException(status_code=409, detail=str(e))
+
+
+@router.get("/report", response_model=ShiftReportOut)
+async def get_shift_report(
+    user_key: Annotated[str, Depends(get_current_user)],
+    month: str = Query(..., pattern=r"^\d{4}-\d{2}$", description="YYYY-MM"),
+    svc=Depends(get_shift_tracking_service),
+):
+    """Soll/Ist-Monatsauswertung."""
+    year, m = map(int, month.split("-"))
+    return svc.get_monthly_report(user_key, year, m)
+
+
+@router.get("/report/csv")
+async def get_shift_report_csv(
+    user_key: Annotated[str, Depends(get_current_user)],
+    month: str = Query(..., pattern=r"^\d{4}-\d{2}$", description="YYYY-MM"),
+    svc=Depends(get_shift_tracking_service),
+):
+    """CSV-Export der Monatsauswertung."""
+    year, m = map(int, month.split("-"))
+    csv_content = svc.generate_csv(user_key, year, m)
+
+    return StreamingResponse(
+        iter([csv_content]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="dienstzeiten_{month}.csv"'},
+    )
+
+
+@router.get("/pending", response_model=list[ShiftEntryOut])
+async def get_pending_shifts(
+    user_key: Annotated[str, Depends(get_current_user)],
+    svc=Depends(get_shift_tracking_service),
+):
+    """Alle offenen (noch nicht bestaetigten) Dienste."""
+    return svc.get_pending_shifts(user_key)
