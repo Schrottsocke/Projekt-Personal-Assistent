@@ -18,8 +18,6 @@ from telegram.ext import (
     filters,
 )
 
-from config.settings import settings
-
 logger = logging.getLogger(__name__)
 
 CALLBACK_PATTERN = r"^shift_confirm:(\d+):(ok|deviation|snooze|cancel)$"
@@ -85,8 +83,8 @@ async def handle_shift_callback(update: Update, context: ContextTypes.DEFAULT_TY
         elif action == "snooze":
             result = svc.snooze_reminder(entry_id, user_key, minutes=60)
             await query.edit_message_text(
-                f"*Sp\u00e4ter erinnern*\n\n"
-                f"Ich erinnere dich in 60 Minuten nochmal.",
+                "*Später erinnern*\n\n"
+                "Ich erinnere dich in 60 Minuten nochmal.",
                 parse_mode="Markdown",
             )
 
@@ -95,8 +93,8 @@ async def handle_shift_callback(update: Update, context: ContextTypes.DEFAULT_TY
             context.user_data["shift_deviation_entry_id"] = entry_id
             context.user_data["shift_deviation_data"] = {}
             await query.edit_message_text(
-                f"*Abweichung erfassen*\n\n"
-                f"Wann hast du angefangen? _(Format: HH:MM)_",
+                "*Abweichung erfassen*\n\n"
+                "Wann hast du angefangen? _(Format: HH:MM)_",
                 parse_mode="Markdown",
             )
             return ASK_START
@@ -105,7 +103,7 @@ async def handle_shift_callback(update: Update, context: ContextTypes.DEFAULT_TY
         await query.edit_message_text(f"Fehler: {e}")
     except Exception as e:
         logger.error(f"Shift-Callback-Fehler: {e}")
-        await query.edit_message_text(f"Fehler bei der Verarbeitung.")
+        await query.edit_message_text("Fehler bei der Verarbeitung.")
 
 
 async def ask_end(update: Update, context: ContextTypes.DEFAULT_TYPE):
