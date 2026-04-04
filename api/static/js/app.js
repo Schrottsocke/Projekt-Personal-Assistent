@@ -21,17 +21,20 @@
   Router.register('#/drive', (c) => DriveView.render(c));
   Router.register('#/issues', (c) => IssuesView.render(c));
   Router.register('#/shifts', (c) => ShiftsView.render(c));
-  Router.register('#/notifications', (c) => NotificationsView.render(c));
   Router.register('#/focus', (c) => FocusView.render(c));
   Router.register('#/templates', (c) => TemplatesView.render(c));
   Router.register('#/documents', (c) => DocumentsView.render(c));
   Router.register('#/contacts', (c) => ContactsView.render(c));
-  Router.register('#/followups', (c) => FollowUpsView.render(c));
+  // Redirect: alte Follow-ups Route → Inbox
+  Router.register('#/followups', () => { window.location.hash = '#/inbox'; });
   Router.register('#/weather', (c) => WeatherView.render(c));
   Router.register('#/mobility', (c) => MobilityView.render(c));
   Router.register('#/automation', (c) => AutomationView.render(c));
-  Router.register('#/inbox', (c) => InboxView.render(c));
-  Router.register('#/unified-inbox', (c) => UnifiedInboxView.render(c));
+  // Konsolidierte Inbox: UnifiedInboxView ist jetzt die einzige Inbox
+  Router.register('#/inbox', (c) => UnifiedInboxView.render(c));
+  // Redirect: alte Routen → Inbox
+  Router.register('#/unified-inbox', () => { window.location.hash = '#/inbox'; });
+  Router.register('#/notifications', () => { window.location.hash = '#/inbox'; });
   Router.register('#/memory', (c) => MemoryView.render(c));
 
   // ── Default Nav (vor Preferences-Load) ──
@@ -57,16 +60,16 @@
     shifts: { route: '#/shifts', icon: 'work', label: 'Dienste' },
     issues: { route: '#/issues', icon: 'bug_report', label: 'Issues' },
     focus: { route: '#/focus', icon: 'center_focus_strong', label: 'Fokus' },
-    notifications: { route: '#/notifications', icon: 'notifications', label: 'Alerts' },
+    notifications: { route: '#/inbox', icon: 'notifications', label: 'Inbox' },
     templates: { route: '#/templates', icon: 'library_books', label: 'Vorlagen' },
     documents: { route: '#/documents', icon: 'scanner', label: 'Dokumente' },
     contacts: { route: '#/contacts', icon: 'contacts', label: 'Kontakte' },
-    followups: { route: '#/followups', icon: 'reply_all', label: 'Follow-ups' },
+    followups: { route: '#/inbox', icon: 'reply_all', label: 'Inbox' },
     weather: { route: '#/weather', icon: 'cloud', label: 'Wetter' },
     mobility: { route: '#/mobility', icon: 'route', label: 'Mobilität' },
     automation: { route: '#/automation', icon: 'smart_toy', label: 'Automation' },
-    inbox: { route: '#/inbox', icon: 'inbox', label: 'Inbox' },
-    'unified-inbox': { route: '#/unified-inbox', icon: 'all_inbox', label: 'Inbox' },
+    inbox: { route: '#/inbox', icon: 'all_inbox', label: 'Inbox' },
+    'unified-inbox': { route: '#/inbox', icon: 'all_inbox', label: 'Inbox' },
     memory: { route: '#/memory', icon: 'psychology', label: 'Gedaechtnis' },
   };
 

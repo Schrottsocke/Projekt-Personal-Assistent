@@ -41,23 +41,8 @@ const UnifiedInboxView = (() => {
     snooze:   { icon: 'snooze',       label: 'Spaeter',       class: '' },
   };
 
-  function formatTime(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diff = now - d;
-    if (diff < 60000) return 'Gerade eben';
-    if (diff < 3600000) return `vor ${Math.floor(diff / 60000)} Min.`;
-    if (diff < 86400000) return `vor ${Math.floor(diff / 3600000)} Std.`;
-    if (diff < 172800000) return 'Gestern';
-    return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' });
-  }
-
-  function formatDueDate(dateStr) {
-    if (!dateStr) return '';
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
-  }
+  const formatTime = Utils.formatTime;
+  const formatDueDate = Utils.formatDateShort;
 
   function renderFilters() {
     const statusFilters = [
@@ -312,4 +297,49 @@ const UnifiedInboxView = (() => {
   }
 
   return { render };
+})();
+
+/**
+ * Notification Bell – Header-Badge mit Unread-Counter.
+ * Wird global initialisiert und pollt alle 60s.
+ */
+const NotificationBell = (() => {
+  let _interval = null;
+  let _badge = null;
+
+  async function refresh() {
+    if (!Api.isLoggedIn()) {
+      updateBadge(0);
+      return;
+    }
+    try {
+      const data = await Api.getUnifiedInboxCount();
+      updateBadge(data.total || 0);
+    } catch (_) {
+      // Silent fail – don't show toast for background polling
+    }
+  }
+
+  function updateBadge(count) {
+    _badge = document.getElementById('notification-badge');
+    if (!_badge) return;
+    if (count > 0) {
+      _badge.textContent = count > 99 ? '99+' : count;
+      _badge.classList.remove('hidden');
+    } else {
+      _badge.classList.add('hidden');
+    }
+  }
+
+  function init() {
+    refresh();
+    if (_interval) clearInterval(_interval);
+    _interval = setInterval(refresh, 60000);
+  }
+
+  function stop() {
+    if (_interval) { clearInterval(_interval); _interval = null; }
+  }
+
+  return { init, stop, refresh };
 })();
