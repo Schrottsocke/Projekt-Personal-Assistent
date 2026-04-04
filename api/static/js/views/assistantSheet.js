@@ -76,7 +76,7 @@ const AssistantSheet = (() => {
     document.addEventListener('keydown', (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        toggle();
+        SearchView.show();
       }
       if (e.key === 'Escape' && isOpen) close();
     });
