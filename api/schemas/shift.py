@@ -63,6 +63,8 @@ class ShiftEntryCreate(BaseModel):
 class ShiftEntryUpdate(BaseModel):
     """Manuelle Bearbeitung eines Diensteintrags."""
 
+    shift_type_id: Optional[int] = None
+    date: Optional[str] = Field(None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     actual_start: Optional[str] = Field(None, pattern=r"^\d{2}:\d{2}$")
     actual_end: Optional[str] = Field(None, pattern=r"^\d{2}:\d{2}$")
     actual_break_minutes: Optional[int] = Field(None, ge=0)
