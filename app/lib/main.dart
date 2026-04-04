@@ -14,6 +14,9 @@ import 'screens/chat_screen.dart';
 import 'screens/profile_screen.dart';
 import 'screens/tasks_screen.dart';
 import 'screens/calendar_screen.dart';
+import 'screens/mealplan_screen.dart';
+import 'screens/notifications_screen.dart';
+import 'providers/theme_provider.dart';
 
 void main() {
   FlutterError.onError = (details) {
@@ -68,6 +71,8 @@ final List<NavArea> allNavAreas = [
   NavArea(id: 'chat', path: '/chat', label: 'Chat', icon: Icons.chat_bubble_outline, selectedIcon: Icons.chat_bubble, screen: const ChatScreen()),
   NavArea(id: 'tasks', path: '/tasks', label: 'Aufgaben', icon: Icons.check_box_outlined, selectedIcon: Icons.check_box, screen: const TasksScreen()),
   NavArea(id: 'calendar', path: '/calendar', label: 'Kalender', icon: Icons.calendar_today_outlined, selectedIcon: Icons.calendar_today, screen: const CalendarScreen()),
+  NavArea(id: 'mealplan', path: '/mealplan', label: 'Wochenplan', icon: Icons.restaurant_outlined, selectedIcon: Icons.restaurant, screen: const MealPlanScreen()),
+  NavArea(id: 'notifications', path: '/notifications', label: 'Mitteilungen', icon: Icons.notifications_outlined, selectedIcon: Icons.notifications, screen: const NotificationsScreen()),
   NavArea(id: 'profile', path: '/profile', label: 'Profil', icon: Icons.person_outline, selectedIcon: Icons.person, screen: const ProfileScreen()),
 ];
 
@@ -83,16 +88,30 @@ class DualMindApp extends ConsumerWidget {
     final pinnedIds = _getPinnedIds(prefsState);
     final router = _buildRouter(ref, pinnedIds);
 
+    final themeMode = ref.watch(themeModeProvider);
+
+    final darkTheme = ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF1565C0),
+        brightness: Brightness.dark,
+      ),
+    );
+
+    final lightTheme = ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: const Color(0xFF1565C0),
+        brightness: Brightness.light,
+      ),
+    );
+
     return MaterialApp.router(
       title: 'DualMind',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1565C0),
-          brightness: Brightness.dark,
-        ),
-      ),
+      theme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
       routerConfig: router,
     );
   }
