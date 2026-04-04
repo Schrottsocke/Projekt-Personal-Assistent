@@ -87,9 +87,82 @@ const DashboardView = (() => {
         <a href="#/tasks" class="quick-action-btn"><span class="material-symbols-outlined">add_task</span> Aufgabe</a>
         <a href="#/shopping" class="quick-action-btn"><span class="material-symbols-outlined">add_shopping_cart</span> Einkauf</a>
         <a href="#/calendar" class="quick-action-btn"><span class="material-symbols-outlined">event</span> Termin</a>
-        <a href="#/chat" class="quick-action-btn"><span class="material-symbols-outlined">chat</span> Fragen</a>
+        <a href="#/chat" class="quick-action-btn"><span class="material-symbols-outlined">chat</span> Chat</a>
       </div>
     `;
+  }
+
+  function renderBriefingTrigger() {
+    return `
+      <div class="card card-clickable briefing-trigger" onclick="DashboardView.showBriefing()" style="margin-bottom:16px">
+        <div class="flex-between">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="material-symbols-outlined" style="color:var(--accent)">wb_sunny</span>
+            <span class="card-title" style="margin:0">Tagesbriefing</span>
+          </div>
+          <span class="material-symbols-outlined" style="color:var(--text-muted)">arrow_forward</span>
+        </div>
+      </div>
+    `;
+  }
+
+  async function showBriefing() {
+    // Show modal overlay with loading state
+    let overlay = document.getElementById('briefing-overlay');
+    if (overlay) overlay.remove();
+
+    overlay = document.createElement('div');
+    overlay.id = 'briefing-overlay';
+    overlay.className = 'assistant-overlay open';
+    overlay.innerHTML = `
+      <div class="assistant-sheet" style="max-height:85vh">
+        <div class="assistant-sheet-handle"></div>
+        <div class="assistant-sheet-header">
+          <span class="assistant-sheet-title"><span class="material-symbols-outlined" style="font-size:20px;vertical-align:-4px;margin-right:4px">wb_sunny</span> Tagesbriefing</span>
+          <button class="btn btn-icon" onclick="document.getElementById('briefing-overlay').remove()"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div id="briefing-content" style="padding:16px;overflow-y:auto;max-height:calc(85vh - 80px)">
+          <div style="text-align:center;padding:32px 0">
+            <span class="typing-dots"><span></span><span></span><span></span></span>
+            <div class="card-subtitle" style="margin-top:8px">Briefing wird erstellt…</div>
+          </div>
+        </div>
+      </div>
+    `;
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+    document.body.appendChild(overlay);
+
+    try {
+      const data = await Api.get('/dashboard/briefing');
+      const contentEl = document.getElementById('briefing-content');
+      if (!contentEl) return;
+
+      if (!data.sections || data.sections.length === 0) {
+        contentEl.innerHTML = `
+          <div class="empty-state">
+            <span class="material-symbols-outlined empty-state-icon">wb_sunny</span>
+            <div class="empty-state-text">Heute steht nichts an — genieß den Tag!</div>
+          </div>
+        `;
+        return;
+      }
+
+      let html = '';
+      for (const section of data.sections) {
+        html += `<div class="section-header" style="margin-top:12px"><span class="section-icon material-symbols-outlined">${section.icon || 'info'}</span> ${escapeHtml(section.title)}</div>`;
+        for (const item of section.items || []) {
+          html += `<div class="card" style="margin-bottom:8px"><div class="card-title">${escapeHtml(item.text)}</div>${item.detail ? `<div class="card-subtitle">${escapeHtml(item.detail)}</div>` : ''}</div>`;
+        }
+      }
+      contentEl.innerHTML = html;
+    } catch (err) {
+      const contentEl = document.getElementById('briefing-content');
+      if (contentEl) {
+        contentEl.innerHTML = `<div class="error-state"><p>${escapeHtml(err.message || 'Fehler beim Laden')}</p><button class="btn btn-secondary" onclick="DashboardView.showBriefing()">Erneut versuchen</button></div>`;
+      }
+    }
   }
 
   // ── Widget Renderers ──
@@ -258,6 +331,7 @@ const DashboardView = (() => {
       </div>
       <div class="greeting-sub" id="greeting-summary">Dein Tages\u00fcberblick wird geladen\u2026</div>
       <div id="proactive-suggestions"></div>
+      ${renderBriefingTrigger()}
       ${renderQuickActions()}
       <div id="dashboard-content">
         <div class="skeleton skeleton-section-header"></div>
@@ -655,5 +729,5 @@ const DashboardView = (() => {
     }
   }
 
-  return { render, dismissSuggestion: _dismissSuggestion };
+  return { render, dismissSuggestion: _dismissSuggestion, showBriefing };
 })();
