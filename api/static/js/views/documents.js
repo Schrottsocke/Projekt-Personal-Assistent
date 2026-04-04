@@ -179,6 +179,9 @@ const DocumentsView = (() => {
             <button class="btn btn-secondary doc-action-btn" data-action="draft_email" data-doc-id="${doc.id}">
               <span class="material-symbols-outlined">forward_to_inbox</span> E-Mail-Entwurf
             </button>
+            <button class="btn btn-danger doc-delete-btn" data-doc-id="${doc.id}">
+              <span class="material-symbols-outlined">delete</span> Loeschen
+            </button>
           </div>
           <div id="doc-action-result" style="display:none;margin-top:12px"></div>
         </div>
@@ -384,6 +387,14 @@ const DocumentsView = (() => {
       load();
     });
 
+    // Delete-Button
+    container.querySelectorAll('.doc-delete-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const docId = btn.dataset.docId;
+        showDeleteConfirm(docId);
+      });
+    });
+
     // Action-Buttons
     container.querySelectorAll('.doc-action-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -430,6 +441,42 @@ const DocumentsView = (() => {
         }
       });
     });
+  }
+
+  // ── Delete Logic ──
+
+  function showDeleteConfirm(docId) {
+    const resultArea = container.querySelector('#doc-action-result');
+    if (resultArea) {
+      resultArea.style.display = 'block';
+      resultArea.innerHTML = `
+        <div style="text-align:center;padding:12px">
+          <span class="material-symbols-outlined" style="font-size:32px;color:var(--error);display:block;margin-bottom:8px">warning</span>
+          <p style="margin-bottom:12px;font-weight:600">Dokument wirklich loeschen?</p>
+          <p style="font-size:13px;color:var(--text-secondary);margin-bottom:12px">Diese Aktion kann nicht rueckgaengig gemacht werden.</p>
+          <div style="display:flex;gap:8px;justify-content:center">
+            <button class="btn btn-secondary btn-sm" id="doc-delete-cancel">Abbrechen</button>
+            <button class="btn btn-danger btn-sm" id="doc-delete-confirm" data-doc-id="${docId}">Loeschen</button>
+          </div>
+        </div>
+      `;
+      container.querySelector('#doc-delete-cancel')?.addEventListener('click', () => {
+        resultArea.style.display = 'none';
+        resultArea.innerHTML = '';
+      });
+      container.querySelector('#doc-delete-confirm')?.addEventListener('click', () => deleteDocument(docId));
+    }
+  }
+
+  async function deleteDocument(docId) {
+    try {
+      await Api.request(`/documents/${docId}`, { method: 'DELETE' });
+      Toast.show('Dokument geloescht', 'success');
+      currentDetail = null;
+      await load();
+    } catch (err) {
+      Toast.show(err.message || 'Loeschen fehlgeschlagen', 'error');
+    }
   }
 
   // ── Public API ──

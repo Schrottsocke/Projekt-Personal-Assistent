@@ -70,6 +70,28 @@ async def get_document(
         return DocumentOut.model_validate(doc)
 
 
+@router.delete("/{doc_id}", status_code=204)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def delete_document(
+    request: Request,
+    doc_id: int,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    """Loescht ein Dokument aus der DB."""
+    from src.services.database import ScannedDocument, get_db
+
+    db = get_db()
+    with db() as session:
+        doc = (
+            session.query(ScannedDocument)
+            .filter(ScannedDocument.id == doc_id, ScannedDocument.user_key == user_key)
+            .first()
+        )
+        if not doc:
+            raise HTTPException(status_code=404, detail="Dokument nicht gefunden.")
+        session.delete(doc)
+
+
 @router.post("/upload", response_model=DocumentOut, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def upload_document(

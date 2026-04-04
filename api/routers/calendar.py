@@ -105,3 +105,41 @@ async def create_event(
         location=body.location,
     )
     return {"created": True, "event": result}
+
+
+@router.patch("/events/{event_id}")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def update_event(
+    request: Request,
+    event_id: str,
+    user_key: Annotated[str, Depends(get_current_user)],
+    cal_svc=Depends(get_calendar_service_optional),
+):
+    if not cal_svc:
+        raise HTTPException(status_code=503, detail="Calendar Service nicht verfuegbar.")
+    if not cal_svc.is_connected(user_key):
+        raise HTTPException(status_code=503, detail="Google Calendar nicht verbunden.")
+    body = await request.json()
+    try:
+        result = await cal_svc.update_event(user_key, event_id, body)
+        return _to_out(result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/events/{event_id}", status_code=204)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def delete_event(
+    request: Request,
+    event_id: str,
+    user_key: Annotated[str, Depends(get_current_user)],
+    cal_svc=Depends(get_calendar_service_optional),
+):
+    if not cal_svc:
+        raise HTTPException(status_code=503, detail="Calendar Service nicht verfuegbar.")
+    if not cal_svc.is_connected(user_key):
+        raise HTTPException(status_code=503, detail="Google Calendar nicht verbunden.")
+    try:
+        await cal_svc.delete_event(user_key, event_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

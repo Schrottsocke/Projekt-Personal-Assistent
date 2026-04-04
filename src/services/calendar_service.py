@@ -311,6 +311,45 @@ class CalendarService:
         retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
         before_sleep=before_sleep_log(logger, logging.WARNING),
     )
+    async def update_event(self, user_key: str, event_id: str, data: dict) -> dict:
+        """Aktualisiert einen bestehenden Kalendereintrag."""
+        try:
+            service = self._get_service(user_key)
+
+            body: dict = {}
+            if "summary" in data:
+                body["summary"] = data["summary"]
+            if "description" in data:
+                body["description"] = data["description"]
+            if "location" in data:
+                body["location"] = data["location"]
+            if "start" in data:
+                body["start"] = {
+                    "dateTime": data["start"],
+                    "timeZone": settings.TIMEZONE,
+                }
+            if "end" in data:
+                body["end"] = {
+                    "dateTime": data["end"],
+                    "timeZone": settings.TIMEZONE,
+                }
+
+            request = service.events().patch(calendarId="primary", eventId=event_id, body=body)
+            updated = await asyncio.to_thread(request.execute)
+            self._invalidate_cache(user_key)
+            logger.info(f"Event aktualisiert fuer '{user_key}': {event_id}")
+            return updated
+
+        except (ValueError, RefreshError, TransportError, OSError) as e:
+            logger.error(f"Calendar-UpdateEvent-Fehler: {e}")
+            raise
+
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        retry=retry_if_exception_type((TransportError, OSError, ConnectionError, TimeoutError)),
+        before_sleep=before_sleep_log(logger, logging.WARNING),
+    )
     async def delete_event(self, user_key: str, event_id: str) -> bool:
         """Löscht einen Kalendereintrag."""
         try:
