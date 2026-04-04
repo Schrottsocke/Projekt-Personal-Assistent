@@ -97,6 +97,162 @@ async def dashboard_today(
     }
 
 
+@router.get("/briefing")
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
+async def get_briefing(
+    request: Request,
+    user_key: Annotated[str, Depends(get_current_user)],
+    calendar_svc=Depends(get_calendar_service),
+    task_svc=Depends(get_task_service),
+    shopping_svc=Depends(get_shopping_service),
+    reminder_svc=Depends(get_reminder_service),
+    email_svc=Depends(get_email_service),
+    notif_svc=Depends(get_notification_service),
+):
+    """Tagesbriefing: Termine, Aufgaben, Einkauf, Erinnerungen, E-Mails, Schichten."""
+
+    async def safe(coro, default):
+        try:
+            return await coro
+        except Exception as e:
+            logger.warning("Briefing-Teilfehler: %s", e)
+            return default
+
+    async def resolved(value):
+        return value
+
+    sections: list[dict] = []
+
+    # Parallel alle Quellen abrufen
+    events, tasks, shopping_items, reminders, unread_count, notif_unread = await asyncio.gather(
+        safe(calendar_svc.get_todays_events(user_key), []) if calendar_svc.is_connected(user_key) else resolved([]),
+        safe(task_svc.get_open_tasks(user_key), []),
+        safe(shopping_svc.get_items(user_key, include_checked=False), []),
+        safe(reminder_svc.get_todays_reminders(user_key), []),
+        safe(email_svc.get_unread_count(user_key), 0) if email_svc.is_connected(user_key) else resolved(0),
+        safe(notif_svc.count_unread(user_key), 0),
+    )
+
+    # Schichten
+    from api.routers.shifts import get_shift_events_for_range
+
+    today_str = _dt.now().strftime("%Y-%m-%d")
+    try:
+        shifts_today = get_shift_events_for_range(user_key, today_str, today_str)
+    except Exception as e:
+        logger.warning("Briefing Shift-Fehler: %s", e)
+        shifts_today = []
+
+    # 1. Schichten
+    if shifts_today:
+        sections.append(
+            {
+                "title": "Schichten heute",
+                "icon": "work",
+                "items": [
+                    {
+                        "text": s.get("summary", "Schicht"),
+                        "detail": f"{s.get('start', '')} – {s.get('end', '')}",
+                    }
+                    for s in shifts_today[:5]
+                ],
+            }
+        )
+
+    # 2. Termine
+    if events:
+        sections.append(
+            {
+                "title": "Termine heute",
+                "icon": "calendar_month",
+                "items": [
+                    {
+                        "text": e.get("summary", ""),
+                        "detail": e.get("start", ""),
+                    }
+                    for e in events[:5]
+                ],
+            }
+        )
+
+    # 3. Erinnerungen
+    if reminders:
+        sections.append(
+            {
+                "title": "Erinnerungen",
+                "icon": "schedule",
+                "items": [
+                    {
+                        "text": r.get("title", r.get("text", "")),
+                        "detail": r.get("time", ""),
+                    }
+                    for r in reminders[:5]
+                ],
+            }
+        )
+
+    # 4. Aufgaben (faellige/ueberfaellige bevorzugt)
+    if tasks:
+        today = _dt.now().strftime("%Y-%m-%d")
+        due_today = [t for t in tasks if t.get("due_date") and t["due_date"] <= today]
+        display_tasks = due_today[:5] if due_today else tasks[:5]
+        sections.append(
+            {
+                "title": "Aufgaben",
+                "icon": "check_circle",
+                "items": [
+                    {
+                        "text": t.get("title", ""),
+                        "detail": f"Priorität: {t.get('priority', 'normal')}",
+                    }
+                    for t in display_tasks
+                ],
+            }
+        )
+
+    # 5. Einkauf
+    if shopping_items:
+        sections.append(
+            {
+                "title": "Einkaufsliste",
+                "icon": "shopping_cart",
+                "items": [{"text": i.get("name", ""), "detail": ""} for i in shopping_items[:5]],
+            }
+        )
+
+    # 6. E-Mails
+    if unread_count:
+        sections.append(
+            {
+                "title": "E-Mails",
+                "icon": "mail",
+                "items": [
+                    {
+                        "text": f"{unread_count} ungelesene E-Mail{'s' if unread_count > 1 else ''}",
+                        "detail": "",
+                    }
+                ],
+            }
+        )
+
+    # 7. Benachrichtigungen
+    if notif_unread:
+        sections.append(
+            {
+                "title": "Benachrichtigungen",
+                "icon": "notifications",
+                "items": [
+                    {
+                        "text": f"{notif_unread} ungelesen",
+                        "detail": "",
+                    }
+                ],
+            }
+        )
+
+    return {"sections": sections, "generated_at": _dt.utcnow().isoformat()}
+
+
 @router.get("/weekly-review")
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def weekly_review(

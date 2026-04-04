@@ -145,9 +145,14 @@ const AssistantSheet = (() => {
       <div class="assistant-sheet-handle"></div>
       <div class="assistant-sheet-header">
         <span class="assistant-sheet-title">Assistent</span>
-        <a href="#/chat" class="assistant-sheet-link" onclick="AssistantSheet.close()">
-          Verlauf <span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px">open_in_new</span>
-        </a>
+        <div style="display:flex;align-items:center;gap:12px">
+          <a href="#/chat" class="assistant-sheet-link" onclick="AssistantSheet.close()" style="white-space:nowrap">
+            <span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px">open_in_full</span> Vollbild
+          </a>
+          <a href="#/chat" class="assistant-sheet-link" onclick="AssistantSheet.close()" style="white-space:nowrap">
+            Verlauf <span class="material-symbols-outlined" style="font-size:16px;vertical-align:-3px">open_in_new</span>
+          </a>
+        </div>
       </div>
       <div class="assistant-messages" id="assistant-messages">
         <div class="assistant-messages-placeholder">
