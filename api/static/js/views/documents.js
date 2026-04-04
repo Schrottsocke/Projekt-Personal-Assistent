@@ -186,11 +186,7 @@ const DocumentsView = (() => {
     `;
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
+  // escapeHtml: nutzt globale Funktion aus utils.js
 
   // ── Data Loading ──
 

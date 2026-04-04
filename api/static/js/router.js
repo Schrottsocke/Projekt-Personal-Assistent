@@ -42,10 +42,19 @@ const Router = (() => {
       return;
     }
 
-    // Update active nav item
+    // Update active nav item (mit Parent-Route-Matching)
+    const ROUTE_PARENTS = {
+      '#/tasks': '#/planen', '#/calendar': '#/planen', '#/mealplan': '#/planen',
+      '#/recipes': '#/planen', '#/shopping': '#/planen', '#/templates': '#/planen',
+      '#/profile': '#/mehr', '#/documents': '#/mehr', '#/drive': '#/mehr',
+      '#/contacts': '#/mehr', '#/shifts': '#/mehr', '#/automation': '#/mehr',
+      '#/memory': '#/mehr', '#/weather': '#/mehr', '#/mobility': '#/mehr',
+      '#/issues': '#/mehr',
+    };
+    const activeNav = ROUTE_PARENTS[hash] || hash;
     document.querySelectorAll('.nav-item').forEach(item => {
       const target = item.getAttribute('data-route');
-      item.classList.toggle('active', target === hash);
+      item.classList.toggle('active', target === activeNav);
     });
 
     // Show/hide nav for login

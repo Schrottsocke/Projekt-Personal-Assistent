@@ -6,11 +6,7 @@ const CalendarView = (() => {
   let events = [];
   let showForm = false;
 
-  function formatTime(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-  }
+  const formatTime = Utils.formatClockTime;
 
   function formatDate(iso) {
     if (!iso) return '';

@@ -19,12 +19,12 @@
     <header class="app-header hidden">
       <h1>DualMind</h1>
       <div class="header-actions">
-        <button class="header-btn notification-bell hidden" onclick="window.location.hash='#/unified-inbox'" title="Inbox">
+        <button class="header-btn notification-bell hidden" onclick="window.location.hash='#/inbox'" title="Inbox">
           <span class="material-symbols-outlined">notifications</span>
           <span id="notification-badge" class="notification-badge hidden">0</span>
         </button>
-        <button class="header-btn header-search-btn" onclick="CommandPalette.open()" title="Suche (Ctrl+K)">
-          <span class="material-symbols-outlined">search</span>
+        <button class="header-btn header-search-btn" onclick="AssistantSheet.toggle()" title="Assistent (Ctrl+K)">
+          <span class="material-symbols-outlined">chat_bubble</span>
         </button>
       </div>
     </header>
@@ -57,20 +57,17 @@
   <script src="/static/js/views/drive.js?v=__CACHE_VERSION__"></script>
   <script src="/static/js/views/issues.js?v=__CACHE_VERSION__"></script>
   <script src="/static/js/views/shifts.js?v=__CACHE_VERSION__"></script>
-  <script src="/static/js/views/notifications.js?v=__CACHE_VERSION__"></script>
-  <script src="/static/js/views/focus.js?v=__CACHE_VERSION__"></script>
   <script src="/static/js/views/templates.js?v=__CACHE_VERSION__"></script>
   <script src="/static/js/views/documents.js?v=__CACHE_VERSION__"></script>
   <script src="/static/js/views/contacts.js?v=__CACHE_VERSION__"></script>
-  <script src="/static/js/views/followups.js?v=__CACHE_VERSION__"></script>
   <script src="/static/js/views/automation.js?v=__CACHE_VERSION__"></script>
-  <script src="/static/js/views/inbox.js?v=__CACHE_VERSION__"></script>
   <script src="/static/js/views/unifiedInbox.js?v=__CACHE_VERSION__"></script>
   <script src="/static/js/views/weather.js?v=__CACHE_VERSION__"></script>
   <script src="/static/js/views/memory.js?v=__CACHE_VERSION__"></script>
+  <script src="/static/js/views/planen.js?v=__CACHE_VERSION__"></script>
+  <script src="/static/js/views/mehr.js?v=__CACHE_VERSION__"></script>
   <script src="/static/js/views/mobility.js?v=__CACHE_VERSION__"></script>
-  <script src="/static/js/views/commandPalette.js?v=__CACHE_VERSION__"></script>
-  <script src="/static/js/views/quickCapture.js?v=__CACHE_VERSION__"></script>
+  <script src="/static/js/views/assistantSheet.js?v=__CACHE_VERSION__"></script>
   <!-- App Init -->
   <script src="/static/js/app.js?v=__CACHE_VERSION__"></script>
   <!-- Service Worker -->

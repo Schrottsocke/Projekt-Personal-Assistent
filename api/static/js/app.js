@@ -21,26 +21,32 @@
   Router.register('#/drive', (c) => DriveView.render(c));
   Router.register('#/issues', (c) => IssuesView.render(c));
   Router.register('#/shifts', (c) => ShiftsView.render(c));
-  Router.register('#/notifications', (c) => NotificationsView.render(c));
-  Router.register('#/focus', (c) => FocusView.render(c));
+  // Redirect: Focus → Dashboard (Focus View wurde ins Dashboard integriert)
+  Router.register('#/focus', () => { window.location.hash = '#/dashboard'; });
   Router.register('#/templates', (c) => TemplatesView.render(c));
   Router.register('#/documents', (c) => DocumentsView.render(c));
   Router.register('#/contacts', (c) => ContactsView.render(c));
-  Router.register('#/followups', (c) => FollowUpsView.render(c));
+  // Redirect: alte Follow-ups Route → Inbox
+  Router.register('#/followups', () => { window.location.hash = '#/inbox'; });
   Router.register('#/weather', (c) => WeatherView.render(c));
   Router.register('#/mobility', (c) => MobilityView.render(c));
   Router.register('#/automation', (c) => AutomationView.render(c));
-  Router.register('#/inbox', (c) => InboxView.render(c));
-  Router.register('#/unified-inbox', (c) => UnifiedInboxView.render(c));
+  // Konsolidierte Inbox: UnifiedInboxView ist jetzt die einzige Inbox
+  Router.register('#/inbox', (c) => UnifiedInboxView.render(c));
+  // Redirect: alte Routen → Inbox
+  Router.register('#/unified-inbox', () => { window.location.hash = '#/inbox'; });
+  Router.register('#/notifications', () => { window.location.hash = '#/inbox'; });
   Router.register('#/memory', (c) => MemoryView.render(c));
+  // Neue Hub-Views
+  Router.register('#/planen', (c) => PlanenView.render(c));
+  Router.register('#/mehr', (c) => MehrView.render(c));
 
-  // ── Default Nav (vor Preferences-Load) ──
-  const DEFAULT_NAV = [
-    { id: 'dashboard', label: 'Home', icon: 'home', route: '#/dashboard', pinned: true, order: 0 },
-    { id: 'calendar', label: 'Kalender', icon: 'calendar_month', route: '#/calendar', pinned: true, order: 1 },
-    { id: 'shopping', label: 'Einkauf', icon: 'shopping_cart', route: '#/shopping', pinned: true, order: 2 },
-    { id: 'chat', label: 'Chat', icon: 'chat_bubble', route: '#/chat', pinned: true, order: 3 },
-    { id: 'profile', label: 'Profil', icon: 'person', route: '#/profile', pinned: true, order: 4 },
+  // ── Feste 4-Tab Navigation ──
+  const FIXED_NAV = [
+    { id: 'dashboard', label: 'Heute', icon: 'today', route: '#/dashboard' },
+    { id: 'inbox', label: 'Inbox', icon: 'all_inbox', route: '#/inbox' },
+    { id: 'planen', label: 'Planen', icon: 'event_note', route: '#/planen' },
+    { id: 'mehr', label: 'Mehr', icon: 'menu', route: '#/mehr' },
   ];
 
   // Mapping von Nav-ID zu Route und Meta
@@ -56,17 +62,17 @@
     drive: { route: '#/drive', icon: 'folder', label: 'Drive' },
     shifts: { route: '#/shifts', icon: 'work', label: 'Dienste' },
     issues: { route: '#/issues', icon: 'bug_report', label: 'Issues' },
-    focus: { route: '#/focus', icon: 'center_focus_strong', label: 'Fokus' },
-    notifications: { route: '#/notifications', icon: 'notifications', label: 'Alerts' },
+    focus: { route: '#/dashboard', icon: 'center_focus_strong', label: 'Heute' },
+    notifications: { route: '#/inbox', icon: 'notifications', label: 'Inbox' },
     templates: { route: '#/templates', icon: 'library_books', label: 'Vorlagen' },
     documents: { route: '#/documents', icon: 'scanner', label: 'Dokumente' },
     contacts: { route: '#/contacts', icon: 'contacts', label: 'Kontakte' },
-    followups: { route: '#/followups', icon: 'reply_all', label: 'Follow-ups' },
+    followups: { route: '#/inbox', icon: 'reply_all', label: 'Inbox' },
     weather: { route: '#/weather', icon: 'cloud', label: 'Wetter' },
     mobility: { route: '#/mobility', icon: 'route', label: 'Mobilität' },
     automation: { route: '#/automation', icon: 'smart_toy', label: 'Automation' },
-    inbox: { route: '#/inbox', icon: 'inbox', label: 'Inbox' },
-    'unified-inbox': { route: '#/unified-inbox', icon: 'all_inbox', label: 'Inbox' },
+    inbox: { route: '#/inbox', icon: 'all_inbox', label: 'Inbox' },
+    'unified-inbox': { route: '#/inbox', icon: 'all_inbox', label: 'Inbox' },
     memory: { route: '#/memory', icon: 'psychology', label: 'Gedaechtnis' },
   };
 
@@ -74,47 +80,30 @@
   let _cachedPrefs = null;
 
   /**
-   * Baut die Bottom-Nav aus Preferences-Daten oder Defaults auf.
+   * Baut die feste 4-Tab Bottom-Nav auf.
    */
-  function buildNav(navItems) {
+  function buildNav() {
     const nav = document.getElementById('bottom-nav');
     if (!nav) return;
 
-    // Nur angepinnte + aktivierte Items anzeigen, sortiert nach order
-    const pinned = (navItems || DEFAULT_NAV)
-      .filter(i => i.enabled !== false && i.pinned)
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-    nav.innerHTML = pinned.map(item => {
-      const meta = NAV_META[item.id] || {};
-      const route = meta.route || item.route || `#/${item.id}`;
-      const icon = meta.icon || item.icon || 'circle';
-      const label = meta.label || item.label || item.id;
-      return `<a class="nav-item" data-route="${route}" href="${route}">
-        <span class="nav-icon material-symbols-outlined">${icon}</span>
-        <span>${label}</span>
-      </a>`;
-    }).join('');
+    nav.innerHTML = FIXED_NAV.map(item => `
+      <a class="nav-item" data-route="${item.route}" href="${item.route}">
+        <span class="nav-icon material-symbols-outlined">${item.icon}</span>
+        <span>${item.label}</span>
+      </a>
+    `).join('');
   }
 
   /**
    * Laedt User-Preferences und aktualisiert Nav + Dashboard-Config.
    */
   async function loadPreferences() {
-    if (!Api.isLoggedIn()) {
-      buildNav(null);
-      return null;
-    }
+    if (!Api.isLoggedIn()) return null;
     try {
       const prefs = await Api.getPreferences();
       _cachedPrefs = prefs;
-      if (prefs.nav && prefs.nav.items) {
-        buildNav(prefs.nav.items);
-      }
       return prefs;
     } catch {
-      // Fallback auf Defaults bei Fehler
-      buildNav(null);
       return null;
     }
   }
@@ -132,9 +121,6 @@
   async function savePreferences(updates) {
     const result = await Api.updatePreferences(updates);
     _cachedPrefs = result;
-    if (result.nav && result.nav.items) {
-      buildNav(result.nav.items);
-    }
     return result;
   }
 
@@ -145,23 +131,17 @@
     save: savePreferences,
     buildNav,
     NAV_META,
-    DEFAULT_NAV,
+    FIXED_NAV,
   };
 
-  // Global keyboard shortcut: Ctrl+K / Cmd+K for Command Palette
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-      e.preventDefault();
-      CommandPalette.toggle();
-    }
-  });
+  // Ctrl+K wird vom AssistantSheet selbst gehandelt (in assistantSheet.js init)
 
   // Init router on DOM ready, then load preferences + Quick Capture
   async function startup() {
-    // Build default nav immediately (before preferences load)
-    buildNav(null);
+    // Feste 4-Tab Navigation aufbauen
+    buildNav();
     Router.init();
-    QuickCapture.init();
+    AssistantSheet.init();
     // Init offline queue (status tracking + auto-sync)
     if (typeof OfflineQueue !== 'undefined') {
       OfflineQueue.init();
