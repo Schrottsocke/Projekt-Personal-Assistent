@@ -36,6 +36,7 @@
   // Redirect: alte Routen → Inbox
   Router.register('#/unified-inbox', () => { window.location.hash = '#/inbox'; });
   Router.register('#/notifications', () => { window.location.hash = '#/inbox'; });
+  Router.register('#/invoices', (c) => InvoicesView.render(c));
   Router.register('#/memory', (c) => MemoryView.render(c));
   // Neue Hub-Views
   Router.register('#/planen', (c) => PlanenView.render(c));
@@ -73,6 +74,7 @@
     automation: { route: '#/automation', icon: 'smart_toy', label: 'Automation' },
     inbox: { route: '#/inbox', icon: 'all_inbox', label: 'Inbox' },
     'unified-inbox': { route: '#/inbox', icon: 'all_inbox', label: 'Inbox' },
+    invoices: { route: '#/invoices', icon: 'receipt_long', label: 'Rechnungen' },
     memory: { route: '#/memory', icon: 'psychology', label: 'Gedaechtnis' },
   };
 
