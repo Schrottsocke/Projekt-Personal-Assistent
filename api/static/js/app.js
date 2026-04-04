@@ -31,6 +31,7 @@
   Router.register('#/mobility', (c) => MobilityView.render(c));
   Router.register('#/automation', (c) => AutomationView.render(c));
   Router.register('#/inbox', (c) => InboxView.render(c));
+  Router.register('#/unified-inbox', (c) => UnifiedInboxView.render(c));
   Router.register('#/memory', (c) => MemoryView.render(c));
 
   // ── Default Nav (vor Preferences-Load) ──
@@ -65,6 +66,7 @@
     mobility: { route: '#/mobility', icon: 'route', label: 'Mobilität' },
     automation: { route: '#/automation', icon: 'smart_toy', label: 'Automation' },
     inbox: { route: '#/inbox', icon: 'inbox', label: 'Inbox' },
+    'unified-inbox': { route: '#/unified-inbox', icon: 'all_inbox', label: 'Inbox' },
     memory: { route: '#/memory', icon: 'psychology', label: 'Gedaechtnis' },
   };
 

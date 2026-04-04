@@ -42,6 +42,7 @@ async def startup():
     from src.services.ocr_service import OcrService
     from src.services.pdf_service import PdfService
     from src.services.template_service import TemplateService
+    from src.services.inbox_service import InboxService
     from src.services.database import init_db
 
     init_db()
@@ -68,6 +69,7 @@ async def startup():
         ("ocr", OcrService),
         ("pdf", PdfService),
         ("template", TemplateService),
+        ("inbox", InboxService),
     ]
 
     # AutomationService (JSON-basiert, kein DB-Init noetig)
@@ -105,6 +107,7 @@ async def startup():
         "contacts",
         "followup",
         "template",
+        "inbox",
     ):
         if name not in pending:
             continue
@@ -258,6 +261,10 @@ def get_pdf_service():
 
 def get_template_service():
     return _require("template")
+
+
+def get_inbox_service():
+    return _require("inbox")
 
 
 def get_automation_service():

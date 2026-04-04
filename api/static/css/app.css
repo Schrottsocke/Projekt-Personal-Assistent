@@ -4087,6 +4087,62 @@ select:focus-visible,
   font-size: 18px;
 }
 
+/* ── Unified Inbox ─────────────────────────────────── */
+
+.unified-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-1);
+}
+
+.unified-section-header.unified-section-muted {
+  color: var(--text-secondary);
+  margin-top: var(--space-4);
+}
+
+.unified-overdue {
+  border-left: 3px solid var(--error) !important;
+}
+
+.unified-overdue .notification-title {
+  color: var(--error);
+}
+
+.unified-source-badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.unified-due {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.unified-due-overdue {
+  font-size: var(--text-xs);
+  color: var(--error);
+  font-weight: 600;
+}
+
+.btn-icon-success:hover {
+  color: var(--success) !important;
+}
+
+.btn-icon-danger:hover {
+  color: var(--error) !important;
+}
+
 /* ── Ingredient Preview ────────────────────────────── */
 
 .ingredient-preview-actions {
