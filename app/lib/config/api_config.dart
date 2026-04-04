@@ -75,4 +75,9 @@ class ApiConfig {
   static const String mobilityDailyFlowPath = '/mobility/daily-flow';
   static const String syncStatusPath = '/sync/status';
   static const String syncBatchPath = '/sync/batch';
+
+  // Chat-Upgrade (#591)
+  static const String chatStreamPath = '/chat/message/stream';
+  static const String chatVoicePath = '/chat/voice';
+  static const String chatSuggestionsPath = '/suggestions/chat';
 }

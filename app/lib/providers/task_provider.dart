@@ -20,13 +20,23 @@ class TaskNotifier extends AsyncNotifier<List<Task>> {
     );
   }
 
-  Future<void> addTask(String title, {String priority = 'medium'}) async {
-    await ref.read(taskServiceProvider).createTask(title, priority: priority);
+  Future<void> addTask(String title, {String priority = 'medium', String? recurrence}) async {
+    await ref.read(taskServiceProvider).createTask(title, priority: priority, recurrence: recurrence);
     await refresh();
   }
 
   Future<void> completeTask(int id) async {
     await ref.read(taskServiceProvider).completeTask(id);
+    await refresh();
+  }
+
+  Future<void> updateStatus(int id, String status) async {
+    await ref.read(taskServiceProvider).updateStatus(id, status);
+    await refresh();
+  }
+
+  Future<void> updateTask(int id, {String? title, String? description}) async {
+    await ref.read(taskServiceProvider).updateTask(id, title: title, description: description);
     await refresh();
   }
 
