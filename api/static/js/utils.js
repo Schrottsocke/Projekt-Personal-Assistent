@@ -33,7 +33,33 @@ const Utils = (() => {
     return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
   }
 
-  return { escapeHtml, formatTime, formatDateShort };
+  /**
+   * Uhrzeit als HH:MM formatieren.
+   */
+  function formatClockTime(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /**
+   * Tageszeit-Begruessung (Morgen/Tag/Abend).
+   */
+  function getGreeting() {
+    const h = new Date().getHours();
+    if (h < 12) return 'Guten Morgen';
+    if (h < 18) return 'Guten Tag';
+    return 'Guten Abend';
+  }
+
+  /**
+   * Ersten Buchstaben gross.
+   */
+  function capitalize(s) {
+    return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+  }
+
+  return { escapeHtml, formatTime, formatDateShort, formatClockTime, getGreeting, capitalize };
 })();
 
 // Backward compatibility: global escapeHtml

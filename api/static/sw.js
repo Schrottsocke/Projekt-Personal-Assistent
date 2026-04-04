@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dualmind-v8';
+const CACHE_NAME = 'dualmind-v9';
 const SHELL_ASSETS = [
   '/app',
   '/static/css/app.css',

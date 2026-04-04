@@ -6,22 +6,9 @@
  * Focus Mode zeigt nur die wichtigsten Tagespunkte.
  */
 const DashboardView = (() => {
-  function getGreeting() {
-    const h = new Date().getHours();
-    if (h < 12) return 'Guten Morgen';
-    if (h < 18) return 'Guten Tag';
-    return 'Guten Abend';
-  }
-
-  function capitalize(s) {
-    return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
-  }
-
-  function formatTime(iso) {
-    if (!iso) return '';
-    const d = new Date(iso);
-    return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-  }
+  const getGreeting = Utils.getGreeting;
+  const capitalize = Utils.capitalize;
+  const formatTime = Utils.formatClockTime;
 
   function priorityBadge(p) {
     const map = { high: 'badge-error', medium: 'badge-warning', low: 'badge-success' };
