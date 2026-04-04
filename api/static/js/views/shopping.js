@@ -497,16 +497,16 @@ const ShoppingView = (() => {
     const item = items.find(i => i.id === id);
     if (!item) return;
 
-    // Remove from UI immediately
-    const el = document.querySelector(`.shopping-item[data-id="${id}"]`);
-    if (el) {
-      el.classList.add('removing');
-    }
-
     // Cancel any existing pending delete for this item
     if (pendingDeletes[id]) {
       clearTimeout(pendingDeletes[id].timer);
       delete pendingDeletes[id];
+    }
+
+    // Remove from UI immediately
+    const el = document.querySelector(`.shopping-item[data-id="${id}"]`);
+    if (el) {
+      el.classList.add('removing');
     }
 
     // Remove from items array after animation
@@ -515,21 +515,30 @@ const ShoppingView = (() => {
       renderList();
     }, 250);
 
-    // Store for undo
+    // Show shared undo toast
+    let cancelled = false;
+    Toast.showUndo(`„${item.name}" gelöscht`, () => {
+      cancelled = true;
+      items.unshift({ ...item });
+      renderList();
+    });
+
+    // Store for undo tracking and delayed API call
     pendingDeletes[id] = {
       item: { ...item },
       timer: setTimeout(async () => {
+        if (cancelled) return;
         try {
           await Api.deleteShoppingItem(id);
         } catch (err) {
-          // Item may already be gone
+          // Restore on error
+          items.unshift({ ...item });
+          renderList();
+          showToast('Löschen fehlgeschlagen: ' + err.message, 'error');
         }
         delete pendingDeletes[id];
       }, 5000),
     };
-
-    // Show undo toast
-    showUndoToast(`„${item.name}" gelöscht`, id);
   }
 
   function undoDelete(id) {
@@ -540,10 +549,6 @@ const ShoppingView = (() => {
     items.unshift(pending.item);
     delete pendingDeletes[id];
     renderList();
-
-    // Remove toast
-    const toastEl = document.getElementById(`undo-toast-${id}`);
-    if (toastEl) toastEl.remove();
   }
 
   async function clearChecked() {
@@ -575,31 +580,6 @@ const ShoppingView = (() => {
     }
   }
 
-  function showUndoToast(message, itemId) {
-    const container = document.querySelector('.toast-container') || createToastContainer();
-    const toast = document.createElement('div');
-    toast.className = 'toast toast-info';
-    toast.id = `undo-toast-${itemId}`;
-    toast.innerHTML = `<div class="toast-undo">
-      <span>${escapeHtml(message)}</span>
-      <button onclick="ShoppingView.undoDelete(${itemId})">Rückgängig</button>
-    </div>`;
-    container.appendChild(toast);
-
-    setTimeout(() => {
-      if (toast.parentNode) toast.remove();
-    }, 5000);
-  }
-
-  function createToastContainer() {
-    let c = document.querySelector('.toast-container');
-    if (!c) {
-      c = document.createElement('div');
-      c.className = 'toast-container';
-      document.body.appendChild(c);
-    }
-    return c;
-  }
 
   // ── Save as Template ──
 
