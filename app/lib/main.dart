@@ -21,6 +21,9 @@ import 'screens/weather_screen.dart';
 import 'screens/drive_screen.dart';
 import 'screens/shifts_screen.dart';
 import 'screens/contacts_screen.dart';
+import 'screens/followups_screen.dart';
+import 'screens/documents_screen.dart';
+import 'screens/search_screen.dart';
 
 void main() {
   FlutterError.onError = (details) {
@@ -75,12 +78,16 @@ final List<NavArea> allNavAreas = [
   NavArea(id: 'chat', path: '/chat', label: 'Chat', icon: Icons.chat_bubble_outline, selectedIcon: Icons.chat_bubble, screen: const ChatScreen()),
   NavArea(id: 'tasks', path: '/tasks', label: 'Aufgaben', icon: Icons.check_box_outlined, selectedIcon: Icons.check_box, screen: const TasksScreen()),
   NavArea(id: 'calendar', path: '/calendar', label: 'Kalender', icon: Icons.calendar_today_outlined, selectedIcon: Icons.calendar_today, screen: const CalendarScreen()),
+<<<<<<< HEAD
   NavArea(id: 'mealplan', path: '/mealplan', label: 'Wochenplan', icon: Icons.restaurant_outlined, selectedIcon: Icons.restaurant, screen: const MealPlanScreen()),
   NavArea(id: 'notifications', path: '/notifications', label: 'Mitteilungen', icon: Icons.notifications_outlined, selectedIcon: Icons.notifications, screen: const NotificationsScreen()),
   NavArea(id: 'weather', path: '/weather', label: 'Wetter', icon: Icons.wb_sunny_outlined, selectedIcon: Icons.wb_sunny, screen: const WeatherScreen()),
   NavArea(id: 'drive', path: '/drive', label: 'Drive', icon: Icons.folder_outlined, selectedIcon: Icons.folder, screen: const DriveScreen()),
   NavArea(id: 'shifts', path: '/shifts', label: 'Dienste', icon: Icons.work_outline, selectedIcon: Icons.work, screen: const ShiftsScreen()),
   NavArea(id: 'contacts', path: '/contacts', label: 'Kontakte', icon: Icons.contacts_outlined, selectedIcon: Icons.contacts, screen: const ContactsScreen()),
+  NavArea(id: 'followups', path: '/followups', label: 'Follow-ups', icon: Icons.fact_check_outlined, selectedIcon: Icons.fact_check, screen: const FollowUpsScreen()),
+  NavArea(id: 'documents', path: '/documents', label: 'Dokumente', icon: Icons.description_outlined, selectedIcon: Icons.description, screen: const DocumentsScreen()),
+  NavArea(id: 'search', path: '/search', label: 'Suche', icon: Icons.search_outlined, selectedIcon: Icons.search, screen: const SearchScreen()),
   NavArea(id: 'profile', path: '/profile', label: 'Profil', icon: Icons.person_outline, selectedIcon: Icons.person, screen: const ProfileScreen()),
 ];
 
