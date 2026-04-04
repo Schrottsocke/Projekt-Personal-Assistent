@@ -54,13 +54,42 @@ const CalendarView = (() => {
     loadData();
   }
 
+  const CACHE_KEY = 'dm_cache_calendar';
+
+  function _cacheKey() { return CACHE_KEY + '_' + activeTab; }
+
   async function loadData() {
+    // Stale-while-revalidate: show cached data immediately, then refresh
+    const cached = OfflineQueue.loadCache(_cacheKey());
+    if (cached && cached.data) {
+      events = cached.data.events || [];
+      renderToolbar(cached.data.connected);
+      renderEvents();
+    }
+
     try {
       const data = activeTab === 'today' ? await Api.getCalendarToday() : await Api.getCalendarWeek();
       events = data.events || [];
+      OfflineQueue.saveCache(_cacheKey(), data);
       renderToolbar(data.connected);
       renderEvents();
+      // Remove offline banner if present
+      const offBanner = document.getElementById('calendar-offline-banner');
+      if (offBanner) offBanner.remove();
     } catch (err) {
+      // If we already showed cached data, just add offline indicator
+      if (cached && cached.data) {
+        const el = document.getElementById('calendar-content');
+        if (el && !document.getElementById('calendar-offline-banner')) {
+          const ts = new Date(cached.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+          el.insertAdjacentHTML('afterbegin',
+            `<div id="calendar-offline-banner" class="offline-cache-banner">
+              <span class="material-symbols-outlined mi-sm">cloud_off</span>
+              Offline \u2014 zuletzt aktualisiert: ${ts}
+            </div>`);
+        }
+        return;
+      }
       document.getElementById('calendar-content').innerHTML = `
         <div class="error-state"><p>${escapeHtml(err.message)}</p>
           <button class="btn btn-secondary" onclick="CalendarView.render(document.getElementById('view-container'))">Erneut versuchen</button>
@@ -150,19 +179,28 @@ const CalendarView = (() => {
       return;
     }
 
+    const eventData = {
+      summary,
+      start: new Date(start).toISOString(),
+      end: new Date(end).toISOString(),
+      location: location || undefined,
+    };
+
     try {
-      await Api.createCalendarEvent({
-        summary,
-        start: new Date(start).toISOString(),
-        end: new Date(end).toISOString(),
-        location: location || undefined,
-      });
+      await Api.createCalendarEvent(eventData);
       showForm = false;
       editingEvent = null;
       Toast.show('Termin erstellt', 'success');
       await loadData();
     } catch (err) {
-      Toast.show('Fehler: ' + err.message, 'error');
+      if (err.isOffline || (typeof OfflineQueue !== 'undefined' && !OfflineQueue.isOnline())) {
+        OfflineQueue.enqueueCalendarCreate(eventData);
+        showForm = false;
+        editingEvent = null;
+        Toast.show('Termin wird erstellt wenn online', 'warning');
+      } else {
+        Toast.show('Fehler: ' + err.message, 'error');
+      }
     }
   }
 

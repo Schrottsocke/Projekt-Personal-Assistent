@@ -187,6 +187,8 @@ const UnifiedInboxView = (() => {
     `;
   }
 
+  const INBOX_CACHE_KEY = 'dm_cache_inbox';
+
   async function load() {
     loading = true;
     update();
@@ -197,7 +199,33 @@ const UnifiedInboxView = (() => {
       const data = await Api.getUnifiedInbox(params);
       items = data.items || [];
       counts = data.counts || { actionable: 0, total: 0 };
+      OfflineQueue.saveCache(INBOX_CACHE_KEY, { items, counts });
+      // Remove offline banner on success
+      const offBanner = container?.querySelector('#inbox-offline-banner');
+      if (offBanner) offBanner.remove();
     } catch (err) {
+      // Offline fallback: show cached inbox
+      if (err.isOffline || (typeof OfflineQueue !== 'undefined' && !OfflineQueue.isOnline())) {
+        const cached = OfflineQueue.loadCache(INBOX_CACHE_KEY);
+        if (cached && cached.data) {
+          items = cached.data.items || [];
+          counts = cached.data.counts || { actionable: 0, total: 0 };
+          loading = false;
+          update();
+          if (container) {
+            const ts = new Date(cached.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const list = container.querySelector('#unified-list');
+            if (list) {
+              list.insertAdjacentHTML('afterbegin',
+                `<div id="inbox-offline-banner" class="offline-cache-banner">
+                  <span class="material-symbols-outlined mi-sm">cloud_off</span>
+                  Offline \u2014 zuletzt aktualisiert: ${ts}
+                </div>`);
+            }
+          }
+          return;
+        }
+      }
       items = [];
       counts = { actionable: 0, total: 0 };
       if (container) {
@@ -274,7 +302,13 @@ const UnifiedInboxView = (() => {
             await load();
             // Refresh bell badge
             if (typeof NotificationBell !== 'undefined') NotificationBell.refresh();
-          } catch (_) {
+          } catch (actionErr) {
+            if (actionErr.isOffline || (typeof OfflineQueue !== 'undefined' && !OfflineQueue.isOnline())) {
+              OfflineQueue.enqueueInboxAction(id, action);
+              Toast.show('Aktion wird ausgefuehrt wenn online', 'warning');
+              // Optimistic UI: remove card
+              card.style.opacity = '0.5';
+            }
             btn.disabled = false;
           }
         });

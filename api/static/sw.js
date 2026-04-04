@@ -1,4 +1,6 @@
-const CACHE_NAME = 'dualmind-v9';
+const CACHE_NAME = 'dualmind-v10';
+const API_CACHE_NAME = 'dualmind-api-v1';
+
 const SHELL_ASSETS = [
   '/app',
   '/static/css/app.css',
@@ -33,6 +35,19 @@ const SHELL_ASSETS = [
   '/static/favicon.svg'
 ];
 
+// API paths eligible for stale-while-revalidate caching
+const API_CACHE_PATHS = [
+  '/dashboard/today',
+  '/calendar/today',
+  '/calendar/week',
+  '/chat/history',
+  '/inbox/unified',
+];
+
+function isApiCacheable(pathname) {
+  return API_CACHE_PATHS.some((p) => pathname.startsWith(p));
+}
+
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(SHELL_ASSETS)));
   self.skipWaiting();
@@ -41,7 +56,11 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((names) =>
-      Promise.all(names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n)))
+      Promise.all(
+        names
+          .filter((n) => n !== CACHE_NAME && n !== API_CACHE_NAME)
+          .map((n) => caches.delete(n))
+      )
     )
   );
   self.clients.claim();
@@ -49,10 +68,33 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  // Only cache static assets and app shell – skip all API endpoints and non-GET
   if (e.request.method !== 'GET') return;
-  if (!url.pathname.startsWith('/static/') && url.pathname !== '/app') return;
-  e.respondWith(
-    caches.match(e.request).then((r) => r || fetch(e.request))
-  );
+
+  // Static assets: cache-first
+  if (url.pathname.startsWith('/static/') || url.pathname === '/app') {
+    e.respondWith(
+      caches.match(e.request).then((r) => r || fetch(e.request))
+    );
+    return;
+  }
+
+  // API GET requests: stale-while-revalidate
+  if (isApiCacheable(url.pathname)) {
+    e.respondWith(
+      caches.open(API_CACHE_NAME).then((cache) =>
+        cache.match(e.request).then((cached) => {
+          const networkFetch = fetch(e.request)
+            .then((response) => {
+              if (response.ok) {
+                cache.put(e.request, response.clone());
+              }
+              return response;
+            })
+            .catch(() => cached);
+          return cached || networkFetch;
+        })
+      )
+    );
+    return;
+  }
 });

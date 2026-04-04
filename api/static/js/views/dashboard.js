@@ -346,10 +346,31 @@ const DashboardView = (() => {
 
     try {
       const data = await Api.getDashboard();
+      OfflineQueue.saveCache('dm_cache_dashboard', data);
       renderContent(data);
+      // Offline-Banner entfernen falls vorhanden
+      const offBanner = document.getElementById('dashboard-offline-banner');
+      if (offBanner) offBanner.remove();
       // Proaktive Vorschlaege im Hintergrund laden
       loadProactiveSuggestions();
     } catch (err) {
+      // Offline-Fallback: gespeicherte Daten anzeigen
+      if (err.isOffline || (typeof OfflineQueue !== 'undefined' && !OfflineQueue.isOnline())) {
+        const cached = OfflineQueue.loadCache('dm_cache_dashboard');
+        if (cached && cached.data) {
+          renderContent(cached.data);
+          const ts = new Date(cached.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+          const contentEl = document.getElementById('dashboard-content');
+          if (contentEl) {
+            contentEl.insertAdjacentHTML('afterbegin',
+              `<div id="dashboard-offline-banner" class="offline-cache-banner">
+                <span class="material-symbols-outlined mi-sm">cloud_off</span>
+                Offline \u2014 zuletzt aktualisiert: ${ts}
+              </div>`);
+          }
+          return;
+        }
+      }
       document.getElementById('dashboard-content').innerHTML = `
         <div class="error-state">
           <p>${err.message}</p>

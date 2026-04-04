@@ -67,6 +67,8 @@ const ChatView = (() => {
     }
   }
 
+  const CHAT_CACHE_KEY = 'dm_cache_chat_history';
+
   async function loadHistory() {
     const el = document.getElementById('chat-messages');
     try {
@@ -75,8 +77,23 @@ const ChatView = (() => {
         el.innerHTML = '<div class="empty-state chat-empty">Schreib mir etwas!</div>';
         return;
       }
+      OfflineQueue.saveCache(CHAT_CACHE_KEY, messages);
       renderMessages(messages);
     } catch (err) {
+      // Offline fallback: show cached history
+      if (err.isOffline || (typeof OfflineQueue !== 'undefined' && !OfflineQueue.isOnline())) {
+        const cached = OfflineQueue.loadCache(CHAT_CACHE_KEY);
+        if (cached && cached.data && cached.data.length > 0) {
+          renderMessages(cached.data);
+          const ts = new Date(cached.ts).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+          el.insertAdjacentHTML('afterbegin',
+            `<div class="offline-cache-banner">
+              <span class="material-symbols-outlined mi-sm">cloud_off</span>
+              Offline \u2014 Verlauf von ${ts}
+            </div>`);
+          return;
+        }
+      }
       el.innerHTML = `<div class="error-state"><p>${err.message}</p>
         <button class="btn btn-secondary" onclick="ChatView.render(document.getElementById('view-container'))">Erneut versuchen</button>
       </div>`;
@@ -158,9 +175,21 @@ const ChatView = (() => {
     const message = retryMsg || (input ? input.value.trim() : '');
     if (!message) return;
 
-    // Offline check – chat needs a live connection
+    // Offline check – queue message for later delivery
     if (typeof OfflineQueue !== 'undefined' && !OfflineQueue.isOnline()) {
-      Toast.show('Du bist offline \u2013 Nachrichten k\u00f6nnen gerade nicht gesendet werden', 'warning');
+      OfflineQueue.enqueueChatSend(message);
+      if (!retryMsg && input) input.value = '';
+      // Show queued message in UI
+      const messagesEl = document.getElementById('chat-messages');
+      if (messagesEl) {
+        const empty = messagesEl.querySelector('.empty-state');
+        if (empty) empty.remove();
+        const qBubble = document.createElement('div');
+        qBubble.className = 'chat-bubble user msg-queued';
+        qBubble.innerHTML = `<div class="bubble-content">${escapeHtml(message)}</div><span class="msg-status"><span class="material-symbols-outlined mi-sm">schedule_send</span> wird gesendet wenn online</span>`;
+        messagesEl.appendChild(qBubble);
+        scrollToBottom();
+      }
       return;
     }
 

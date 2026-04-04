@@ -305,9 +305,71 @@ const OfflineQueue = (() => {
   function isOnline() { return online; }
   function getPendingCount() { return queue.length; }
 
+  /**
+   * Convenience helpers for common offline-queued operations.
+   * Supported types: shopping_*, task_*, calendar_create, chat_send, inbox_action
+   */
+  function enqueueCalendarCreate(eventData) {
+    return enqueue({
+      type: 'calendar_create',
+      endpoint: '/calendar/events',
+      method: 'POST',
+      body: eventData,
+      label: 'Termin: ' + (eventData.summary || 'Neuer Termin'),
+    });
+  }
+
+  function enqueueChatSend(message) {
+    return enqueue({
+      type: 'chat_send',
+      endpoint: '/chat',
+      method: 'POST',
+      body: { message },
+      label: 'Nachricht: ' + (message.length > 40 ? message.slice(0, 40) + '\u2026' : message),
+    });
+  }
+
+  function enqueueInboxAction(itemId, action) {
+    return enqueue({
+      type: 'inbox_action',
+      endpoint: '/inbox/unified/' + itemId + '/action',
+      method: 'POST',
+      body: { action },
+      label: 'Inbox: ' + action,
+    });
+  }
+
+  // ── Cache Helpers (shared by views) ──
+
+  function saveCache(key, data) {
+    try {
+      localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+    } catch (_) { /* localStorage full */ }
+  }
+
+  function loadCache(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function clearCache(key) {
+    try { localStorage.removeItem(key); } catch (_) {}
+  }
+
   return {
     init,
     enqueue,
+    enqueueCalendarCreate,
+    enqueueChatSend,
+    enqueueInboxAction,
+    saveCache,
+    loadCache,
+    clearCache,
     isOnline,
     getPendingCount,
     processQueue,
