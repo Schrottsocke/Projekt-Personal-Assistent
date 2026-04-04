@@ -21,7 +21,8 @@
   Router.register('#/drive', (c) => DriveView.render(c));
   Router.register('#/issues', (c) => IssuesView.render(c));
   Router.register('#/shifts', (c) => ShiftsView.render(c));
-  Router.register('#/focus', (c) => FocusView.render(c));
+  // Redirect: Focus → Dashboard (Focus View wurde ins Dashboard integriert)
+  Router.register('#/focus', () => { window.location.hash = '#/dashboard'; });
   Router.register('#/templates', (c) => TemplatesView.render(c));
   Router.register('#/documents', (c) => DocumentsView.render(c));
   Router.register('#/contacts', (c) => ContactsView.render(c));
@@ -59,7 +60,7 @@
     drive: { route: '#/drive', icon: 'folder', label: 'Drive' },
     shifts: { route: '#/shifts', icon: 'work', label: 'Dienste' },
     issues: { route: '#/issues', icon: 'bug_report', label: 'Issues' },
-    focus: { route: '#/focus', icon: 'center_focus_strong', label: 'Fokus' },
+    focus: { route: '#/dashboard', icon: 'center_focus_strong', label: 'Heute' },
     notifications: { route: '#/inbox', icon: 'notifications', label: 'Inbox' },
     templates: { route: '#/templates', icon: 'library_books', label: 'Vorlagen' },
     documents: { route: '#/documents', icon: 'scanner', label: 'Dokumente' },
