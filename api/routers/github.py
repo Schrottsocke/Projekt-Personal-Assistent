@@ -10,7 +10,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from api.dependencies import get_current_user
-from api.schemas.github import IssueCreate, IssueOut, LabelOut
+from api.schemas.github import IssueCreate, IssueOut, IssueUpdate, LabelOut
 from config.settings import settings
 
 logger = structlog.get_logger(__name__)
@@ -158,6 +158,55 @@ async def create_issue(
         "github_issue_created",
         number=data["number"],
         title=data["title"],
+        user=user_key,
+    )
+
+    return IssueOut(
+        number=data["number"],
+        title=data["title"],
+        html_url=data["html_url"],
+        labels=[lb["name"] for lb in data.get("labels", [])],
+        created_at=data["created_at"],
+    )
+
+
+@router.patch("/issues/{issue_number}", response_model=IssueOut)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def update_issue(
+    request: Request,
+    issue_number: int,
+    body: IssueUpdate,
+    user_key: Annotated[str, Depends(get_current_user)],
+) -> IssueOut:
+    """Bestehendes GitHub-Issue aktualisieren (Titel, Body, State, Labels)."""
+    _require_token()
+
+    url = f"{_GITHUB_API}/repos/{settings.GITHUB_REPO}/issues/{issue_number}"
+    payload = body.model_dump(exclude_none=True)
+    if not payload:
+        raise HTTPException(status_code=422, detail="Keine Aenderungen angegeben.")
+
+    async with httpx.AsyncClient(timeout=15) as client:
+        resp = await client.patch(url, json=payload, headers=_headers())
+
+    if resp.status_code not in (200,):
+        logger.error("github_update_issue_error", status=resp.status_code, body=resp.text[:300])
+        detail = "Issue konnte nicht aktualisiert werden"
+        if resp.status_code == 404:
+            detail = f"Issue #{issue_number} nicht gefunden"
+        elif resp.status_code == 422:
+            detail = "Ungueltige Daten"
+        raise HTTPException(status_code=502, detail=detail)
+
+    # Invalidate issue cache
+    global _issue_cache
+    _issue_cache = None
+
+    data = resp.json()
+    logger.info(
+        "github_issue_updated",
+        number=data["number"],
+        state=data.get("state"),
         user=user_key,
     )
 

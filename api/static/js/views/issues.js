@@ -115,14 +115,21 @@ const IssuesView = (() => {
       return;
     }
     el.innerHTML = issues.map(iss => `
-      <a href="${escapeHtml(iss.html_url)}" target="_blank" rel="noopener" class="card issue-item">
+      <div class="card issue-item">
         <div class="flex-between">
-          <span class="issue-number">#${iss.number}</span>
-          <span class="issue-date">${formatIssueDate(iss.created_at)}</span>
+          <a href="${escapeHtml(iss.html_url)}" target="_blank" rel="noopener" style="text-decoration:none;color:inherit;flex:1">
+            <div class="flex-between">
+              <span class="issue-number">#${iss.number}</span>
+              <span class="issue-date">${formatIssueDate(iss.created_at)}</span>
+            </div>
+            <div class="issue-title">${escapeHtml(iss.title)}</div>
+            ${iss.labels.length ? `<div class="issue-labels">${iss.labels.map(l => renderLabelBadge(l)).join('')}</div>` : ''}
+          </a>
+          <button class="btn btn-sm btn-secondary" style="margin-left:8px;color:var(--error);flex-shrink:0" title="Issue schliessen" onclick="IssuesView.closeIssue(${iss.number})">
+            <span class="material-symbols-outlined mi-sm">close</span>
+          </button>
         </div>
-        <div class="issue-title">${escapeHtml(iss.title)}</div>
-        ${iss.labels.length ? `<div class="issue-labels">${iss.labels.map(l => renderLabelBadge(l)).join('')}</div>` : ''}
-      </a>
+      </div>
     `).join('');
   }
 
@@ -278,5 +285,18 @@ const IssuesView = (() => {
     }
   }
 
-  return { render, submit, reload };
+  async function closeIssue(number) {
+    if (!confirm(`Issue #${number} wirklich schliessen?`)) return;
+    try {
+      await Api.request(`/github/issues/${number}`, { method: 'PATCH', body: { state: 'closed' } });
+      Toast.show('Issue geschlossen', 'success');
+      const issues = await withRetry(() => Api.getGitHubIssues());
+      const el = document.getElementById('issue-list');
+      if (el) renderIssueList(el, issues);
+    } catch (err) {
+      Toast.show('Fehler: ' + (err.message || 'Unbekannt'));
+    }
+  }
+
+  return { render, submit, reload, closeIssue };
 })();

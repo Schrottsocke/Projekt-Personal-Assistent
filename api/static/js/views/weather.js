@@ -2,7 +2,7 @@
  * Weather View – Aktuelles Wetter und Vorhersage.
  */
 const WeatherView = (() => {
-  let _location = 'Schwerin';
+  let _location = localStorage.getItem('dm_weather_location') || 'Schwerin';
 
   function weatherIcon(desc) {
     const d = (desc || '').toLowerCase();
@@ -38,6 +38,7 @@ const WeatherView = (() => {
       const loc = document.getElementById('weather-location').value.trim();
       if (loc) {
         _location = loc;
+        localStorage.setItem('dm_weather_location', loc);
         loadWeather();
       }
     });
@@ -47,6 +48,7 @@ const WeatherView = (() => {
         const loc = e.target.value.trim();
         if (loc) {
           _location = loc;
+          localStorage.setItem('dm_weather_location', loc);
           loadWeather();
         }
       }

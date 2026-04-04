@@ -118,7 +118,11 @@ const DriveView = (() => {
             ${f.modified_time ? ' &middot; ' + formatDate(f.modified_time) : ''}
           </div>
         </div>
-        ${f.web_view_link ? `<a href="${escapeHtml(f.web_view_link)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" title="Oeffnen"><span class="material-symbols-outlined mi-sm">open_in_new</span></a>` : ''}
+        <div class="file-actions" style="display:flex;gap:4px;align-items:center">
+          <button class="btn btn-sm btn-secondary" title="Herunterladen" onclick="DriveView.downloadFile('${escapeHtml(f.id)}','${escapeHtml(f.name)}')"><span class="material-symbols-outlined mi-sm">download</span></button>
+          ${f.web_view_link ? `<a href="${escapeHtml(f.web_view_link)}" target="_blank" rel="noopener" class="btn btn-sm btn-secondary" title="Oeffnen"><span class="material-symbols-outlined mi-sm">open_in_new</span></a>` : ''}
+          <button class="btn btn-sm btn-secondary" title="Loeschen" style="color:var(--error)" onclick="DriveView.deleteFile('${escapeHtml(f.id)}','${escapeHtml(f.name)}')"><span class="material-symbols-outlined mi-sm">delete</span></button>
+        </div>
       </div>
     `).join('');
   }
@@ -148,5 +152,37 @@ const DriveView = (() => {
     }
   }
 
-  return { render, onSearch, handleFileSelect };
+  async function deleteFile(fileId, fileName) {
+    if (!confirm(`"${fileName}" wirklich loeschen?`)) return;
+    try {
+      await Api.request(`/drive/files/${fileId}`, { method: 'DELETE' });
+      Toast.show('Datei geloescht', 'success');
+      await loadFiles();
+    } catch (err) {
+      Toast.show('Fehler beim Loeschen: ' + err.message);
+    }
+  }
+
+  async function downloadFile(fileId, fileName) {
+    try {
+      const token = localStorage.getItem('dm_access_token');
+      const res = await fetch(`/drive/files/${fileId}/download`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Download fehlgeschlagen');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'download';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      Toast.show('Fehler beim Download: ' + err.message);
+    }
+  }
+
+  return { render, onSearch, handleFileSelect, deleteFile, downloadFile };
 })();

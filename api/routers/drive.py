@@ -1,4 +1,4 @@
-"""GET /drive/files, POST /drive/upload"""
+"""GET /drive/files, POST /drive/upload, DELETE /drive/files/{id}, GET /drive/files/{id}/download"""
 
 import logging
 import tempfile
@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, File
+from fastapi.responses import Response
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -90,3 +91,53 @@ async def upload_file(
     except Exception as e:
         logger.error("Drive upload Fehler: %s", e)
         raise HTTPException(status_code=500, detail="Upload fehlgeschlagen.")
+
+
+@router.delete("/files/{file_id}", status_code=204)
+async def delete_file(
+    file_id: str,
+    user_key: Annotated[str, Depends(get_current_user)],
+    drive_svc=Depends(get_drive_service),
+):
+    if not drive_svc.is_connected(user_key):
+        raise HTTPException(status_code=503, detail="Google Drive nicht verbunden.")
+    try:
+        ok = await drive_svc.delete_file(user_key, file_id)
+        if not ok:
+            raise HTTPException(status_code=500, detail="Datei konnte nicht geloescht werden.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Drive delete Fehler: %s", e)
+        raise HTTPException(status_code=500, detail="Drive-Fehler.")
+
+
+@router.get("/files/{file_id}/download")
+async def download_file(
+    file_id: str,
+    user_key: Annotated[str, Depends(get_current_user)],
+    drive_svc=Depends(get_drive_service),
+):
+    if not drive_svc.is_connected(user_key):
+        raise HTTPException(status_code=503, detail="Google Drive nicht verbunden.")
+    try:
+        # Get file metadata for name/mime
+        service = drive_svc._get_service(user_key)
+        import asyncio
+
+        meta = await asyncio.to_thread(service.files().get(fileId=file_id, fields="name,mimeType").execute)
+        content = await drive_svc.download_file(user_key, file_id)
+        if content is None:
+            raise HTTPException(status_code=500, detail="Download fehlgeschlagen.")
+        filename = meta.get("name", "download")
+        mime = meta.get("mimeType", "application/octet-stream")
+        return Response(
+            content=content,
+            media_type=mime,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Drive download Fehler: %s", e)
+        raise HTTPException(status_code=500, detail="Drive-Fehler.")
