@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from typing import Annotated, List, Optional
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -106,16 +106,23 @@ async def upload_document(
     """Dokument hochladen, OCR ausfuehren, PDF erstellen, in Drive ablegen."""
     from src.services.database import ScannedDocument, get_db
 
+    # Pre-check file size if available (avoids loading oversized files into RAM)
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if file.size and file.size > max_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Datei zu gross: {file.size / 1024 / 1024:.1f} MB (max {settings.MAX_UPLOAD_SIZE_MB} MB).",
+        )
+
     image_bytes = await file.read()
     if not image_bytes:
         raise HTTPException(status_code=400, detail="Leere Datei.")
 
-    # File size check (MAX_UPLOAD_SIZE_MB)
-    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    # Fallback size check for chunked uploads where file.size was None
     if len(image_bytes) > max_bytes:
         raise HTTPException(
-            status_code=413,
-            detail=f"Datei zu gross ({len(image_bytes) / 1024 / 1024:.1f} MB). Maximum: {settings.MAX_UPLOAD_SIZE_MB} MB.",
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Datei zu gross: {len(image_bytes) / 1024 / 1024:.1f} MB (max {settings.MAX_UPLOAD_SIZE_MB} MB).",
         )
 
     # 1. OCR via OcrService (Tesseract -> Vision-Fallback)
