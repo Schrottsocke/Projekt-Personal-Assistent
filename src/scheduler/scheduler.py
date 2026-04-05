@@ -102,6 +102,73 @@ class AssistantScheduler:
             name="Dienst-Erinnerungs-Check",
         )
 
+        # --- Deadline & Fristen Jobs ---
+
+        try:
+            from src.scheduler.jobs.contract_jobs import check_contract_deadlines
+
+            self.scheduler.add_job(
+                check_contract_deadlines,
+                CronTrigger(hour=7, minute=0, timezone=settings.TIMEZONE),
+                id="contract_deadline_check",
+                replace_existing=True,
+                name="Vertrags-Kuendigungsfristen",
+            )
+        except Exception as e:
+            logger.error("Contract-Deadline-Job konnte nicht registriert werden: %s", e)
+
+        try:
+            from src.scheduler.jobs.invoice_jobs import check_overdue_invoices
+
+            self.scheduler.add_job(
+                check_overdue_invoices,
+                CronTrigger(hour=8, minute=0, timezone=settings.TIMEZONE),
+                id="overdue_invoice_check",
+                replace_existing=True,
+                name="Ueberfaellige Rechnungen",
+            )
+        except Exception as e:
+            logger.error("Overdue-Invoice-Job konnte nicht registriert werden: %s", e)
+
+        try:
+            from src.scheduler.jobs.inventory_jobs import check_warranty_expiry
+
+            self.scheduler.add_job(
+                check_warranty_expiry,
+                CronTrigger(day_of_week="mon", hour=7, minute=0, timezone=settings.TIMEZONE),
+                id="warranty_expiry_check",
+                replace_existing=True,
+                name="Garantie-Ablauf",
+            )
+        except Exception as e:
+            logger.error("Warranty-Expiry-Job konnte nicht registriert werden: %s", e)
+
+        try:
+            from src.scheduler.jobs.document_jobs import check_document_deadlines
+
+            self.scheduler.add_job(
+                check_document_deadlines,
+                CronTrigger(hour=7, minute=30, timezone=settings.TIMEZONE),
+                id="document_deadline_check",
+                replace_existing=True,
+                name="Dokumenten-Fristen",
+            )
+        except Exception as e:
+            logger.error("Document-Deadline-Job konnte nicht registriert werden: %s", e)
+
+        try:
+            from src.scheduler.jobs.routine_jobs import check_routine_reminders
+
+            self.scheduler.add_job(
+                check_routine_reminders,
+                CronTrigger(hour=9, minute=0, timezone=settings.TIMEZONE),
+                id="routine_reminder_check",
+                replace_existing=True,
+                name="Haushalts-Routinen",
+            )
+        except Exception as e:
+            logger.error("Routine-Reminder-Job konnte nicht registriert werden: %s", e)
+
         self.scheduler.start()
         logger.info(
             f"Scheduler gestartet: Briefing {settings.MORNING_BRIEFING_TIME}, "
