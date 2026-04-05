@@ -113,6 +113,9 @@ class Settings:
     # Document Generation
     DOCUMENTS_DIR: Path = BASE_DIR / "data" / "documents"
 
+    # Storage Backend (local | gdrive)
+    STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "local")
+
     # Calendar Cache (TTL in Minuten)
     CALENDAR_CACHE_TTL_MINUTES: int = _safe_int(
         os.getenv("CALENDAR_CACHE_TTL_MINUTES"), 5, "CALENDAR_CACHE_TTL_MINUTES"
