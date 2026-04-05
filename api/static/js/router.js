@@ -52,6 +52,7 @@ const Router = (() => {
       '#/issues': '#/mehr', '#/invoices': '#/mehr',
       '#/finance': '#/mehr', '#/inventory': '#/mehr', '#/family': '#/mehr',
       '#/notification-center': '#/mehr', '#/gdpr': '#/mehr',
+      '#/test-user-admin': '#/mehr',
     };
     const activeNav = ROUTE_PARENTS[hash] || hash;
     document.querySelectorAll('.nav-item').forEach(item => {

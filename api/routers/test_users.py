@@ -4,9 +4,9 @@ import hashlib
 import logging
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -87,13 +87,24 @@ async def create_invitation(
 @router.get("/invitations", response_model=InvitationListResponse)
 async def list_invitations(
     user_key: Annotated[str, Depends(get_current_user)],
+    status_filter: Optional[str] = Query(None, alias="status", description="Filter nach Status: pending, accepted, expired, revoked"),
 ):
-    """Listet alle Einladungen auf (nur Admin)."""
+    """Listet alle Einladungen auf (nur Admin). Optional nach Status filtern."""
     if user_key not in _ADMIN_USERS:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Nur Admins duerfen Einladungen einsehen.")
 
+    valid_statuses = {"pending", "accepted", "expired", "revoked"}
+    if status_filter and status_filter not in valid_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Ungueltiger Status. Erlaubt: {', '.join(sorted(valid_statuses))}",
+        )
+
     with get_db()() as db:
-        invitations = db.query(TestUserInvitation).order_by(TestUserInvitation.created_at.desc()).all()
+        query = db.query(TestUserInvitation)
+        if status_filter:
+            query = query.filter(TestUserInvitation.status == status_filter)
+        invitations = query.order_by(TestUserInvitation.created_at.desc()).all()
         return InvitationListResponse(
             invitations=[InvitationResponse.model_validate(inv) for inv in invitations],
             total=len(invitations),
