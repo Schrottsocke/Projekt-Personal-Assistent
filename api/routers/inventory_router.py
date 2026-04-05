@@ -11,9 +11,11 @@ from api.dependencies import get_current_user
 from api.schemas.inventory import (
     DocumentScanResult,
     DocumentSearchResult,
+    InventoryHealthOut,
     InventoryItemCreate,
     InventoryItemOut,
     InventoryItemUpdate,
+    InventoryWidgetSummary,
     ReceiptLinkRequest,
     RoomListOut,
     ValueSummary,
@@ -46,7 +48,7 @@ def _resolve_user_id(db, user_key: str) -> int:
     return profile.id
 
 
-@router.get("/health")
+@router.get("/health", response_model=InventoryHealthOut)
 async def health():
     return {"status": "ok", "module": "inventory"}
 
@@ -54,7 +56,7 @@ async def health():
 # --- Widget Summary ---
 
 
-@router.get("/widget-summary")
+@router.get("/widget-summary", response_model=InventoryWidgetSummary)
 async def widget_summary(user_key: Annotated[str, Depends(get_current_user)]):
     with get_db()() as db:
         uid = _resolve_user_id(db, user_key)
