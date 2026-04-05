@@ -3723,6 +3723,107 @@ select:focus-visible,
   font-size: 16px;
 }
 
+/* ── Weather Full View ── */
+.weather-current-card {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  border-left: 4px solid var(--accent);
+}
+.weather-current-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.weather-current-icon .material-symbols-outlined {
+  font-size: 3rem;
+  color: var(--accent);
+}
+.weather-current-temp {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+}
+.weather-current-location {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 4px;
+}
+.weather-current-desc {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: 2px;
+  text-transform: capitalize;
+}
+.weather-current-feels {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  margin-top: 2px;
+  margin-bottom: 12px;
+}
+.weather-detail-grid {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+.weather-detail-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+.weather-detail-item .material-symbols-outlined {
+  color: var(--accent);
+}
+.weather-forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+}
+.weather-forecast-card {
+  text-align: center;
+  padding: var(--space-4);
+}
+.weather-forecast-day {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+.weather-forecast-icon {
+  font-size: 2rem;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 8px;
+}
+.weather-forecast-temps {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.weather-forecast-max {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.weather-forecast-min {
+  color: var(--text-muted);
+}
+.weather-forecast-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
 /* ── Recurrence Badge ── */
 
 .recurrence-badge {
