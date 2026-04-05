@@ -65,6 +65,9 @@ def run_migrations_online() -> None:
             "finance_invoices",
             "notification_events",
             "notification_preferences",
+            "invoice_items",
+            "household_documents",
+            "budget_categories",
         }
         for table in target_metadata.sorted_tables:
             if table.name not in existing and table.name not in new_tables:

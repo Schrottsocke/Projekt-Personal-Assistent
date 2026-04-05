@@ -355,7 +355,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False, index=True)
     date = Column(DateTime, nullable=False)
     amount = Column(Float, nullable=False)
     currency = Column(String(10), default="EUR")
@@ -363,6 +363,7 @@ class Transaction(Base):
     description = Column(Text, nullable=True)
     source = Column(String(10), default="manual")  # csv, manual, scan
     raw_text = Column(Text, nullable=True)
+    contract_id = Column(Integer, ForeignKey("contracts.id"), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -385,15 +386,21 @@ class Contract(Base):
     __tablename__ = "contracts"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False, index=True)
     name = Column(String(200), nullable=False)
+    provider = Column(String(200), nullable=True)
+    category = Column(String(50), nullable=True)
     amount = Column(Float, nullable=False)
     interval = Column(String(20), default="monthly")  # monthly, yearly, quarterly
     start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=True)
+    cancellation_days = Column(Integer, nullable=True)
     cancellation_deadline = Column(Date, nullable=True)
     next_billing = Column(Date, nullable=True)
-    status = Column(String(20), default="active")  # active, cancelled, expired
+    status = Column(String(20), default="active", index=True)  # active, cancelled, expired
+    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, onupdate=lambda: datetime.now(timezone.utc))
 
 
 class FinanceInvoice(Base):
@@ -402,12 +409,65 @@ class FinanceInvoice(Base):
     __tablename__ = "finance_invoices"
 
     id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False, index=True)
+    invoice_number = Column(String(50), nullable=True)
     recipient = Column(String(200), nullable=False)
+    recipient_address = Column(Text, nullable=True)
+    issue_date = Column(Date, nullable=True)
     total = Column(Float, nullable=False)
-    due_date = Column(Date, nullable=False)
-    status = Column(String(20), default="open")  # open, paid, overdue
+    tax_rate = Column(Float, nullable=True)
+    due_date = Column(Date, nullable=False, index=True)
+    status = Column(String(20), default="open", index=True)  # open, paid, overdue
+    payment_date = Column(Date, nullable=True)
     pdf_path = Column(String(500), nullable=True)
+    notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, onupdate=lambda: datetime.now(timezone.utc))
+
+
+class InvoiceItem(Base):
+    """Position einer Privatkunden-Rechnung."""
+
+    __tablename__ = "invoice_items"
+
+    id = Column(Integer, primary_key=True)
+    invoice_id = Column(Integer, ForeignKey("finance_invoices.id"), nullable=False, index=True)
+    description = Column(String(300), nullable=False)
+    quantity = Column(Float, nullable=False, default=1)
+    unit_price = Column(Float, nullable=False)
+    total = Column(Float, nullable=False)
+
+
+class HouseholdDocument(Base):
+    """Haushalts-Dokument (Rechnung, Garantie, Versicherung, Beleg)."""
+
+    __tablename__ = "household_documents"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False, index=True)
+    title = Column(String(300), nullable=False)
+    category = Column(String(50), nullable=True)  # invoice, warranty, insurance, receipt, other
+    file_path = Column(String(500), nullable=True)
+    ocr_text = Column(Text, nullable=True)
+    deadline_date = Column(Date, nullable=True)
+    issuer = Column(String(200), nullable=True)
+    amount = Column(Float, nullable=True)
+    linked_inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, onupdate=lambda: datetime.now(timezone.utc))
+
+
+class BudgetCategory(Base):
+    """Budget-Kategorie mit monatlichem Limit."""
+
+    __tablename__ = "budget_categories"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False, index=True)
+    name = Column(String(100), nullable=False)
+    monthly_limit = Column(Float, nullable=False)
+    color = Column(String(20), nullable=True)
+    icon = Column(String(50), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
@@ -468,15 +528,18 @@ class InventoryItem(Base):
 
     id = Column(Integer, primary_key=True)
     workspace_id = Column(Integer, ForeignKey("household_workspaces.id"), nullable=True)
-    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("user_profiles.id"), nullable=False, index=True)
     name = Column(String(200), nullable=False)
     description = Column(Text, nullable=True)
     room = Column(String(100), nullable=True)
+    box_label = Column(String(100), nullable=True)
     photo_url = Column(String(500), nullable=True)
     value = Column(Float, nullable=True)
     purchase_date = Column(Date, nullable=True)
     receipt_doc_id = Column(Integer, ForeignKey("scanned_documents.id"), nullable=True)
+    serial_number = Column(String(200), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = Column(DateTime, onupdate=lambda: datetime.now(timezone.utc))
 
 
 class Warranty(Base):
