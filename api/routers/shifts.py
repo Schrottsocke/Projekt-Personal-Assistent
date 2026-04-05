@@ -256,7 +256,7 @@ async def update_shift_entry(
         raise HTTPException(status_code=404, detail=str(e))
 
 
-@router.post("/entries/{entry_id}/confirm")
+@router.post("/entries/{entry_id}/confirm", status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def confirm_shift_entry(
     request: Request,
