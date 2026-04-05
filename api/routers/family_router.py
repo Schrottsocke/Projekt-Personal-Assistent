@@ -164,6 +164,22 @@ async def get_workspace(workspace_id: int, user_key: Annotated[str, Depends(get_
 # --- Members (#651) ---
 
 
+@router.get("/workspaces/{workspace_id}/members", response_model=list[WorkspaceMemberOut])
+async def list_members(
+    workspace_id: int,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    """Alle Mitglieder eines Workspaces auflisten."""
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+        _check_workspace_access(db, workspace_id, uid)
+        return (
+            db.query(WorkspaceMember)
+            .filter(WorkspaceMember.workspace_id == workspace_id)
+            .all()
+        )
+
+
 @router.post(
     "/workspaces/{workspace_id}/members",
     response_model=WorkspaceMemberOut,
