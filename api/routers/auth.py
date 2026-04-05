@@ -46,9 +46,7 @@ async def login(request: Request, body: LoginRequest):
         with get_db()() as db:
             profile = db.query(UserProfile).filter(UserProfile.user_key == user_key).first()
             if profile and profile.password_hash:
-                candidate_hash = hashlib.pbkdf2_hmac(
-                    "sha256", body.password.encode(), user_key.encode(), 100_000
-                ).hex()
+                candidate_hash = hashlib.pbkdf2_hmac("sha256", body.password.encode(), user_key.encode(), 100_000).hex()
                 if secrets.compare_digest(profile.password_hash, candidate_hash):
                     return TokenResponse(
                         access_token=create_access_token(user_key),

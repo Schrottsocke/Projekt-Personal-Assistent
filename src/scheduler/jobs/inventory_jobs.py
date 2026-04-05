@@ -29,13 +29,15 @@ async def check_warranty_expiry():
                 )
                 results = []
                 for w, user_key in warranties:
-                    results.append({
-                        "id": w.id,
-                        "product_name": w.product_name,
-                        "warranty_end": w.warranty_end.isoformat() if w.warranty_end else "",
-                        "vendor": w.vendor,
-                        "user_key": user_key,
-                    })
+                    results.append(
+                        {
+                            "id": w.id,
+                            "product_name": w.product_name,
+                            "warranty_end": w.warranty_end.isoformat() if w.warranty_end else "",
+                            "vendor": w.vendor,
+                            "user_key": user_key,
+                        }
+                    )
                 return results
 
         expiring = await asyncio.to_thread(_query_warranties)

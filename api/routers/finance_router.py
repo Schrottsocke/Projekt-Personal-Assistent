@@ -86,6 +86,7 @@ def _is_duplicate(db, uid: int, txn_date: datetime, amount: float, raw_text: str
     )
     return existing is not None
 
+
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
@@ -528,15 +529,17 @@ async def detect_contracts_from_transactions(
             else:
                 interval = "yearly"
 
-            suggestions.append({
-                "description": group[0].description,
-                "amount": abs(round(float(amount_str), 2)),
-                "interval": interval,
-                "occurrences": len(group),
-                "first_seen": dates[0].isoformat(),
-                "last_seen": dates[-1].isoformat(),
-                "category": group[0].category,
-            })
+            suggestions.append(
+                {
+                    "description": group[0].description,
+                    "amount": abs(round(float(amount_str), 2)),
+                    "interval": interval,
+                    "occurrences": len(group),
+                    "first_seen": dates[0].isoformat(),
+                    "last_seen": dates[-1].isoformat(),
+                    "category": group[0].category,
+                }
+            )
 
         return sorted(suggestions, key=lambda s: s["occurrences"], reverse=True)
 

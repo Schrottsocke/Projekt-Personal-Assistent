@@ -29,14 +29,16 @@ async def check_overdue_invoices():
                 results = []
                 for inv, user_key in invoices:
                     inv.status = "overdue"
-                    results.append({
-                        "id": inv.id,
-                        "recipient": inv.recipient,
-                        "total": inv.total,
-                        "due_date": inv.due_date.isoformat() if inv.due_date else "",
-                        "invoice_number": inv.invoice_number,
-                        "user_key": user_key,
-                    })
+                    results.append(
+                        {
+                            "id": inv.id,
+                            "recipient": inv.recipient,
+                            "total": inv.total,
+                            "due_date": inv.due_date.isoformat() if inv.due_date else "",
+                            "invoice_number": inv.invoice_number,
+                            "user_key": user_key,
+                        }
+                    )
                 return results
 
         overdue = await asyncio.to_thread(_mark_overdue)

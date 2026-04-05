@@ -29,30 +29,61 @@ def _get_ocr_semaphore() -> asyncio.Semaphore:
         _ocr_semaphore = asyncio.Semaphore(settings.OCR_MAX_PARALLEL_JOBS)
     return _ocr_semaphore
 
+
 logger = logging.getLogger(__name__)
 
 # Keyword-Maps für Dokumenten-Klassifikation
 _DOCUMENT_KEYWORDS: dict[str, list[str]] = {
     "invoice": [
-        "rechnung", "rechnungsnummer", "rechnungsdatum", "invoice",
-        "nettobetrag", "bruttobetrag", "zahlungsziel", "umsatzsteuer",
-        "mwst", "ust-id", "bankverbindung", "iban",
+        "rechnung",
+        "rechnungsnummer",
+        "rechnungsdatum",
+        "invoice",
+        "nettobetrag",
+        "bruttobetrag",
+        "zahlungsziel",
+        "umsatzsteuer",
+        "mwst",
+        "ust-id",
+        "bankverbindung",
+        "iban",
     ],
     "receipt": [
-        "kassenbon", "quittung", "beleg", "receipt", "bar bezahlt",
-        "kartenzahlung", "summe", "gesamt", "ec-karte",
+        "kassenbon",
+        "quittung",
+        "beleg",
+        "receipt",
+        "bar bezahlt",
+        "kartenzahlung",
+        "summe",
+        "gesamt",
+        "ec-karte",
     ],
     "warranty": [
-        "garantie", "gewährleistung", "warranty", "garantieschein",
-        "garantiezeitraum", "garantiebedingungen",
+        "garantie",
+        "gewährleistung",
+        "warranty",
+        "garantieschein",
+        "garantiezeitraum",
+        "garantiebedingungen",
     ],
     "insurance": [
-        "versicherung", "police", "versicherungsnummer", "insurance",
-        "versicherungsschein", "prämie", "selbstbeteiligung",
+        "versicherung",
+        "police",
+        "versicherungsnummer",
+        "insurance",
+        "versicherungsschein",
+        "prämie",
+        "selbstbeteiligung",
     ],
     "contract": [
-        "vertrag", "vereinbarung", "contract", "laufzeit",
-        "kündigungsfrist", "vertragspartner", "unterschrift",
+        "vertrag",
+        "vereinbarung",
+        "contract",
+        "laufzeit",
+        "kündigungsfrist",
+        "vertragspartner",
+        "unterschrift",
     ],
 }
 

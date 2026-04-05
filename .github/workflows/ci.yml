@@ -26,6 +26,7 @@ jobs:
               - 'main.py'
               - 'src/**'
               - 'api/**'
+              - '!api/static/**'
               - 'config/**'
               - 'tests/**'
               - 'requirements*.txt'

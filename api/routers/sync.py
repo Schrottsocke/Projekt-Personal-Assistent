@@ -10,7 +10,6 @@ from api.dependencies import get_current_user
 from api.schemas.sync import (
     SyncBatchRequest,
     SyncBatchResponse,
-    SyncOperationResult,
 )
 from config.settings import settings
 

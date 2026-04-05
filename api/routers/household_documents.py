@@ -9,8 +9,8 @@ from pydantic import BaseModel
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from api.dependencies import get_current_user, get_ocr_service, get_ai_service
-from api.schemas.household_documents import HouseholdDocumentCreate, HouseholdDocumentList, HouseholdDocumentOut
+from api.dependencies import get_current_user
+from api.schemas.household_documents import HouseholdDocumentList, HouseholdDocumentOut
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,10 @@ async def _run_ocr_background(doc_id: int, file_path: str, user_key: str):
                 doc_title = doc.title
                 logger.info(
                     "OCR abgeschlossen fuer Dokument #%d (%d Zeichen, Kategorie=%s, Frist=%s)",
-                    doc_id, len(ocr_text), category, deadline,
+                    doc_id,
+                    len(ocr_text),
+                    category,
+                    deadline,
                 )
 
         # 5. Create task if deadline found
@@ -146,6 +149,7 @@ async def list_household_documents(
 
 class DocumentStatsOut(BaseModel):
     """Response-Schema fuer Dokument-Statistiken."""
+
     categories: dict[str, int]
     upcoming_deadlines: int
 
@@ -340,7 +344,13 @@ async def download_household_document(
 
     # Determine content type from extension
     ext = file_path.rsplit(".", 1)[-1].lower() if "." in file_path else ""
-    content_types = {"pdf": "application/pdf", "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp"}
+    content_types = {
+        "pdf": "application/pdf",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "webp": "image/webp",
+    }
     ct = content_types.get(ext, "application/octet-stream")
 
     return Response(content=data, media_type=ct, headers={"Content-Disposition": f'attachment; filename="{title}"'})

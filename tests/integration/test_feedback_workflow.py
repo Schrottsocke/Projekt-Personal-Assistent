@@ -13,17 +13,22 @@ class TestFeedbackService(unittest.TestCase):
         self._db_path = os.path.join(self._tmpdir, "feedback.db")
 
         import src.services.feedback_service as mod
+
         self._original_db_path = mod.DB_PATH
         from pathlib import Path
+
         mod.DB_PATH = Path(self._db_path)
 
         from src.services.feedback_service import FeedbackService
+
         self.service = FeedbackService()
 
     def tearDown(self):
         import src.services.feedback_service as mod
+
         mod.DB_PATH = self._original_db_path
         import shutil
+
         shutil.rmtree(self._tmpdir, ignore_errors=True)
 
     def test_create_bug_report(self):
@@ -98,6 +103,7 @@ class TestFeedbackService(unittest.TestCase):
     def test_update_triage_all_states(self):
         """Alle gueltigen Triage-States werden akzeptiert."""
         from src.services.feedback_service import VALID_TRIAGE_STATES
+
         bug = self.service.create_bug_report(user_key="a", title="Bug")
         for state in VALID_TRIAGE_STATES:
             updated = self.service.update_triage(bug["id"], state)

@@ -1,6 +1,6 @@
 """Pydantic-Schemas fuer Dashboard-Endpunkte."""
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 

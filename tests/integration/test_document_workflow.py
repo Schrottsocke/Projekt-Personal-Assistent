@@ -2,9 +2,7 @@
 
 import io
 from datetime import date, timedelta
-from unittest.mock import AsyncMock, patch
-
-import pytest
+from unittest.mock import AsyncMock
 
 
 class TestUploadTriggersOCR:
@@ -100,6 +98,7 @@ class TestUploadTriggersOCR:
         # Verify task was created (TaskService is real DB-backed in conftest)
         tasks = task_svc._db()
         from src.services.database import Task
+
         with tasks as session:
             task = session.query(Task).filter(Task.title.contains("Frist-Dokument")).first()
             assert task is not None
@@ -111,7 +110,7 @@ class TestUploadTriggersOCR:
         import api.dependencies as deps
 
         ocr_svc = deps._svc["ocr"]
-        notif_svc = deps._svc["notification"]
+        deps._svc["notification"]  # ensure service is loaded
 
         ocr_svc.extract_text = AsyncMock(
             return_value={"text": "Test text", "confidence": 80.0, "method": "mock", "words_data": None}
@@ -126,16 +125,13 @@ class TestUploadTriggersOCR:
             data={"title": "Kassenbon-Test"},
         )
         assert resp.status_code == 201
-        doc_id = resp.json()["id"]
+        resp.json()["id"]  # verify id present
 
         # Verify notification was created (real DB-backed service)
         from src.services.database import Notification, get_db
+
         with get_db()() as session:
-            notif = (
-                session.query(Notification)
-                .filter(Notification.title.contains("Kassenbon-Test"))
-                .first()
-            )
+            notif = session.query(Notification).filter(Notification.title.contains("Kassenbon-Test")).first()
             assert notif is not None
             assert "receipt" in notif.title
 
@@ -157,6 +153,7 @@ class TestReprocessEndpoint:
 
         # Now reprocess
         import api.dependencies as deps
+
         ocr_svc = deps._svc["ocr"]
         ocr_svc.extract_text = AsyncMock(
             return_value={"text": "Reprocessed text", "confidence": 85.0, "method": "mock", "words_data": None}

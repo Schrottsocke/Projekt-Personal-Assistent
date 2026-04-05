@@ -28,15 +28,17 @@ async def check_contract_deadlines():
                 )
                 results = []
                 for contract, user_key in contracts:
-                    results.append({
-                        "id": contract.id,
-                        "name": contract.name,
-                        "provider": contract.provider,
-                        "cancellation_deadline": contract.cancellation_deadline,
-                        "next_billing": contract.next_billing,
-                        "cancellation_days": contract.cancellation_days,
-                        "user_key": user_key,
-                    })
+                    results.append(
+                        {
+                            "id": contract.id,
+                            "name": contract.name,
+                            "provider": contract.provider,
+                            "cancellation_deadline": contract.cancellation_deadline,
+                            "next_billing": contract.next_billing,
+                            "cancellation_days": contract.cancellation_days,
+                            "user_key": user_key,
+                        }
+                    )
                 return results
 
         contracts = await asyncio.to_thread(_query_contracts)

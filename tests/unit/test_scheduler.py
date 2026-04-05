@@ -197,6 +197,7 @@ class TestCheckReminders:
 # Deadline/Fristen-Job Tests
 # ---------------------------------------------------------------------------
 
+
 def _mock_db_and_notif():
     """Create mock NotificationService and prepare DB mock module."""
     mock_notif_svc = MagicMock()
@@ -228,25 +229,33 @@ class TestContractDeadlineJob:
         today = date.today()
         deadline = today + timedelta(days=7)
 
-        mock_contract_data = [{
-            "id": 1,
-            "name": "Internet-Vertrag",
-            "provider": "Telekom",
-            "cancellation_deadline": deadline,
-            "next_billing": None,
-            "cancellation_days": None,
-            "user_key": "taake",
-        }]
+        mock_contract_data = [
+            {
+                "id": 1,
+                "name": "Internet-Vertrag",
+                "provider": "Telekom",
+                "cancellation_deadline": deadline,
+                "next_billing": None,
+                "cancellation_days": None,
+                "user_key": "taake",
+            }
+        ]
 
         mock_notif_svc, mock_notif_mod, mock_db_mod = _mock_db_and_notif()
 
-        with patch.dict(sys.modules, {
-            "src.services.database": mock_db_mod,
-            "src.services.notification_service": mock_notif_mod,
-        }):
-            with patch("asyncio.to_thread", new_callable=lambda: lambda *a, **k: AsyncMock(return_value=mock_contract_data)):
+        with patch.dict(
+            sys.modules,
+            {
+                "src.services.database": mock_db_mod,
+                "src.services.notification_service": mock_notif_mod,
+            },
+        ):
+            with patch(
+                "asyncio.to_thread", new_callable=lambda: lambda *a, **k: AsyncMock(return_value=mock_contract_data)
+            ):
                 import importlib
                 import src.scheduler.jobs.contract_jobs as mod
+
                 importlib.reload(mod)
 
                 with patch.object(mod.asyncio, "to_thread", AsyncMock(return_value=mock_contract_data)):
@@ -265,24 +274,30 @@ class TestContractDeadlineJob:
         # next_billing in 37 days, cancellation_days=30 -> deadline in 7 days
         next_billing = today + timedelta(days=37)
 
-        mock_contract_data = [{
-            "id": 2,
-            "name": "Strom-Vertrag",
-            "provider": "EON",
-            "cancellation_deadline": None,
-            "next_billing": next_billing,
-            "cancellation_days": 30,
-            "user_key": "taake",
-        }]
+        mock_contract_data = [
+            {
+                "id": 2,
+                "name": "Strom-Vertrag",
+                "provider": "EON",
+                "cancellation_deadline": None,
+                "next_billing": next_billing,
+                "cancellation_days": 30,
+                "user_key": "taake",
+            }
+        ]
 
         mock_notif_svc, mock_notif_mod, mock_db_mod = _mock_db_and_notif()
 
-        with patch.dict(sys.modules, {
-            "src.services.database": mock_db_mod,
-            "src.services.notification_service": mock_notif_mod,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "src.services.database": mock_db_mod,
+                "src.services.notification_service": mock_notif_mod,
+            },
+        ):
             import importlib
             import src.scheduler.jobs.contract_jobs as mod
+
             importlib.reload(mod)
 
             with patch.object(mod.asyncio, "to_thread", AsyncMock(return_value=mock_contract_data)):
@@ -297,24 +312,30 @@ class TestContractDeadlineJob:
         today = date.today()
         deadline = today + timedelta(days=20)  # Not a threshold day
 
-        mock_contract_data = [{
-            "id": 3,
-            "name": "Handy-Vertrag",
-            "provider": "O2",
-            "cancellation_deadline": deadline,
-            "next_billing": None,
-            "cancellation_days": None,
-            "user_key": "taake",
-        }]
+        mock_contract_data = [
+            {
+                "id": 3,
+                "name": "Handy-Vertrag",
+                "provider": "O2",
+                "cancellation_deadline": deadline,
+                "next_billing": None,
+                "cancellation_days": None,
+                "user_key": "taake",
+            }
+        ]
 
         mock_notif_svc, mock_notif_mod, mock_db_mod = _mock_db_and_notif()
 
-        with patch.dict(sys.modules, {
-            "src.services.database": mock_db_mod,
-            "src.services.notification_service": mock_notif_mod,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "src.services.database": mock_db_mod,
+                "src.services.notification_service": mock_notif_mod,
+            },
+        ):
             import importlib
             import src.scheduler.jobs.contract_jobs as mod
+
             importlib.reload(mod)
 
             with patch.object(mod.asyncio, "to_thread", AsyncMock(return_value=mock_contract_data)):
@@ -329,23 +350,29 @@ class TestOverdueInvoiceJob:
     @pytest.mark.asyncio
     async def test_marks_overdue_and_notifies(self):
         """Ueberfaellige Rechnungen werden erkannt und Notification erstellt."""
-        overdue_data = [{
-            "id": 1,
-            "recipient": "Max Mustermann",
-            "total": 150.00,
-            "due_date": (date.today() - timedelta(days=3)).isoformat(),
-            "invoice_number": "INV-001",
-            "user_key": "taake",
-        }]
+        overdue_data = [
+            {
+                "id": 1,
+                "recipient": "Max Mustermann",
+                "total": 150.00,
+                "due_date": (date.today() - timedelta(days=3)).isoformat(),
+                "invoice_number": "INV-001",
+                "user_key": "taake",
+            }
+        ]
 
         mock_notif_svc, mock_notif_mod, mock_db_mod = _mock_db_and_notif()
 
-        with patch.dict(sys.modules, {
-            "src.services.database": mock_db_mod,
-            "src.services.notification_service": mock_notif_mod,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "src.services.database": mock_db_mod,
+                "src.services.notification_service": mock_notif_mod,
+            },
+        ):
             import importlib
             import src.scheduler.jobs.invoice_jobs as mod
+
             importlib.reload(mod)
 
             with patch.object(mod.asyncio, "to_thread", AsyncMock(return_value=overdue_data)):
@@ -362,12 +389,16 @@ class TestOverdueInvoiceJob:
         """Keine Benachrichtigung wenn keine ueberfaelligen Rechnungen."""
         mock_notif_svc, mock_notif_mod, mock_db_mod = _mock_db_and_notif()
 
-        with patch.dict(sys.modules, {
-            "src.services.database": mock_db_mod,
-            "src.services.notification_service": mock_notif_mod,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "src.services.database": mock_db_mod,
+                "src.services.notification_service": mock_notif_mod,
+            },
+        ):
             import importlib
             import src.scheduler.jobs.invoice_jobs as mod
+
             importlib.reload(mod)
 
             with patch.object(mod.asyncio, "to_thread", AsyncMock(return_value=[])):
@@ -383,22 +414,28 @@ class TestWarrantyExpiryJob:
     async def test_finds_expiring_warranties(self):
         """Erkennt Garantien die innerhalb von 30 Tagen ablaufen."""
         expiry_date = date.today() + timedelta(days=15)
-        expiring_data = [{
-            "id": 1,
-            "product_name": "Waschmaschine",
-            "warranty_end": expiry_date.isoformat(),
-            "vendor": "Bosch",
-            "user_key": "taake",
-        }]
+        expiring_data = [
+            {
+                "id": 1,
+                "product_name": "Waschmaschine",
+                "warranty_end": expiry_date.isoformat(),
+                "vendor": "Bosch",
+                "user_key": "taake",
+            }
+        ]
 
         mock_notif_svc, mock_notif_mod, mock_db_mod = _mock_db_and_notif()
 
-        with patch.dict(sys.modules, {
-            "src.services.database": mock_db_mod,
-            "src.services.notification_service": mock_notif_mod,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "src.services.database": mock_db_mod,
+                "src.services.notification_service": mock_notif_mod,
+            },
+        ):
             import importlib
             import src.scheduler.jobs.inventory_jobs as mod
+
             importlib.reload(mod)
 
             with patch.object(mod.asyncio, "to_thread", AsyncMock(return_value=expiring_data)):
@@ -415,12 +452,16 @@ class TestWarrantyExpiryJob:
         """Keine Benachrichtigung wenn keine Garantien ablaufen."""
         mock_notif_svc, mock_notif_mod, mock_db_mod = _mock_db_and_notif()
 
-        with patch.dict(sys.modules, {
-            "src.services.database": mock_db_mod,
-            "src.services.notification_service": mock_notif_mod,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "src.services.database": mock_db_mod,
+                "src.services.notification_service": mock_notif_mod,
+            },
+        ):
             import importlib
             import src.scheduler.jobs.inventory_jobs as mod
+
             importlib.reload(mod)
 
             with patch.object(mod.asyncio, "to_thread", AsyncMock(return_value=[])):

@@ -215,6 +215,7 @@ class TestProposal:
 
 # --- Helpers ---
 
+
 def _create_user(session, key="taake"):
     """Create and return a UserProfile for FK tests."""
     user = UserProfile(user_key=key)
@@ -224,6 +225,7 @@ def _create_user(session, key="taake"):
 
 
 # --- Finance Models ---
+
 
 class TestTransaction:
     def test_create_transaction(self, session):
@@ -239,6 +241,7 @@ class TestTransaction:
     def test_transaction_with_contract_fk(self, session):
         user = _create_user(session)
         from datetime import date
+
         contract = Contract(user_id=user.id, name="Netflix", amount=12.99, start_date=date(2026, 1, 1))
         session.add(contract)
         session.commit()
@@ -275,10 +278,16 @@ class TestContract:
     def test_create_contract(self, session):
         user = _create_user(session)
         from datetime import date
+
         c = Contract(
-            user_id=user.id, name="Spotify", provider="Spotify AB",
-            category="Streaming", amount=9.99, start_date=date(2026, 1, 1),
-            cancellation_days=30, notes="Familienabo",
+            user_id=user.id,
+            name="Spotify",
+            provider="Spotify AB",
+            category="Streaming",
+            amount=9.99,
+            start_date=date(2026, 1, 1),
+            cancellation_days=30,
+            notes="Familienabo",
         )
         session.add(c)
         session.commit()
@@ -291,6 +300,7 @@ class TestContract:
     def test_contract_cancel(self, session):
         user = _create_user(session)
         from datetime import date
+
         c = Contract(user_id=user.id, name="Test", amount=5.0, start_date=date(2026, 1, 1))
         session.add(c)
         session.commit()
@@ -306,10 +316,14 @@ class TestFinanceInvoice:
     def test_create_invoice(self, session):
         user = _create_user(session)
         from datetime import date
+
         inv = FinanceInvoice(
-            user_id=user.id, recipient="Max Mustermann",
-            invoice_number="RE-2026-001", total=119.0,
-            tax_rate=19.0, due_date=date(2026, 5, 1),
+            user_id=user.id,
+            recipient="Max Mustermann",
+            invoice_number="RE-2026-001",
+            total=119.0,
+            tax_rate=19.0,
+            due_date=date(2026, 5, 1),
         )
         session.add(inv)
         session.commit()
@@ -321,6 +335,7 @@ class TestFinanceInvoice:
     def test_invoice_pay(self, session):
         user = _create_user(session)
         from datetime import date
+
         inv = FinanceInvoice(user_id=user.id, recipient="Test", total=50.0, due_date=date(2026, 5, 1))
         session.add(inv)
         session.commit()
@@ -334,6 +349,7 @@ class TestInvoiceItem:
     def test_create_invoice_item(self, session):
         user = _create_user(session)
         from datetime import date
+
         inv = FinanceInvoice(user_id=user.id, recipient="Kunde", total=238.0, due_date=date(2026, 5, 1))
         session.add(inv)
         session.commit()
@@ -348,12 +364,17 @@ class TestInvoiceItem:
 
 # --- Inventory Models ---
 
+
 class TestInventoryItem:
     def test_create_inventory_item(self, session):
         user = _create_user(session)
         item = InventoryItem(
-            user_id=user.id, name="Staubsauger", room="Abstellkammer",
-            box_label="K3", serial_number="SN-12345", value=299.99,
+            user_id=user.id,
+            name="Staubsauger",
+            room="Abstellkammer",
+            box_label="K3",
+            serial_number="SN-12345",
+            value=299.99,
         )
         session.add(item)
         session.commit()
@@ -367,13 +388,17 @@ class TestWarranty:
     def test_create_warranty(self, session):
         user = _create_user(session)
         from datetime import date
+
         item = InventoryItem(user_id=user.id, name="Laptop")
         session.add(item)
         session.commit()
         w = Warranty(
-            user_id=user.id, product_name="Laptop",
-            purchase_date=date(2026, 1, 15), warranty_end=date(2028, 1, 15),
-            vendor="Lenovo", inventory_item_id=item.id,
+            user_id=user.id,
+            product_name="Laptop",
+            purchase_date=date(2026, 1, 15),
+            warranty_end=date(2028, 1, 15),
+            vendor="Lenovo",
+            inventory_item_id=item.id,
         )
         session.add(w)
         session.commit()
@@ -386,8 +411,11 @@ class TestHouseholdDocument:
     def test_create_document(self, session):
         user = _create_user(session)
         doc = HouseholdDocument(
-            user_id=user.id, title="Stromrechnung 2026",
-            category="invoice", issuer="Stadtwerke", amount=85.50,
+            user_id=user.id,
+            title="Stromrechnung 2026",
+            category="invoice",
+            issuer="Stadtwerke",
+            amount=85.50,
         )
         session.add(doc)
         session.commit()
@@ -402,8 +430,10 @@ class TestHouseholdDocument:
         session.add(item)
         session.commit()
         doc = HouseholdDocument(
-            user_id=user.id, title="Kaufbeleg Waschmaschine",
-            category="receipt", linked_inventory_item_id=item.id,
+            user_id=user.id,
+            title="Kaufbeleg Waschmaschine",
+            category="receipt",
+            linked_inventory_item_id=item.id,
         )
         session.add(doc)
         session.commit()
@@ -411,6 +441,7 @@ class TestHouseholdDocument:
 
 
 # --- Family Models ---
+
 
 class TestHouseholdWorkspace:
     def test_create_workspace(self, session):

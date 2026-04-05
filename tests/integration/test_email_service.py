@@ -2,7 +2,6 @@
 
 import unittest
 from unittest.mock import patch, MagicMock
-from pathlib import Path
 
 
 class TestEmailServiceSMTP(unittest.TestCase):
@@ -10,31 +9,41 @@ class TestEmailServiceSMTP(unittest.TestCase):
 
     def setUp(self):
         from src.services.email_service import EmailService
+
         self.service = EmailService()
 
     def test_render_invite_template(self):
         """Invite-Template wird korrekt gerendert."""
-        html = self.service._render_template("invite.html", {
-            "invite_link": "https://example.com/invite/abc",
-            "display_name": "Max",
-        })
+        html = self.service._render_template(
+            "invite.html",
+            {
+                "invite_link": "https://example.com/invite/abc",
+                "display_name": "Max",
+            },
+        )
         self.assertIn("https://example.com/invite/abc", html)
         self.assertIn("Max", html)
         self.assertIn("DualMind", html)
 
     def test_render_password_reset_template(self):
         """Password-Reset-Template wird korrekt gerendert."""
-        html = self.service._render_template("password_reset.html", {
-            "reset_link": "https://example.com/reset/xyz",
-        })
+        html = self.service._render_template(
+            "password_reset.html",
+            {
+                "reset_link": "https://example.com/reset/xyz",
+            },
+        )
         self.assertIn("https://example.com/reset/xyz", html)
         self.assertIn("zuruecksetzen", html)
 
     def test_render_activation_template(self):
         """Activation-Template wird korrekt gerendert."""
-        html = self.service._render_template("activation.html", {
-            "activation_link": "https://example.com/activate/def",
-        })
+        html = self.service._render_template(
+            "activation.html",
+            {
+                "activation_link": "https://example.com/activate/def",
+            },
+        )
         self.assertIn("https://example.com/activate/def", html)
         self.assertIn("aktivieren", html)
 

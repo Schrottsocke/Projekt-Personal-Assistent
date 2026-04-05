@@ -696,7 +696,6 @@ def init_db():
 def prune_conversation_history(days: int = 30) -> int:
     """Löscht Conversation-History-Einträge älter als 'days' Tage.
     Returns: Anzahl gelöschter Zeilen."""
-    from datetime import timedelta
 
     if _engine is None:
         return 0

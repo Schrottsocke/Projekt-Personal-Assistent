@@ -487,6 +487,7 @@ Wenn keine Aufgaben/Termine/Fristen gefunden, leere Listen verwenden."""
     def _plaintext_from_html(html: str) -> str:
         """Erzeugt einen Plaintext-Fallback aus HTML (vereinfacht)."""
         import re
+
         text = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL)
         text = re.sub(r"<[^>]+>", "\n", text)
         text = re.sub(r"\n{3,}", "\n\n", text)
@@ -537,10 +538,13 @@ Wenn keine Aufgaben/Termine/Fristen gefunden, leere Listen verwenden."""
     def send_invite_email(to: str, invite_link: str, display_name: str) -> bool:
         """Sendet eine Einladungs-E-Mail."""
         try:
-            html = EmailService._render_template("invite.html", {
-                "invite_link": invite_link,
-                "display_name": display_name,
-            })
+            html = EmailService._render_template(
+                "invite.html",
+                {
+                    "invite_link": invite_link,
+                    "display_name": display_name,
+                },
+            )
         except FileNotFoundError:
             logger.error("Einladungs-E-Mail-Template fehlt – Versand abgebrochen.")
             return False
@@ -550,9 +554,12 @@ Wenn keine Aufgaben/Termine/Fristen gefunden, leere Listen verwenden."""
     def send_password_reset_email(to: str, reset_link: str) -> bool:
         """Sendet eine Passwort-Reset-E-Mail."""
         try:
-            html = EmailService._render_template("password_reset.html", {
-                "reset_link": reset_link,
-            })
+            html = EmailService._render_template(
+                "password_reset.html",
+                {
+                    "reset_link": reset_link,
+                },
+            )
         except FileNotFoundError:
             logger.error("Passwort-Reset-E-Mail-Template fehlt – Versand abgebrochen.")
             return False
@@ -562,9 +569,12 @@ Wenn keine Aufgaben/Termine/Fristen gefunden, leere Listen verwenden."""
     def send_activation_email(to: str, activation_link: str) -> bool:
         """Sendet eine Konto-Aktivierungs-E-Mail."""
         try:
-            html = EmailService._render_template("activation.html", {
-                "activation_link": activation_link,
-            })
+            html = EmailService._render_template(
+                "activation.html",
+                {
+                    "activation_link": activation_link,
+                },
+            )
         except FileNotFoundError:
             logger.error("Aktivierungs-E-Mail-Template fehlt – Versand abgebrochen.")
             return False

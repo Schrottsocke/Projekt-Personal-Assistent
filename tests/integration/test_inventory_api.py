@@ -9,10 +9,6 @@ Getestet:
 - Wert-Zusammenfassung mit mehreren Items
 """
 
-import io
-
-import pytest
-
 
 class TestInventoryHealth:
     """GET /inventory/health – Modul-Gesundheitscheck."""
@@ -44,9 +40,7 @@ class TestInventoryRooms:
         resp = client.get("/inventory/items/rooms", headers=auth_headers)
         if resp.status_code == 200:
             rooms = resp.json()
-            assert "Wohnzimmer" in rooms or any(
-                r.get("name") == "Wohnzimmer" for r in rooms if isinstance(r, dict)
-            )
+            assert "Wohnzimmer" in rooms or any(r.get("name") == "Wohnzimmer" for r in rooms if isinstance(r, dict))
 
     def test_filter_items_by_room(self, client, auth_headers):
         """Items koennen nach Raum gefiltert werden."""

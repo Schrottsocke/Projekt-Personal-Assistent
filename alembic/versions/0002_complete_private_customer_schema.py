@@ -155,9 +155,7 @@ def upgrade() -> None:
     if cols:
         if "contract_id" not in cols:
             with op.batch_alter_table("transactions") as batch_op:
-                batch_op.add_column(
-                    sa.Column("contract_id", sa.Integer, nullable=True)
-                )
+                batch_op.add_column(sa.Column("contract_id", sa.Integer, nullable=True))
                 # FK constraint added separately for SQLite compatibility
 
         indexes = _existing_indexes(insp, "transactions")
@@ -188,7 +186,10 @@ def downgrade() -> None:
     for table, columns in [
         ("transactions", ["contract_id"]),
         ("inventory_items", ["box_label", "serial_number", "updated_at"]),
-        ("finance_invoices", ["invoice_number", "recipient_address", "issue_date", "tax_rate", "payment_date", "notes", "updated_at"]),
+        (
+            "finance_invoices",
+            ["invoice_number", "recipient_address", "issue_date", "tax_rate", "payment_date", "notes", "updated_at"],
+        ),
         ("contracts", ["provider", "category", "end_date", "cancellation_days", "notes", "updated_at"]),
     ]:
         if table in insp.get_table_names():

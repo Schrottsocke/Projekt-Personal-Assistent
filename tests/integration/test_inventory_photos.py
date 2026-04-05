@@ -38,9 +38,7 @@ class TestUploadItemPhoto:
 
         # Upload photo
         fake_image = BytesIO(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
-        with patch(
-            "api.routers.inventory_router.StorageService"
-        ) as MockStorage:
+        with patch("api.routers.inventory_router.StorageService") as MockStorage:
             instance = MockStorage.return_value
             instance.save = AsyncMock(return_value="taake/2026/04/photo.png")
             resp = client.post(
@@ -168,9 +166,7 @@ class TestReceiptLinking:
 class TestCreateItemWithPhoto:
     def test_create_with_photo(self, client, auth_headers):
         fake_image = BytesIO(b"\x89PNG\r\n\x1a\n" + b"\x00" * 100)
-        with patch(
-            "api.routers.inventory_router.StorageService"
-        ) as MockStorage:
+        with patch("api.routers.inventory_router.StorageService") as MockStorage:
             instance = MockStorage.return_value
             instance.save = AsyncMock(return_value="taake/2026/04/item.png")
             resp = client.post(
