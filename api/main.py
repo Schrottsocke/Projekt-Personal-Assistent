@@ -65,6 +65,7 @@ from api.routers import (
     onboarding_router,
     documents,
     household_documents,
+    test_users,
 )
 
 logger = structlog.get_logger(__name__)
@@ -341,6 +342,7 @@ app.include_router(gdpr_router.router, prefix="/gdpr", tags=["GDPR"])
 app.include_router(onboarding_router.router, prefix="/onboarding", tags=["Onboarding"])
 app.include_router(documents.router, prefix="/documents", tags=["Dokumente"])
 app.include_router(household_documents.router, prefix="/household-documents", tags=["Haushalts-Dokumente"])
+app.include_router(test_users.router, prefix="/test-users", tags=["Test-Users"])
 app.include_router(status.router)
 
 
