@@ -138,12 +138,18 @@ async def accept_invitation(
                 detail="Ein Benutzer mit diesem Schluessel existiert bereits.",
             )
 
+        # Passwort hashen (PBKDF2-SHA256)
+        password_hash = hashlib.pbkdf2_hmac(
+            "sha256", body.password.encode(), user_key.encode(), 100_000
+        ).hex()
+
         # UserProfile erstellen
         profile = UserProfile(
             user_key=user_key,
             is_onboarded=False,
             nickname=invitation.display_name,
             communication_style="casual",
+            password_hash=password_hash,
         )
         db.add(profile)
 
