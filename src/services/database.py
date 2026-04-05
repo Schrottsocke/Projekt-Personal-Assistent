@@ -659,6 +659,8 @@ def init_db():
                     "ALTER TABLE shift_entries ADD COLUMN reminder_sent BOOLEAN DEFAULT 0",
                     "ALTER TABLE shift_entries ADD COLUMN reminder_count INTEGER DEFAULT 0",
                     "ALTER TABLE shift_entries ADD COLUMN next_reminder_at DATETIME",
+                    # Auth: Passwort-Hash fuer DB-Login
+                    "ALTER TABLE user_profiles ADD COLUMN password_hash VARCHAR",
                     # ScannedDocument: Produktlinien-Erweiterung
                     "ALTER TABLE scanned_documents ADD COLUMN category VARCHAR(50)",
                     "ALTER TABLE scanned_documents ADD COLUMN deadline DATE",
