@@ -133,6 +133,14 @@ class Settings:
         os.getenv("EMAIL_CHECK_INTERVAL_MINUTES"), 15, "EMAIL_CHECK_INTERVAL_MINUTES"
     )
 
+    # SMTP (System-Mails: Einladungen, Passwort-Reset, Aktivierung)
+    SMTP_HOST: str = os.getenv("SMTP_HOST", "")
+    SMTP_PORT: int = _safe_int(os.getenv("SMTP_PORT"), 587, "SMTP_PORT")
+    SMTP_USER: str = os.getenv("SMTP_USER", "")
+    SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+    SMTP_FROM_NAME: str = os.getenv("SMTP_FROM_NAME", "DualMind")
+    SMTP_FROM_EMAIL: str = os.getenv("SMTP_FROM_EMAIL", "")
+
     # Conversation History Pruning (Einträge älter als N Tage löschen)
     CONVERSATION_HISTORY_DAYS: int = _safe_int(os.getenv("CONVERSATION_HISTORY_DAYS"), 30, "CONVERSATION_HISTORY_DAYS")
 

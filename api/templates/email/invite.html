@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Einladung zu DualMind</title>
+<style>
+  body { margin: 0; padding: 0; background: #121212; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+  .container { max-width: 520px; margin: 0 auto; padding: 32px 20px; }
+  .card { background: #1e1e1e; border-radius: 12px; padding: 32px 24px; }
+  h1 { color: #e0e0e0; font-size: 1.5rem; margin: 0 0 8px; }
+  h1 span { color: #7c4dff; }
+  p { color: #a0a0a0; font-size: 0.95rem; line-height: 1.6; margin: 16px 0; }
+  .cta { display: inline-block; padding: 14px 32px; background: #7c4dff; color: #fff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 1rem; margin: 20px 0; }
+  .cta:hover { background: #651fff; }
+  .footer { text-align: center; color: #666; font-size: 0.8rem; margin-top: 24px; }
+  .link-fallback { color: #7c4dff; word-break: break-all; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="card">
+    <h1>Hallo! <span>{{ display_name }}</span> laedt dich ein.</h1>
+    <p>Du wurdest eingeladen, DualMind zu nutzen – deinen persoenlichen Assistenten fuer Termine, Aufgaben, Einkauf und mehr.</p>
+    <p style="text-align: center;">
+      <a href="{{ invite_link }}" class="cta">Einladung annehmen</a>
+    </p>
+    <p>Falls der Button nicht funktioniert, kopiere diesen Link in deinen Browser:</p>
+    <p class="link-fallback">{{ invite_link }}</p>
+  </div>
+  <p class="footer">Diese E-Mail wurde von DualMind gesendet. Wenn du diese Einladung nicht erwartet hast, kannst du sie ignorieren.</p>
+</div>
+</body>
+</html>
