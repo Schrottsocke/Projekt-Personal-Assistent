@@ -1,0 +1,634 @@
+/**
+ * GDPR View – Datenschutz & Follow-ups
+ * Tabs: Datenschutz | Follow-ups
+ */
+const GdprView = (() => {
+  let activeTab = 'datenschutz';
+
+  // ── State: Datenschutz ──
+  let dataSummary = null;
+  let consents = [];
+  let processingLog = [];
+  let exportUrl = null;
+  let deleteStep = 0; // 0=idle, 1=show password input
+
+  // ── State: Follow-ups ──
+  let followups = [];
+  let dueFollowups = [];
+  let showCreateForm = false;
+
+  // ── Helpers ──
+
+  function esc(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    })[c]);
+  }
+
+  function showToast(msg, type) {
+    if (typeof Toast !== 'undefined') Toast.show(msg, type);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '–';
+    const d = new Date(iso);
+    return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function formatDatetime(iso) {
+    if (!iso) return '–';
+    const d = new Date(iso);
+    return d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function isOverdue(dueDateStr) {
+    if (!dueDateStr) return false;
+    const due = new Date(dueDateStr);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return due < today;
+  }
+
+  function isDueToday(dueDateStr) {
+    if (!dueDateStr) return false;
+    const due = new Date(dueDateStr);
+    const today = new Date();
+    return (
+      due.getFullYear() === today.getFullYear() &&
+      due.getMonth() === today.getMonth() &&
+      due.getDate() === today.getDate()
+    );
+  }
+
+  function consentLabel(category) {
+    const labels = {
+      analytics: 'Analyse & Statistik',
+      personalization: 'Personalisierung',
+      email_notifications: 'E-Mail-Benachrichtigungen',
+      data_sharing: 'Datenweitergabe',
+    };
+    return labels[category] || esc(category);
+  }
+
+  function followupStatusBadge(status, dueDate) {
+    if (status === 'done') return '<span class="badge badge-success">Erledigt</span>';
+    if (isOverdue(dueDate)) return '<span class="badge badge-error">Überfällig</span>';
+    if (isDueToday(dueDate)) return '<span class="badge badge-warning">Heute fällig</span>';
+    return '<span class="badge badge-accent">Offen</span>';
+  }
+
+  function refTypeBadge(refType) {
+    if (!refType) return '';
+    const map = {
+      task: 'badge-accent',
+      conversation: 'badge-muted',
+      invoice: 'badge-warning',
+      contract: 'badge-error',
+      document: 'badge-success',
+    };
+    return `<span class="badge ${map[refType] || 'badge-muted'}">${esc(refType)}</span>`;
+  }
+
+  // ── Main Render ──
+
+  async function render(container) {
+    deleteStep = 0;
+    exportUrl = null;
+    showCreateForm = false;
+
+    container.innerHTML = `
+      <div class="section-header">
+        <span class="section-icon material-symbols-outlined">security</span>
+        Datenschutz &amp; Follow-ups
+      </div>
+      <div class="tab-bar mb-16">
+        <button class="tab-btn ${activeTab === 'datenschutz' ? 'active' : ''}"
+          onclick="GdprView.switchTab('datenschutz')">
+          <span class="material-symbols-outlined mi-sm">shield</span> Datenschutz
+        </button>
+        <button class="tab-btn ${activeTab === 'followups' ? 'active' : ''}"
+          onclick="GdprView.switchTab('followups')">
+          <span class="material-symbols-outlined mi-sm">event_upcoming</span> Follow-ups
+        </button>
+      </div>
+      <div id="gdpr-tab-content">
+        <div class="skeleton skeleton-card"></div>
+        <div class="skeleton skeleton-card"></div>
+      </div>
+    `;
+
+    if (activeTab === 'datenschutz') {
+      await loadDatenschutzTab(container);
+    } else {
+      await loadFollowupsTab(container);
+    }
+  }
+
+  // ── Datenschutz Tab ──
+
+  async function loadDatenschutzTab(container) {
+    try {
+      const [summaryRes, consentsRes, logRes] = await Promise.all([
+        Api.get('/gdpr/data-summary'),
+        Api.get('/gdpr/consent'),
+        Api.get('/gdpr/processing-log'),
+      ]);
+      dataSummary = summaryRes;
+      consents = consentsRes || [];
+      processingLog = (logRes || []).slice().reverse();
+    } catch (e) {
+      showToast('Fehler beim Laden der Datenschutzdaten', 'error');
+      dataSummary = null;
+      consents = [];
+      processingLog = [];
+    }
+    renderDatenschutzTab(container);
+  }
+
+  function renderDatenschutzTab(container) {
+    const tabContent = container.querySelector('#gdpr-tab-content');
+    if (!tabContent) return;
+
+    // Data summary
+    let summaryHtml = '';
+    if (dataSummary) {
+      const cats = dataSummary.categories || {};
+      const catRows = Object.entries(cats)
+        .map(([k, v]) => `<div class="data-summary-row"><span class="data-summary-key">${esc(k)}</span><span class="badge badge-muted">${esc(String(v))}</span></div>`)
+        .join('');
+      summaryHtml = `
+        <div class="card mb-16">
+          <div class="card-title"><span class="material-symbols-outlined mi-sm">database</span> Meine Daten</div>
+          <div class="data-summary-total mb-8">
+            <strong>Gesamt:</strong> ${esc(String(dataSummary.total_records || 0))} Einträge
+          </div>
+          ${catRows}
+        </div>
+      `;
+    } else {
+      summaryHtml = `<div class="card mb-16"><div class="empty-state">Keine Datenzusammenfassung verfügbar.</div></div>`;
+    }
+
+    // Export card
+    const exportSection = `
+      <div class="card mb-16">
+        <div class="card-title"><span class="material-symbols-outlined mi-sm">download</span> Datenexport</div>
+        <p class="text-muted mb-12">Exportiere alle deine persönlichen Daten als ZIP-Datei.</p>
+        <div id="gdpr-export-area">
+          ${exportUrl
+            ? `<a class="btn btn-secondary" href="${esc(exportUrl)}" download>
+                <span class="material-symbols-outlined mi-sm">download</span> ZIP herunterladen
+               </a>`
+            : `<button class="btn btn-primary" onclick="GdprView.requestExport()">
+                <span class="material-symbols-outlined mi-sm">cloud_download</span> Meine Daten exportieren
+               </button>`
+          }
+        </div>
+      </div>
+    `;
+
+    // Consent management
+    const CONSENT_CATEGORIES = ['analytics', 'personalization', 'email_notifications', 'data_sharing'];
+    const consentMap = {};
+    consents.forEach(c => { consentMap[c.category] = c; });
+
+    const consentRows = CONSENT_CATEGORIES.map(cat => {
+      const entry = consentMap[cat] || {};
+      const granted = entry.granted === true || entry.granted === 1;
+      const updatedAt = entry.updated_at ? `<span class="text-muted text-xs">Aktualisiert: ${formatDate(entry.updated_at)}</span>` : '';
+      return `
+        <div class="consent-row">
+          <div class="consent-info">
+            <span class="consent-label">${consentLabel(cat)}</span>
+            ${updatedAt}
+          </div>
+          <label class="toggle-switch">
+            <input type="checkbox" id="consent-${esc(cat)}" ${granted ? 'checked' : ''}>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      `;
+    }).join('');
+
+    const consentSection = `
+      <div class="card mb-16">
+        <div class="card-title"><span class="material-symbols-outlined mi-sm">tune</span> Einwilligungen</div>
+        <div id="consent-list">${consentRows}</div>
+        <div class="mt-12">
+          <button class="btn btn-primary" onclick="GdprView.saveConsents()">
+            <span class="material-symbols-outlined mi-sm">save</span> Einwilligungen speichern
+          </button>
+        </div>
+      </div>
+    `;
+
+    // Processing log
+    const logRows = processingLog.length
+      ? processingLog.map(entry => `
+          <tr>
+            <td class="log-timestamp">${formatDatetime(entry.timestamp)}</td>
+            <td>${esc(entry.action)}</td>
+            <td class="text-muted">${esc(entry.details || '–')}</td>
+          </tr>
+        `).join('')
+      : `<tr><td colspan="3" class="text-center text-muted">Keine Einträge vorhanden.</td></tr>`;
+
+    const logSection = `
+      <div class="card mb-16">
+        <div class="card-title"><span class="material-symbols-outlined mi-sm">history</span> Verarbeitungsprotokoll</div>
+        <div class="table-scroll">
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th>Zeitpunkt</th>
+                <th>Aktion</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>${logRows}</tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    // Delete account danger zone
+    const deleteZone = renderDeleteZone();
+
+    tabContent.innerHTML = summaryHtml + exportSection + consentSection + logSection + deleteZone;
+  }
+
+  function renderDeleteZone() {
+    if (deleteStep === 0) {
+      return `
+        <div class="card danger-zone mb-16">
+          <div class="card-title text-danger">
+            <span class="material-symbols-outlined mi-sm">delete_forever</span> Konto löschen
+          </div>
+          <p class="text-muted mb-12">
+            Diese Aktion ist <strong>unwiderruflich</strong>. Alle deine Daten werden dauerhaft gelöscht.
+          </p>
+          <button class="btn btn-danger" onclick="GdprView.startDeleteAccount()">
+            <span class="material-symbols-outlined mi-sm">delete_forever</span> Konto löschen
+          </button>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="card danger-zone mb-16">
+          <div class="card-title text-danger">
+            <span class="material-symbols-outlined mi-sm">warning</span> Konto wirklich löschen?
+          </div>
+          <p class="text-muted mb-12">
+            Gib dein Passwort ein, um die Löschung zu bestätigen. Diese Aktion kann <strong>nicht rückgängig</strong> gemacht werden.
+          </p>
+          <div class="form-group mb-12">
+            <input type="password" id="delete-password-input" class="input" placeholder="Passwort zur Bestätigung">
+          </div>
+          <div class="flex gap-8">
+            <button class="btn btn-danger" onclick="GdprView.confirmDeleteAccount()">
+              <span class="material-symbols-outlined mi-sm">delete_forever</span> Endgültig löschen
+            </button>
+            <button class="btn btn-secondary" onclick="GdprView.cancelDeleteAccount()">
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  // ── Datenschutz Actions ──
+
+  async function requestExport() {
+    try {
+      const res = await Api.post('/gdpr/export', {});
+      if (res && res.download_url) {
+        exportUrl = res.download_url;
+        showToast('Export wird vorbereitet. Download-Link ist bereit.', 'success');
+      } else {
+        exportUrl = '/gdpr/export/download';
+        showToast('Export angefordert. Download-Link ist bereit.', 'success');
+      }
+      const exportArea = document.getElementById('gdpr-export-area');
+      if (exportArea) {
+        exportArea.innerHTML = `
+          <a class="btn btn-secondary" href="${esc(exportUrl)}" download>
+            <span class="material-symbols-outlined mi-sm">download</span> ZIP herunterladen
+          </a>
+        `;
+      }
+    } catch (e) {
+      showToast('Fehler beim Anfordern des Exports', 'error');
+    }
+  }
+
+  async function saveConsents() {
+    const CONSENT_CATEGORIES = ['analytics', 'personalization', 'email_notifications', 'data_sharing'];
+    const updates = CONSENT_CATEGORIES.map(cat => {
+      const el = document.getElementById(`consent-${cat}`);
+      return { category: cat, granted: el ? el.checked : false };
+    });
+    try {
+      await Api.patch('/gdpr/consent', { consents: updates });
+      showToast('Einwilligungen gespeichert', 'success');
+      // Refresh consent list
+      const consentsRes = await Api.get('/gdpr/consent');
+      consents = consentsRes || [];
+    } catch (e) {
+      showToast('Fehler beim Speichern der Einwilligungen', 'error');
+    }
+  }
+
+  function startDeleteAccount() {
+    deleteStep = 1;
+    _replaceDangerZone();
+  }
+
+  async function confirmDeleteAccount() {
+    const pwInput = document.getElementById('delete-password-input');
+    const password = pwInput ? pwInput.value.trim() : '';
+    if (!password) {
+      showToast('Bitte Passwort eingeben', 'error');
+      return;
+    }
+    try {
+      await Api.post('/gdpr/delete-account', { password });
+      showToast('Konto wurde gelöscht. Du wirst abgemeldet.', 'success');
+      deleteStep = 0;
+      // Optionally redirect or logout
+      setTimeout(() => {
+        if (typeof window !== 'undefined') window.location.hash = '#/login';
+      }, 2000);
+    } catch (e) {
+      showToast('Fehler beim Löschen des Kontos. Passwort korrekt?', 'error');
+    }
+  }
+
+  function cancelDeleteAccount() {
+    deleteStep = 0;
+    _replaceDangerZone();
+  }
+
+  function _replaceDangerZone() {
+    const zone = document.querySelector('.danger-zone');
+    if (zone) {
+      const div = document.createElement('div');
+      div.innerHTML = renderDeleteZone();
+      zone.replaceWith(div.firstElementChild);
+    }
+  }
+
+  // ── Follow-ups Tab ──
+
+  async function loadFollowupsTab(container) {
+    try {
+      const [allRes, dueRes] = await Promise.all([
+        Api.get('/followups/'),
+        Api.get('/followups/due'),
+      ]);
+      followups = (allRes || []).slice().sort((a, b) => {
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return new Date(a.due_date) - new Date(b.due_date);
+      });
+      dueFollowups = dueRes || [];
+    } catch (e) {
+      showToast('Fehler beim Laden der Follow-ups', 'error');
+      followups = [];
+      dueFollowups = [];
+    }
+    renderFollowupsTab(container);
+  }
+
+  function renderFollowupsTab(container) {
+    const tabContent = container.querySelector('#gdpr-tab-content');
+    if (!tabContent) return;
+
+    // Due followups section
+    let dueSection = '';
+    if (dueFollowups.length > 0) {
+      const dueItems = dueFollowups.map(f => renderFollowupCard(f, true)).join('');
+      dueSection = `
+        <div class="card mb-16 due-followups-card">
+          <div class="card-title text-warning">
+            <span class="material-symbols-outlined mi-sm">notification_important</span>
+            Fällige Follow-ups (${dueFollowups.length})
+          </div>
+          <div>${dueItems}</div>
+        </div>
+      `;
+    }
+
+    // Create form
+    const createForm = showCreateForm ? renderCreateFollowupForm() : `
+      <div class="mb-16">
+        <button class="btn btn-primary" onclick="GdprView.toggleCreateForm()">
+          <span class="material-symbols-outlined mi-sm">add</span> Follow-up erstellen
+        </button>
+      </div>
+    `;
+
+    // Full list
+    let listHtml = '';
+    if (followups.length === 0) {
+      listHtml = `<div class="empty-state"><span class="material-symbols-outlined">event_upcoming</span><p>Keine Follow-ups vorhanden.</p></div>`;
+    } else {
+      listHtml = followups.map(f => renderFollowupCard(f, false)).join('');
+    }
+
+    tabContent.innerHTML = dueSection + createForm + `
+      <div class="section-subheader mb-8">
+        <span class="material-symbols-outlined mi-sm">list</span> Alle Follow-ups
+      </div>
+      <div id="followup-list">${listHtml}</div>
+    `;
+  }
+
+  function renderFollowupCard(f, highlight) {
+    const statusBadge = followupStatusBadge(f.status, f.due_date);
+    const refBadge = refTypeBadge(f.reference_type);
+    const isDone = f.status === 'done';
+    const highlightClass = highlight ? 'followup-card-highlight' : '';
+
+    return `
+      <div class="card followup-card mb-8 ${highlightClass}" data-id="${esc(String(f.id))}">
+        <div class="followup-header">
+          <div class="followup-subject">${esc(f.subject)}</div>
+          <div class="followup-badges">
+            ${statusBadge}
+            ${refBadge}
+          </div>
+        </div>
+        <div class="followup-meta text-muted text-sm mt-4">
+          <span class="material-symbols-outlined mi-xs">calendar_today</span>
+          Fällig: ${formatDate(f.due_date)}
+          ${f.reference_id ? `<span class="ml-8">Ref: #${esc(String(f.reference_id))}</span>` : ''}
+        </div>
+        <div class="followup-actions mt-8 flex gap-8">
+          ${!isDone ? `<button class="btn btn-sm btn-primary" onclick="GdprView.markDone(${f.id})">
+            <span class="material-symbols-outlined mi-sm">check_circle</span> Als erledigt
+          </button>` : ''}
+          <button class="btn btn-sm btn-danger" onclick="GdprView.deleteFollowup(${f.id})">
+            <span class="material-symbols-outlined mi-sm">delete</span>
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderCreateFollowupForm() {
+    return `
+      <div class="card mb-16" id="followup-create-form">
+        <div class="card-title">
+          <span class="material-symbols-outlined mi-sm">add_task</span> Neues Follow-up
+        </div>
+        <div class="form-group mb-8">
+          <label>Betreff</label>
+          <input type="text" id="fu-subject" class="input" placeholder="Worum geht es?">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Fälligkeitsdatum</label>
+            <input type="date" id="fu-due-date" class="input">
+          </div>
+          <div class="form-group">
+            <label>Referenztyp</label>
+            <select id="fu-ref-type" class="input">
+              <option value="">– kein –</option>
+              <option value="task">Aufgabe</option>
+              <option value="conversation">Gespräch</option>
+              <option value="invoice">Rechnung</option>
+              <option value="contract">Vertrag</option>
+              <option value="document">Dokument</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group mb-8">
+          <label>Referenz-ID (optional)</label>
+          <input type="number" id="fu-ref-id" class="input" placeholder="z.B. 42">
+        </div>
+        <div class="flex gap-8 mt-12">
+          <button class="btn btn-primary" onclick="GdprView.createFollowup()">
+            <span class="material-symbols-outlined mi-sm">save</span> Erstellen
+          </button>
+          <button class="btn btn-secondary" onclick="GdprView.toggleCreateForm()">
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
+  // ── Follow-ups Actions ──
+
+  async function markDone(id) {
+    try {
+      await Api.patch(`/followups/${id}`, { status: 'done' });
+      showToast('Follow-up als erledigt markiert', 'success');
+      followups = followups.map(f => f.id === id ? { ...f, status: 'done' } : f);
+      dueFollowups = dueFollowups.filter(f => f.id !== id);
+      _rerenderFollowupsInPlace();
+    } catch (e) {
+      showToast('Fehler beim Aktualisieren des Follow-ups', 'error');
+    }
+  }
+
+  async function deleteFollowup(id) {
+    if (!confirm('Follow-up wirklich löschen?')) return;
+    try {
+      await Api.delete(`/followups/${id}`);
+      showToast('Follow-up gelöscht', 'success');
+      followups = followups.filter(f => f.id !== id);
+      dueFollowups = dueFollowups.filter(f => f.id !== id);
+      _rerenderFollowupsInPlace();
+    } catch (e) {
+      showToast('Fehler beim Löschen des Follow-ups', 'error');
+    }
+  }
+
+  function _rerenderFollowupsInPlace() {
+    renderFollowupsTab({ querySelector: (sel) => document.querySelector(sel) });
+  }
+
+  async function createFollowup() {
+    const subject = (document.getElementById('fu-subject') || {}).value || '';
+    const dueDate = (document.getElementById('fu-due-date') || {}).value || '';
+    const refType = (document.getElementById('fu-ref-type') || {}).value || '';
+    const refIdRaw = (document.getElementById('fu-ref-id') || {}).value || '';
+    const refId = refIdRaw ? parseInt(refIdRaw, 10) : null;
+
+    if (!subject.trim()) {
+      showToast('Bitte Betreff angeben', 'error');
+      return;
+    }
+    if (!dueDate) {
+      showToast('Bitte Fälligkeitsdatum angeben', 'error');
+      return;
+    }
+
+    const payload = {
+      subject: subject.trim(),
+      due_date: dueDate,
+      reference_type: refType || null,
+      reference_id: refId,
+    };
+
+    try {
+      const created = await Api.post('/followups/', payload);
+      showToast('Follow-up erstellt', 'success');
+      followups = [...followups, created].sort((a, b) => {
+        if (!a.due_date) return 1;
+        if (!b.due_date) return -1;
+        return new Date(a.due_date) - new Date(b.due_date);
+      });
+      showCreateForm = false;
+      _rerenderFollowupsInPlace();
+    } catch (e) {
+      showToast('Fehler beim Erstellen des Follow-ups', 'error');
+    }
+  }
+
+  function toggleCreateForm() {
+    showCreateForm = !showCreateForm;
+    _rerenderFollowupsInPlace();
+  }
+
+  // ── Tab Switch ──
+
+  function switchTab(tab) {
+    activeTab = tab;
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.textContent.toLowerCase().includes(tab === 'datenschutz' ? 'datenschutz' : 'follow'));
+    if (activeBtn) activeBtn.classList.add('active');
+
+    const tabContent = document.getElementById('gdpr-tab-content');
+    if (!tabContent) return;
+    tabContent.innerHTML = `<div class="skeleton skeleton-card"></div><div class="skeleton skeleton-card"></div>`;
+
+    const container = { querySelector: (sel) => document.querySelector(sel) };
+    if (tab === 'datenschutz') {
+      loadDatenschutzTab(container);
+    } else {
+      loadFollowupsTab(container);
+    }
+  }
+
+  // ── Public API ──
+
+  return {
+    render,
+    switchTab,
+    // Datenschutz
+    requestExport,
+    saveConsents,
+    startDeleteAccount,
+    confirmDeleteAccount,
+    cancelDeleteAccount,
+    // Follow-ups
+    markDone,
+    deleteFollowup,
+    createFollowup,
+    toggleCreateForm,
+  };
+})();
