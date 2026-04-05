@@ -464,4 +464,18 @@ def run_seed():
 
 
 if __name__ == "__main__":
+    import os
+
+    env = os.environ.get("ENVIRONMENT", os.environ.get("ENV", "")).lower()
+    if env == "production":
+        logger.error("Seed-Script darf nicht in der Produktionsumgebung laufen! (ENVIRONMENT=production)")
+        sys.exit(1)
+
+    if "--confirm" not in sys.argv and "--yes" not in sys.argv:
+        logger.warning(
+            "ACHTUNG: Dieses Script loescht alle demo_* Daten und erstellt neue.\n"
+            "  Ausfuehren mit: python scripts/seed_demo.py --confirm"
+        )
+        sys.exit(0)
+
     run_seed()

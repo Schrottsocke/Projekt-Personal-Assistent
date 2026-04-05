@@ -96,18 +96,24 @@ async def create_ux_rating(
 
 
 @router.get("")
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def get_all_feedback(
+    request: Request,
     user_key: Annotated[str, Depends(get_current_user)],
     feedback_type: Optional[str] = None,
     triage_status: Optional[str] = None,
     limit: int = 100,
+    own_only: bool = False,
 ):
-    """Alle Feedback-Eintraege abrufen (Admin)."""
-    return _service.get_all(
+    """Feedback-Eintraege abrufen. Ohne own_only=true werden alle angezeigt (Admin)."""
+    items = _service.get_all(
         feedback_type=feedback_type,
         triage_status=triage_status,
         limit=limit,
     )
+    if own_only:
+        items = [i for i in items if i.get("user_key") == user_key]
+    return items
 
 
 @router.patch("/{feedback_id}/triage")
