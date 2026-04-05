@@ -1,432 +1,225 @@
-# Personal Assistant – DualMind
+# DualMind – Persönlicher Haushaltsassistent
 
-Zwei persönliche KI-Assistenten via Telegram. Jeder Bot hat eine eigene Persönlichkeit, ein gemeinsames Gedächtnis-System und lernt kontinuierlich aus Gesprächen.
+**DualMind** ist eine Progressive Web App (PWA) für die vollständige digitale Verwaltung eines Haushalts. Finanzen, Dokumente, Inventar, Familie, Aufgaben und mehr – in einer modernen, DSGVO-konformen Anwendung.
+
+> 🚧 Aktuell in der **Beta-Phase** – erster Testerkreis läuft.
 
 ---
 
-## Features
+## Funktionsbereiche
 
-| Feature | Beschreibung |
+| Bereich | Features |
 |---|---|
-| **Zwei Bots** | TaakeBot + NinaBot, eigene Tokens, eigene Persönlichkeit |
-| **Natürliche Sprache** | Kein Befehlssystem – einfach frei schreiben |
-| **Voice-Input** | Sprachnachrichten via Groq Whisper Large v3 |
-| **Langzeitgedächtnis** | Lernt aus Gesprächen (mem0 + Konfidenz-Tracking) |
-| **Google Calendar** | Termine lesen, erstellen, erinnern |
-| **Task-Management** | Aufgaben mit Priorität, Cross-Bot-Zuweisung |
-| **Timer / Pomodoro** | "Timer 25 Minuten" – sofort, kein Klick nötig |
-| **Trust-System** | Konfigurierbar: was direkt ausgeführt wird vs. Bestätigung |
-| **Tabellen & Präsentationen** | .xlsx und .pptx per KI generiert und gesendet |
-| **Web-Suche** | Wetter, Nachrichten, Preise automatisch gesucht |
-| **Foto-Analyse** | Bilder & Screenshots analysieren, Intent erkennen (Vision) |
-| **Fokus-Modus** | `/fokus 90` – Nachrichten + Proaktiv-Meldungen zurückhalten |
-| **Tagesplanung** | Zeitgeblockte Tagesplanung im Morgen-Briefing |
-| **Spotify** | Musik per Sprache steuern (Play, Pause, Skip, Suche) |
-| **Smart Home** | Home Assistant Steuerung (Licht, Heizung, Rollos) |
-| **Voice Output (TTS)** | `/tts` – Bot antwortet zusätzlich als Sprachnachricht |
-| **Cross-User Sync** | `/gemeinsam` – Gemeinsamer Kalender + Konflikt-Erkennung |
-| **Proaktives Briefing** | Täglich um 08:00 Uhr |
-| **Quiet Hours** | Keine Nachrichten in der Ruhezeit |
-| **Wochenrückblick** | Sonntags automatisch |
-| **Einkaufsliste** | Artikel hinzufügen/abhaken, automatische Kategorien, Chefkoch-Rezept → Zutaten |
-| **E-Mail (Gmail)** | Posteingang lesen, KI-Aktionen erkennen, Entwürfe erstellen |
-| **Google Drive** | Dateien hochladen, durchsuchen, als Datei-Eingang nutzen |
-| **Dokument-Scanner** | Foto → OCR → durchsuchbares PDF → Drive-Upload → KI-Aktionen per Proposal |
-| **Mobilität** | Fahrzeit berechnen, Abfahrtszeit rückwärts (OpenRouteService) |
-| **REST API** | FastAPI auf Port 8000 – alle Services als JSON-Endpunkte (JWT-Auth) |
-| **Flutter App** | Native iOS/Android App: Dashboard, Einkauf, Rezepte, Chat, Profil |
+| **Dashboard** | Tagesübersicht: Finanzen, offene Aufgaben, Benachrichtigungen, Kalender |
+| **Finanzen** | Transaktionen, Budgets, Verträge, Rechnungen, Kategorien, Statistiken |
+| **Dokumente** | Kamera-Scan, OCR-Texterkennung, Kategorisierung, Volltextsuche |
+| **Inventar** | Gegenstände mit Foto, Raumzuordnung, Garantie-Tracking, Suche |
+| **Familie** | Haushaltsmitglieder, Rollen, Aufgaben mit Zuweisung, Einkaufsliste, Routinen |
+| **Kalender** | Termine, Deadlines, Scheduler-Jobs, Erinnerungen |
+| **Benachrichtigungen** | Push (PWA), Telegram, Deadline-Alerts, VAPID-Keys |
+| **Suche** | Globale Volltextsuche über alle Bereiche |
+| **DSGVO** | Datenexport, Datenlöschung, Datenschutz-Center |
+| **Onboarding** | 6-schrittiger geführter Einstieg für neue Nutzer |
+| **Beta-Feedback** | Bug-Reports, UX-Bewertung (1–5), Triage-Status im Admin |
+| **Admin** | Testuser-Einladungen, Invite-Links, Resend, Widerruf |
 
 ---
 
-## Befehle
-
-| Befehl | Funktion |
-|---|---|
-| `/start` | Onboarding starten |
-| `/hilfe` | Alle Befehle |
-| `/kalender` | Kommende Termine |
-| `/neu_termin` | Neuen Termin erstellen |
-| `/notiz` | Notiz speichern |
-| `/notizen` | Alle Notizen anzeigen |
-| `/erinnerung` | Erinnerung setzen |
-| `/erinnerungen` | Aktive Erinnerungen |
-| `/tasks` | Offene Aufgaben |
-| `/done <Nr>` | Aufgabe abhaken |
-| `/briefing` | Morgen-Briefing jetzt |
-| `/gedaechtnis` | Gespeicherte Fakten mit Konfidenz |
-| `/autonomie` | Trust-Level konfigurieren |
-| `/profil` | Persönlichkeitsprofil anzeigen/bearbeiten |
-| `/fokus` | Fokus-Modus aktivieren (Minuten oder Uhrzeit) |
-| `/fokus_ende` | Fokus-Modus vorzeitig beenden |
-| `/gemeinsam` | Gemeinsamer Kalender + Terminüberschneidungen |
-| `/tts` | Sprachantworten an/aus |
-| `/spotify` | Spotify verbinden und steuern |
-| `/smarthome` | Smart Home Status und Steuerung |
-| `/vorschlaege` | Offene Vorschläge anzeigen |
-| `/tabelle` | Tabelle als Chat oder Excel-Datei |
-| `/praesentation` | PowerPoint-Präsentation erstellen |
-| `/drive` | Google Drive Dateien anzeigen |
-| `/einkaufsliste` | Einkaufsliste anzeigen |
-| `/einkauf <Artikel>` | Artikel zur Einkaufsliste hinzufügen |
-| `/rezept <Name>` | Rezept suchen + Zutaten zur Einkaufsliste hinzufügen |
-| `/email` | Posteingang lesen (Gmail) |
-| `/email_connect` | Gmail verbinden (OAuth2) |
-| `/email_aktionen` | KI-Aktionen aus E-Mails als Vorschläge |
-| `/fahrzeit <Ziel>` | Fahrzeit und Route berechnen |
-| `/scan` | Anleitung zum Dokument scannen |
-| `/dokumente` | Letzte 10 gescannte Dokumente |
-
-Oder einfach **frei schreiben oder eine Sprachnachricht schicken** – der Bot versteht natürliche Sprache.
-
----
-
-## REST API + Flutter App
-
-### API-Endpunkte (FastAPI auf Port 8000)
-
-| Endpunkt | Methode | Beschreibung |
-|---|---|---|
-| `/auth/login` | POST | Login mit username + password → JWT |
-| `/auth/refresh` | POST | Neues Access-Token mit Refresh-Token |
-| `/dashboard/today` | GET | Termine, Tasks, Shopping, E-Mails im Überblick |
-| `/chat/message` | POST | Chat-Nachricht senden → KI-Antwort |
-| `/chat/history` | GET | Gesprächshistorie |
-| `/tasks` | GET/POST/PATCH/DELETE | Task-Verwaltung |
-| `/calendar/today` | GET | Heutige Termine |
-| `/calendar/week` | GET | Wochenübersicht |
-| `/calendar/events` | POST | Neuen Termin anlegen |
-| `/shopping/items` | GET/POST/PATCH/DELETE | Einkaufsliste |
-| `/shopping/from-recipe/{id}` | POST | Rezept-Zutaten zur Liste hinzufügen |
-| `/recipes/search` | GET | Chefkoch-Rezepte suchen |
-| `/recipes/saved` | GET/POST/DELETE | Gespeicherte Rezepte |
-| `/recipes/{id}/to-shopping` | POST | Zutaten mit Portionsskalierung übernehmen |
-| `/meal-plan/week` | GET/POST/DELETE | Wochenplan |
-| `/drive/files` | GET | Drive-Dateien auflisten |
-| `/drive/upload` | POST | Datei hochladen |
-
-### Flutter App starten (Entwicklung)
-
-```bash
-cd app
-flutter pub get
-# API-URL in lib/config/api_config.dart anpassen
-flutter run
-```
-
----
-
-## Deployment auf Hostinger VPS
-
-### Voraussetzungen
-- Hostinger VPS mit **Ubuntu 22.04**, mind. **2 GB RAM** (KVM 2 empfohlen)
-- Root-SSH-Zugang
-- API-Keys bereit: Telegram (@BotFather), OpenRouter, Groq
-- Google Cloud Console Projekt mit aktivierter Calendar API + credentials.json
-
----
-
-### Schritt 1 – Server-Setup (einmalig, als root)
-
-```bash
-ssh root@DEINE_IP
-
-# Setup-Skript ausführen (installiert Python, legt Benutzer an, richtet systemd ein)
-git clone https://github.com/schrottsocke/projekt-personal-assistent.git /tmp/pa
-bash /tmp/pa/deploy/setup_server.sh
-```
-
-Das Skript erledigt automatisch:
-- System-Update + Python 3.11 + Build-Tools installieren
-- Benutzer `assistant` anlegen
-- Repo nach `/home/assistant/projekt-personal-assistent` klonen
-- Virtualenv + alle Dependencies installieren
-- Systemd-Service einrichten (Autostart bei Reboot)
-
-Für den Dokument-Scanner zusätzlich:
-```bash
-apt install -y tesseract-ocr tesseract-ocr-deu
-```
-
----
-
-### Schritt 2 – .env befüllen
-
-```bash
-nano /home/assistant/projekt-personal-assistent/.env
-```
-
-```env
-# Telegram
-BOT_TOKEN_TAAKE=          # Von @BotFather
-BOT_TOKEN_NINA=           # Von @BotFather
-TELEGRAM_USER_ID_TAAKE=   # Deine ID: @userinfobot im Telegram fragen
-TELEGRAM_USER_ID_NINA=    # Ninas ID
-
-# AI
-OPENROUTER_API_KEY=       # openrouter.ai/keys
-AI_MODEL_INTENT=meta-llama/llama-3.1-8b-instruct
-AI_MODEL_CHAT=google/gemma-3-27b-it
-
-# Voice
-GROQ_API_KEY=             # console.groq.com (kostenlos, 7.200 Sek./Tag)
-
-# Einstellungen
-MEMORY_MODE=local
-TIMEZONE=Europe/Berlin
-DATABASE_URL=sqlite:///data/assistant.db
-LOG_LEVEL=INFO
-
-# Mobilität (optional)
-OPENROUTE_API_KEY=        # openrouteservice.org – kostenlos bis 2.000 Req/Tag
-HOME_ADDRESS=             # z.B. "Musterstraße 1, Berlin" für Fahrzeitberechnung
-
-# Dokument-Scanner (optional)
-DRIVE_DOCUMENTS_FOLDER_ID=   # Google Drive Ordner-ID (leer = "Personal Assistant" Ordner)
-OCR_CONFIDENCE_THRESHOLD=70  # Unter diesem Wert → Vision-API Fallback
-SCAN_SAVE_LOCAL=true         # Lokale Kopie in data/scans/ behalten
-
-# REST API (Flutter App)
-API_SECRET_KEY=              # python -c "import secrets; print(secrets.token_hex(32))"
-API_PASSWORD_TAAKE=          # App-Passwort für Taake
-API_PASSWORD_NINA=           # App-Passwort für Nina
-API_PORT=8000
-API_CORS_ORIGINS=*
-API_TOKEN_EXPIRE_DAYS=30
-```
-
----
-
-### Schritt 3 – Google API verbinden
-
-Die **gleichen** `google_credentials.json` gelten für Calendar, Drive und Gmail. In der Google Cloud Console müssen alle drei APIs aktiviert sein:
-
-- Google Calendar API
-- Google Drive API
-- Gmail API
-
-Google OAuth benötigt einen Browser. **Lokal auf deinem PC** ausführen, Tokens dann hochladen.
-
-```bash
-# Lokal auf deinem PC:
-pip install google-auth-oauthlib google-api-python-client
-python deploy/google_auth_local.py
-```
-
-Das Skript öffnet den Browser, du meldest dich mit deinem Google-Account an und Tokens werden gespeichert. Am Ende werden die `scp`-Befehle zum Hochladen angezeigt:
-
-```bash
-scp config/google_credentials.json  assistant@IP:~/projekt-personal-assistent/config/
-scp data/google_token_taake.json    assistant@IP:~/projekt-personal-assistent/data/
-scp data/google_token_nina.json     assistant@IP:~/projekt-personal-assistent/data/
-```
-
-Drive und Gmail werden beim ersten Benutzen im Chat verbunden (`/email_connect`, `/drive`).
-
-> **Ohne Google** funktioniert alles außer Kalender/Drive/Gmail-Features. Bot startet trotzdem.
-
----
-
-### Schritt 4 – Bots und API starten
-
-```bash
-# Als root auf dem Server:
-systemctl start personal-assistant
-systemctl start personal-assistant-api
-
-# Live-Logs anzeigen:
-journalctl -u personal-assistant -f
-journalctl -u personal-assistant-api -f
-```
-
-Erfolgreich wenn du siehst:
-```
-Beide Bots laufen! Drücke Ctrl+C zum Beenden.
-```
-
-API erreichbar unter: `http://DEINE_IP:8000/docs` (Swagger UI)
-
----
-
-### Schritt 5 – Updates einspielen
-
-```bash
-# Nach Code-Änderungen: einzeiliges Update-Skript
-bash /home/assistant/projekt-personal-assistent/deploy/update.sh
-```
-
----
-
-### Monitoring
-
-```bash
-# Status
-systemctl status personal-assistant
-
-# Letzte 100 Log-Zeilen
-journalctl -u personal-assistant -n 100
-
-# Live-Logs
-journalctl -u personal-assistant -f
-
-# Neustart
-systemctl restart personal-assistant
-
-# Stoppen
-systemctl stop personal-assistant
-```
-
----
-
-### Bekannte Tücken
-
-| Problem | Lösung |
-|---|---|
-| `pip install` schlägt bei ChromaDB fehl | `apt install -y cmake` und erneut versuchen |
-| RAM zu knapp (< 2 GB) | `MEMORY_MODE=cloud` in .env + mem0-API-Key |
-| Google Token läuft nach 7 Tagen ab | In Google Cloud Console Offline-Zugriff aktivieren |
-| Bot startet nach Reboot nicht | `systemctl enable personal-assistant` ausführen |
-| Port bereits belegt | Kein Port nötig – Bot nutzt Telegram-Polling |
-| Tesseract nicht installiert | `apt install -y tesseract-ocr tesseract-ocr-deu` – OCR fällt automatisch auf Vision-API zurück |
-| Drive/Gmail-Scopes fehlen | In Google Cloud Console alle drei APIs aktivieren, `credentials.json` neu herunterladen |
-| API startet nicht | `API_SECRET_KEY` und `API_PASSWORD_*` in .env setzen; Port 8000 in Firewall freigeben |
-| Flutter 401-Fehler | Token abgelaufen → App-Neustart oder `API_TOKEN_EXPIRE_DAYS` erhöhen |
-
----
-
-## Staging-Deployment
-
-Das Staging-Environment ermoeglicht Tests vor dem Production-Deploy.
-
-### Staging-Workflow
-
-1. Code auf den `staging` Branch pushen
-2. GitHub Actions fuehrt automatisch aus:
-   - Lint + Tests
-   - Docker-Build
-   - SSH-Deploy auf Staging-VPS
-   - Health-Check
-   - Status-Notification
-3. Staging-API laeuft auf Port 8001 (statt 8000 in Production)
-
-### Staging einrichten
-
-```bash
-# .env.staging aus Vorlage erstellen
-cp .env.staging.example .env.staging
-# Staging-Werte eintragen (eigene Bot-Tokens, DB-Pfad etc.)
-
-# Lokal testen mit Docker Compose
-docker compose -f docker-compose.staging.yml up -d
-```
-
-### Benoetigte GitHub Secrets (Staging)
-
-| Secret | Beschreibung |
-|---|---|
-| `STAGING_SSH_KEY` | SSH Private Key fuer Staging-VPS |
-| `STAGING_HOST` | Staging-Server IP/Hostname |
-| `STAGING_USER` | SSH-User auf dem Staging-Server |
-| `STAGING_HEALTH_URL` | Health-Check URL (z.B. `http://staging:8001/status`) |
-
-### robots.txt
-
-Staging wird automatisch mit `Disallow: /` konfiguriert, um Suchmaschinen-Indexierung zu verhindern.
-
----
-
-## Test-Coverage
-
-Coverage wird automatisch in CI gemessen und als GitHub Actions Summary angezeigt.
-
-### Coverage lokal pruefen
-
-```bash
-pip install -r requirements-dev.txt
-python -m pytest tests/ --cov=src --cov=api --cov-report=term-missing
-```
-
-### Coverage-Badge (optional)
-
-Um einen Coverage-Badge in der README anzuzeigen, kann ein Service wie [Codecov](https://codecov.io) oder [coveralls.io](https://coveralls.io) eingebunden werden:
-
-```markdown
-[![Coverage](https://codecov.io/gh/schrottsocke/projekt-personal-assistent/branch/main/graph/badge.svg)](https://codecov.io/gh/schrottsocke/projekt-personal-assistent)
-```
-
-Dazu `coverage.xml` als Artifact in den entsprechenden Service hochladen. Der CI-Workflow erzeugt dieses Artifact bereits.
+## Technologie-Stack
+
+### Backend
+- **FastAPI** (Python 3.11) – 35 Router, vollständige Pydantic v2 Schemas
+- **SQLAlchemy** + **Alembic** – Datenbankmigrationen
+- **APScheduler** – Deadline-Alerts, Scheduler-Jobs
+- **Tesseract OCR** + Vision-Fallback – Dokumentenscanning
+- **Jinja2** – E-Mail-Templates (HTML + Plaintext)
+- **JWT-Auth** – Access + Refresh Token
+
+### Frontend / PWA
+- Progressive Web App – installierbar auf iOS & Android
+- Service Worker, Offline-Fallback, Web Manifest
+- Kamera-Zugriff (`getUserMedia`) für Dokumentenscans
+- Web Push Notifications (VAPID)
+
+### Infrastruktur
+- **Docker** + **Docker Compose** (local & staging)
+- **GitHub Actions** – CI/CD Pipeline (Lint → Test → Build → Deploy)
+- **Hostinger VPS** (Ubuntu 22.04)
+- **Let's Encrypt** – HTTPS auf Staging & Produktion
+- **Mailpit** (lokal) / **Resend** oder **Brevo** (Produktion) – E-Mail
 
 ---
 
 ## Lokale Entwicklung
 
 ```bash
-git clone https://github.com/schrottsocke/projekt-personal-assistent.git
-cd projekt-personal-assistent
+git clone https://github.com/Schrottsocke/Projekt-Personal-Assistent.git
+cd Projekt-Personal-Assistent
 
+# Backend
 python3.11 -m venv venv
-source venv/bin/activate      # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 
 cp .env.example .env
-# .env ausfüllen
+# .env mit eigenen Werten befüllen
 
-python main.py
+# Datenbank initialisieren
+alembic upgrade head
+
+# Optionale Demo-Daten
+python scripts/seed_demo_household.py
+
+# Starten
+uvicorn api.main:app --reload --port 8000
 ```
+
+API-Dokumentation (Swagger UI): `http://localhost:8000/docs`
+
+### Lokales E-Mail-Testing (Mailpit)
+
+```bash
+docker compose up mailpit -d
+# Mails abfangen unter: http://localhost:8025
+```
+
+---
+
+## Staging-Deployment
+
+```bash
+# Push auf staging-Branch → CI/CD deployt automatisch
+git push origin main:staging
+
+# Oder manuell:
+docker compose -f docker-compose.staging.yml up -d
+docker compose -f docker-compose.staging.yml exec app alembic upgrade head
+```
+
+### Benötigte GitHub Secrets
+
+| Secret | Beschreibung |
+|---|---|
+| `STAGING_SSH_KEY` | SSH Private Key für Staging-VPS |
+| `STAGING_HOST` | Staging-Server IP/Hostname |
+| `STAGING_USER` | SSH-User auf dem Staging-Server |
+| `STAGING_HEALTH_URL` | Health-Check URL |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` | E-Mail-Konfiguration |
+
+---
+
+## Umgebungsvariablen
+
+Alle Variablen sind in `.env.example` vollständig dokumentiert. Wichtigste Einträge:
+
+```env
+# Datenbank
+DATABASE_URL=sqlite:///data/dualmind.db
+
+# Auth
+SECRET_KEY=                    # python -c "import secrets; print(secrets.token_hex(32))"
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+REFRESH_TOKEN_EXPIRE_DAYS=30
+
+# E-Mail (SMTP)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=noreply@dualmind.app
+SMTP_PASSWORD=
+
+# Push Notifications (VAPID)
+VAPID_PRIVATE_KEY=
+VAPID_PUBLIC_KEY=
+VAPID_SUBJECT=mailto:admin@dualmind.app
+
+# OCR
+TESSERACT_CMD=tesseract
+```
+
+---
+
+## Tests & Coverage
+
+```bash
+pip install -r requirements-dev.txt
+
+# Alle Tests
+pytest tests/ -v
+
+# Mit Coverage-Report
+pytest tests/ --cov=app --cov=api --cov-report=term-missing --cov-report=html
+
+# Nur Integrationstests
+pytest tests/integration/ -v
+```
+
+Ziel: ≥ 80 % Coverage für alle Module, ≥ 90 % für OCR, Finance, Scheduler.
 
 ---
 
 ## Architektur
 
 ```
-main.py                      (Telegram Bots)
-├── TaakeBot / NinaBot       (Telegram Applications)
-├── AIService                (OpenRouter + Groq Whisper)
-│   ├── Intent-Erkennung     (calendar, task, timer, table, shopping, email, ...)
-│   ├── Web-Suche            (Search-First Pattern)
-│   └── Verification-Loop    (JSON-Validierung + Retry)
-├── MemoryService            (mem0 + Konfidenz-Tracking)
-├── CalendarService          (Google Calendar API)
-├── TaskService              (SQLite, Cross-Bot-Zuweisung)
-├── ReminderService          (SQLite + Startup-Delivery)
-├── DocumentService          (python-pptx + openpyxl)
-├── ProposalService          (Human-in-the-Loop + Auto-Approve)
-├── ShoppingService          (SQLite, Kategorien, Chefkoch-API)
-├── EmailService             (Gmail OAuth2, Aktionserkennung)
-├── DriveService             (Google Drive API, Typen-Ordner)
-├── OcrService               (pytesseract + Vision-API Fallback)
-├── PdfService               (img2pdf + reportlab + pypdf, searchable PDF)
-├── MobilityService          (OpenRouteService, Geocoding + Routing)
-└── AssistantScheduler       (APScheduler, Briefing, Quiet Hours, E-Mail-Check)
+api/
+├── main.py                  FastAPI App, Router-Registrierung, CORS, Lifespan
+├── dependencies.py          get_current_user, get_db, Service-Singletons
+├── routers/                 35 Router (finance, inventory, family, documents, ...)
+├── schemas/                 Pydantic v2 Request/Response-Modelle
+├── auth/                    JWT-Auth, Login, Refresh
+└── templates/email/         Jinja2 E-Mail-Templates (DE, HTML + Plaintext)
 
-api/api_main.py              (FastAPI REST-API, Port 8000)
-├── api/auth/                (JWT Auth, Login + Refresh)
-├── api/routers/             (9 Router: dashboard, chat, tasks, calendar, shopping, recipes, mealplan, drive, auth)
-├── api/schemas/             (Pydantic Request/Response-Models)
-├── api/dependencies.py      (Service-Singletons, get_current_user)
-└── api/bot_shim.py          (ApiBotShim – AIService-Proxy ohne Telegram)
+app/
+├── models/                  SQLAlchemy ORM-Modelle
+├── services/                Business-Logik (OCR, Finance, Email, Notifications, ...)
+└── scheduler/               APScheduler Jobs (Deadline-Alerts, Cleanup)
 
-app/                         (Flutter Mobile App)
-├── lib/screens/             (Login, Home, Shopping, Recipes, Chat, Profile)
-├── lib/providers/           (Riverpod AsyncNotifierProviders)
-├── lib/services/            (ApiService mit JWT-Interceptor, Auth, Chat, Tasks, Shopping, Recipes)
-├── lib/models/              (Task, CalendarEvent, ShoppingItem, Recipe, MealPlanEntry, ChatMessage)
-└── lib/widgets/             (EventCard, TaskCard, ShoppingItemTile, RecipeCard, ChatBubble)
+src/                         Shared Utilities, Settings, DB-Session
+alembic/                     Datenbank-Migrationen
+tests/
+├── unit/                    Unit-Tests pro Service
+└── integration/             End-to-End API-Tests
+scripts/
+└── seed_demo_household.py   Demo-Haushalt für Tester
+docs/
+└── beta/                    Beta-Testplan, PWA-Produktionscheck-Protokoll
 ```
 
 ---
 
-## Benötigte API-Keys
+## API-Überblick
 
-| Service | Wo holen | Kosten |
+Die vollständige OpenAPI-Dokumentation ist unter `/docs` verfügbar. Kernbereiche:
+
+| Prefix | Router | Beschreibung |
 |---|---|---|
-| Telegram Bot Token | @BotFather | Kostenlos |
-| OpenRouter | openrouter.ai/keys | Kostenlos (free Modelle) |
-| Groq (Whisper) | console.groq.com | Kostenlos (7.200 Sek./Tag) |
-| Google Calendar | console.cloud.google.com | Kostenlos |
-| Google Drive | console.cloud.google.com (Drive API aktivieren) | Kostenlos |
-| Google Gmail | console.cloud.google.com (Gmail API aktivieren) | Kostenlos |
-| Tavily (Web-Suche) | tavily.com | Kostenlos (1.000 Suchen/Monat) |
-| OpenRouter Vision | openrouter.ai (Gemini Flash) | Kostenlos |
-| OpenRouteService | openrouteservice.org | Kostenlos (2.000 Req/Tag) |
-| Spotify | developer.spotify.com/dashboard | Kostenlos (Premium für Steuerung) |
-| Home Assistant | homeassistant.local (self-hosted) | Kostenlos |
+| `/auth` | auth.py | Login, Refresh, Passwort-Reset |
+| `/api/finance` | finance_router.py | Transaktionen, Budgets, Verträge, Rechnungen |
+| `/api/inventory` | inventory_router.py | Gegenstände, Räume, Garantien, Fotos |
+| `/api/family` | family_router.py | Haushalt, Mitglieder, Aufgaben, Routinen |
+| `/api/documents` | documents.py | Upload, OCR, Kategorien, Suche |
+| `/api/notifications` | notifications_router.py | Push-Subscriptions, VAPID, Alerts |
+| `/api/gdpr` | gdpr_router.py | Export, Löschung, Datenschutz-Center |
+| `/api/onboarding` | onboarding_router.py | Onboarding-Steps, Fortschritt |
+| `/api/feedback` | feedback_router.py | Bug-Reports, UX-Bewertungen, Triage |
+| `/api/test-users` | test_users.py | Invite-Links, Einladungsverwaltung |
+| `/api/monitoring` | monitoring_router.py | Beta-KPIs, Invite-Funnel, Error-Events |
+| `/api/dashboard` | dashboard.py | Tagesübersicht, Aggregations |
+| `/api/search` | search.py | Globale Volltextsuche |
+| `/api/calendar` | calendar.py | Termine, Deadlines |
+| `/status` | status.py | Health-Check, System-Status |
+
+---
+
+## Bekannte Einschränkungen (Beta)
+
+- Push Notifications auf iOS nur aus installierter PWA (Homescreen-Install erforderlich)
+- Kamera-Zugriff erfordert HTTPS (lokal via `localhost` funktioniert)
+- OCR-Qualität abhängig von Bildqualität und Tesseract-Installation
+
+---
+
+## Mitmachen / Beta testen
+
+Beta-Zugang nur auf Einladung. Interesse? Kontakt über GitHub Issues oder direkt per E-Mail an die im Profil hinterlegte Adresse.
+
+Bug-Reports bitte als GitHub Issue mit dem Label `bug` oder direkt über den In-App-Feedback-Button.
