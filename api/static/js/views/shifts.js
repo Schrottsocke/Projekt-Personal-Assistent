@@ -823,16 +823,20 @@ const ShiftsView = (() => {
         </tr></thead><tbody>`;
 
       entries.forEach(e => {
-        const st = statusMeta(e.confirmation_status || 'pending');
+        const st = statusMeta(e.status || e.confirmation_status || 'pending');
         const plannedTime = (e.planned_start && e.planned_end) ? `${e.planned_start}–${e.planned_end}` : '–';
         const actualTime = (e.actual_start && e.actual_end) ? `${e.actual_start}–${e.actual_end}` : '–';
+        const typeColor = e.shift_color || e.shift_type_color || '#7c4dff';
+        const typeShort = e.shift_type_short || e.shift_type_short_name || '?';
+        const plannedDur = e.planned_duration != null ? e.planned_duration : e.planned_duration_minutes;
+        const actualDur = e.actual_duration != null ? e.actual_duration : e.actual_duration_minutes;
         html += `<tr>
           <td>${fmtDate(e.date)}</td>
-          <td><span class="shift-badge" style="background:${escapeHtml(e.shift_type_color || '#7c4dff')}22;color:${escapeHtml(e.shift_type_color || '#7c4dff')}">${escapeHtml(e.shift_type_short_name || '?')}</span></td>
+          <td><span class="shift-badge" style="background:${escapeHtml(typeColor)}22;color:${escapeHtml(typeColor)}">${escapeHtml(typeShort)}</span></td>
           <td>${escapeHtml(plannedTime)}</td>
           <td>${escapeHtml(actualTime)}</td>
-          <td>${fmtDuration(e.planned_duration_minutes)}</td>
-          <td>${fmtDuration(e.actual_duration_minutes)}</td>
+          <td>${fmtDuration(plannedDur)}</td>
+          <td>${fmtDuration(actualDur)}</td>
           <td style="color:${(e.delta_minutes || 0) < 0 ? 'var(--error)' : (e.delta_minutes || 0) > 0 ? 'var(--success)' : 'inherit'}">${e.delta_minutes != null ? (e.delta_minutes >= 0 ? '+' : '') + e.delta_minutes + ' min' : '–'}</td>
           <td><span class="shift-status-badge" style="color:${st.color}"><span class="material-symbols-outlined" style="font-size:14px">${st.icon}</span> ${st.label}</span></td>
         </tr>`;

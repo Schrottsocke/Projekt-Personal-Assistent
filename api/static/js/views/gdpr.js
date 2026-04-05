@@ -143,10 +143,27 @@ const GdprView = (() => {
 
   async function loadDatenschutzTab(container) {
     try {
-      const consentsRes = await Api.get('/gdpr/consents');
-      dataSummary = null;
+      const [consentsRes, exportRes] = await Promise.all([
+        Api.get('/gdpr/consents').catch(() => null),
+        Api.get('/gdpr/data-export').catch(() => null),
+      ]);
       consents = consentsRes && consentsRes.consents ? consentsRes.consents : {};
       processingLog = [];
+      // Build data summary from export response
+      if (exportRes && exportRes.data) {
+        const categories = {};
+        let total = 0;
+        for (const [key, records] of Object.entries(exportRes.data)) {
+          const count = Array.isArray(records) ? records.length : 0;
+          if (count > 0) {
+            categories[key] = count;
+            total += count;
+          }
+        }
+        dataSummary = { categories, total_records: total };
+      } else {
+        dataSummary = null;
+      }
     } catch (e) {
       showToast('Fehler beim Laden der Datenschutzdaten', 'error');
       dataSummary = null;
@@ -177,8 +194,23 @@ const GdprView = (() => {
         </div>
       `;
     } else {
-      summaryHtml = `<div class="card mb-16"><div class="empty-state">Keine Datenzusammenfassung verf\u00fcgbar.</div></div>`;
+      summaryHtml = '';
     }
+
+    // Datenschutzerklaerung (DSGVO)
+    summaryHtml = `
+      <div class="card mb-16">
+        <div class="card-title"><span class="material-symbols-outlined mi-sm">gavel</span> Datenschutzerkl\u00e4rung</div>
+        <div style="font-size:0.9rem;color:var(--text-secondary);line-height:1.6">
+          <p class="mb-8"><strong>Verantwortlicher:</strong> Der Betreiber dieser DualMind-Instanz.</p>
+          <p class="mb-8"><strong>Zweck der Datenverarbeitung:</strong> Bereitstellung eines pers\u00f6nlichen Assistenten f\u00fcr Aufgaben-, Termin-, Finanz- und Haushaltsverwaltung.</p>
+          <p class="mb-8"><strong>Rechtsgrundlage:</strong> Art. 6 Abs. 1 lit. a (Einwilligung) und lit. b (Vertragserf\u00fcllung) DSGVO.</p>
+          <p class="mb-8"><strong>Speicherung:</strong> Alle Daten werden ausschlie\u00dflich auf dem eigenen Server gespeichert. Es erfolgt keine Weitergabe an Dritte, sofern nicht ausdr\u00fccklich eingewilligt.</p>
+          <p class="mb-8"><strong>Deine Rechte:</strong> Auskunft, Berichtigung, L\u00f6schung, Einschr\u00e4nkung, Daten\u00fcbertragbarkeit und Widerspruch gem\u00e4\u00df Art. 15\u201321 DSGVO.</p>
+          <p><strong>Datenexport & L\u00f6schung:</strong> Du kannst jederzeit alle deine Daten exportieren oder dein Konto vollst\u00e4ndig l\u00f6schen \u2013 siehe unten.</p>
+        </div>
+      </div>
+    ` + summaryHtml;
 
     // Export card with status polling
     const exportSection = `

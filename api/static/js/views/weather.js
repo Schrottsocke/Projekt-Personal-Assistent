@@ -86,52 +86,52 @@ const WeatherView = (() => {
     const icon = weatherIcon(c.description);
 
     let html = `
-      <div class="card" style="border-left:4px solid var(--accent)">
-        <div class="flex-between mb-8">
-          <div>
-            <div class="card-title" style="font-size:1.2rem">
-              <span class="material-symbols-outlined">${icon}</span>
-              ${escapeHtml(c.location)}
-            </div>
-            <div class="card-subtitle">${escapeHtml(c.description)}</div>
+      <div class="weather-current-card card">
+        <div class="weather-current-main">
+          <div class="weather-current-icon">
+            <span class="material-symbols-outlined">${icon}</span>
           </div>
-          <div style="text-align:right">
-            <div style="font-size:2rem;font-weight:700;color:var(--accent)">${c.temp_c}\u00b0C</div>
-            <div class="card-subtitle">gef\u00fchlt ${c.feels_like_c}\u00b0C</div>
-          </div>
+          <div class="weather-current-temp">${c.temp_c}\u00b0C</div>
         </div>
-        <div class="flex-between" style="gap:12px;flex-wrap:wrap">
-          <span class="badge badge-accent">\U0001f4ca ${c.min_temp_c}\u00b0 \u2013 ${c.max_temp_c}\u00b0</span>
-          <span class="badge badge-accent">\U0001f4a7 ${c.humidity}%</span>
-          <span class="badge badge-accent">\U0001f4a8 ${c.wind_kmph} km/h</span>
+        <div class="weather-current-location">${escapeHtml(c.location)}</div>
+        <div class="weather-current-desc">${escapeHtml(c.description)}</div>
+        <div class="weather-current-feels">Gef\u00fchlt ${c.feels_like_c}\u00b0C</div>
+        <div class="weather-detail-grid">
+          <div class="weather-detail-item">
+            <span class="material-symbols-outlined mi-sm">thermostat</span>
+            <span>${c.min_temp_c}\u00b0 \u2013 ${c.max_temp_c}\u00b0</span>
+          </div>
+          <div class="weather-detail-item">
+            <span class="material-symbols-outlined mi-sm">water_drop</span>
+            <span>${c.humidity}%</span>
+          </div>
+          <div class="weather-detail-item">
+            <span class="material-symbols-outlined mi-sm">air</span>
+            <span>${c.wind_kmph} km/h</span>
+          </div>
         </div>
       </div>
     `;
 
     if (data.forecast && data.forecast.length > 0) {
       html += `<div class="section-header"><span class="section-icon material-symbols-outlined">calendar_month</span> Vorhersage</div>`;
+      html += `<div class="weather-forecast-grid">`;
       data.forecast.forEach(day => {
         const dayIcon = weatherIcon(day.description);
         const dateStr = new Date(day.date).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
         html += `
-          <div class="card">
-            <div class="flex-between">
-              <div>
-                <div class="card-title">
-                  <span class="material-symbols-outlined mi-sm">${dayIcon}</span>
-                  ${dateStr}
-                </div>
-                <div class="card-subtitle">${escapeHtml(day.description || '')}</div>
-              </div>
-              <div style="text-align:right;white-space:nowrap">
-                <span style="color:var(--text-secondary)">${day.min_temp_c}\u00b0</span>
-                <span style="margin:0 4px">\u2013</span>
-                <span style="font-weight:600">${day.max_temp_c}\u00b0</span>
-              </div>
+          <div class="card weather-forecast-card">
+            <div class="weather-forecast-day">${dateStr}</div>
+            <span class="material-symbols-outlined weather-forecast-icon">${dayIcon}</span>
+            <div class="weather-forecast-temps">
+              <span class="weather-forecast-max">${day.max_temp_c}\u00b0</span>
+              <span class="weather-forecast-min">${day.min_temp_c}\u00b0</span>
             </div>
+            <div class="weather-forecast-desc">${escapeHtml(day.description || '')}</div>
           </div>
         `;
       });
+      html += `</div>`;
     }
 
     el.innerHTML = html;

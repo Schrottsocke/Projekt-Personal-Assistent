@@ -302,11 +302,33 @@ async def get_shift_report(
 
 @router.get("/report/csv")
 async def get_shift_report_csv(
-    user_key: Annotated[str, Depends(get_current_user)],
+    request: Request,
     month: str = Query(..., pattern=r"^\d{4}-\d{2}$", description="YYYY-MM"),
+    token: str = Query(None, description="JWT-Token als Query-Parameter (fuer Browser-Downloads)"),
     svc=Depends(get_shift_tracking_service),
 ):
-    """CSV-Export der Monatsauswertung."""
+    """CSV-Export der Monatsauswertung (unterstuetzt Token via Header oder Query-Param)."""
+    from api.auth.jwt_handler import verify_token
+
+    # Versuche Token aus Authorization-Header
+    user_key = None
+    auth_header = request.headers.get("authorization", "")
+    if auth_header.startswith("Bearer "):
+        try:
+            user_key = verify_token(auth_header[7:], token_type="access")
+        except Exception:
+            pass
+
+    # Fallback: Token aus Query-Parameter (fuer direkte Browser-Downloads)
+    if not user_key and token:
+        try:
+            user_key = verify_token(token, token_type="access")
+        except Exception:
+            pass
+
+    if not user_key:
+        raise HTTPException(status_code=401, detail="Nicht authentifiziert.")
+
     year, m = map(int, month.split("-"))
     csv_content = svc.generate_csv(user_key, year, m)
 
