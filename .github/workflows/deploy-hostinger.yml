@@ -53,6 +53,8 @@ jobs:
         run: sleep 30
 
       - name: Verify deploy
+        # HOSTINGER_HEALTH_URL muss auf /status (liveness) zeigen, nicht /health.
+        # /health gibt 503 bis AI-Service vollstaendig initialisiert (~60s).
         env:
           HEALTH_URL: ${{ secrets.HOSTINGER_HEALTH_URL }}
         run: |
