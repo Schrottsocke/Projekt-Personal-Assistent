@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 
 # --- Transaction ---
@@ -31,8 +31,7 @@ class TransactionOut(BaseModel):
     raw_text: Optional[str]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Contract ---
@@ -60,8 +59,7 @@ class ContractOut(BaseModel):
     status: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Budget ---
@@ -81,8 +79,7 @@ class BudgetOut(BaseModel):
     alert_threshold: Optional[float]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Contract Update ---
@@ -150,8 +147,7 @@ class FinanceInvoiceOut(BaseModel):
     pdf_path: Optional[str]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- FinanceInvoice Update ---

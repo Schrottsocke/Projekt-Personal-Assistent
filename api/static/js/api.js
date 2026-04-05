@@ -611,20 +611,20 @@ const Api = (() => {
     return request(`/memories/${id}`, { method: 'DELETE' });
   }
 
-  // Invoices / Rechnungen
+  // Invoices / Rechnungen (via Finance-Modul)
   function getInvoices(status) {
     const qs = status ? `?status=${encodeURIComponent(status)}` : '';
-    return request(`/invoices${qs}`);
+    return request(`/finance/invoices${qs}`);
   }
-  function getInvoice(id) { return request(`/invoices/${id}`); }
+  function getInvoice(id) { return request(`/finance/invoices/${id}`); }
   function createInvoice(data) {
-    return request('/invoices', { method: 'POST', body: data });
+    return request('/finance/invoices', { method: 'POST', body: data });
   }
   function updateInvoice(id, data) {
-    return request(`/invoices/${id}`, { method: 'PATCH', body: data });
+    return request(`/finance/invoices/${id}`, { method: 'PATCH', body: data });
   }
   function deleteInvoice(id) {
-    return request(`/invoices/${id}`, { method: 'DELETE' });
+    return request(`/finance/invoices/${id}`, { method: 'DELETE' });
   }
 
   // Generic convenience methods

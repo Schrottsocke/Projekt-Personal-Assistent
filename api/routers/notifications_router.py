@@ -1,10 +1,10 @@
-"""Notifications V2 Router: Events, Preferences, History."""
+"""Notifications Router: Events, Preferences, History + Legacy-Compat-Endpoints."""
 
 from datetime import datetime, timedelta, timezone
 from typing import Annotated, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -51,8 +51,7 @@ class NotificationEventOut(BaseModel):
     created_at: Optional[datetime]
     updated_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class NotificationEventUpdate(BaseModel):
@@ -75,8 +74,7 @@ class PreferenceOut(BaseModel):
     quiet_start: str
     quiet_end: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Helpers ---
@@ -314,3 +312,84 @@ async def delete_preference(
         if not pref:
             raise HTTPException(404, "Preference nicht gefunden.")
         db.delete(pref)
+
+
+# --- Legacy-Compat-Endpoints (Web-App erwartet flache /notifications Pfade) ---
+
+
+@router.get("", response_model=list[NotificationEventOut])
+async def list_notifications_compat(
+    user_key: Annotated[str, Depends(get_current_user)],
+    type: Optional[str] = None,
+    status: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Legacy: GET /notifications → delegiert an list_events."""
+    return await list_events(user_key=user_key, type=type, status=status, limit=limit, offset=offset)
+
+
+@router.get("/count")
+async def notification_count_compat(user_key: Annotated[str, Depends(get_current_user)]):
+    """Legacy: GET /notifications/count → {"unread": N}."""
+    result = await unread_count(user_key=user_key)
+    return {"unread": result["unread_count"]}
+
+
+@router.post("", response_model=NotificationEventOut, status_code=201)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def create_notification_compat(
+    request: Request,
+    body: NotificationEventCreate,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    """Legacy: POST /notifications → delegiert an create_event."""
+    return await create_event(request=request, body=body, user_key=user_key)
+
+
+@router.patch("/bulk")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def bulk_update_compat(
+    request: Request,
+    body: dict,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    """Legacy: PATCH /notifications/bulk → bulk status update."""
+    ids = body.get("ids", [])
+    new_status = body.get("status", "read")
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+        now = datetime.now(timezone.utc)
+        count = (
+            db.query(NotificationEvent)
+            .filter(NotificationEvent.user_id == uid, NotificationEvent.id.in_(ids))
+            .update(
+                {
+                    NotificationEvent.status: new_status,
+                    NotificationEvent.updated_at: now,
+                    **({"read_at": now} if new_status == "read" else {}),
+                },
+                synchronize_session="fetch",
+            )
+        )
+        return {"updated": count}
+
+
+@router.post("/mark-all-read")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def mark_all_read_compat(request: Request, user_key: Annotated[str, Depends(get_current_user)]):
+    """Legacy: POST /notifications/mark-all-read → delegiert an mark_all_read."""
+    result = await mark_all_read(request=request, user_key=user_key)
+    return {"updated": result["marked_read"]}
+
+
+@router.patch("/{notif_id}", response_model=NotificationEventOut)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def update_notification_compat(
+    request: Request,
+    notif_id: int,
+    body: NotificationEventUpdate,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    """Legacy: PATCH /notifications/{id} → delegiert an update_event."""
+    return await update_event(request=request, event_id=notif_id, body=body, user_key=user_key)
