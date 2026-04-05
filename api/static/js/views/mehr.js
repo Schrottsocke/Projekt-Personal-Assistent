@@ -40,6 +40,7 @@ const MehrView = (() => {
         { id: 'weather', icon: 'cloud', label: 'Wetter', route: '#/weather', desc: 'Vorhersage und Details' },
         { id: 'mobility', icon: 'route', label: 'Mobilitaet', route: '#/mobility', desc: 'Reisezeiten und Routen' },
         { id: 'issues', icon: 'bug_report', label: 'Issues', route: '#/issues', desc: 'GitHub Bug-Tracker' },
+        { id: 'test-user-admin', icon: 'admin_panel_settings', label: 'Testuser', route: '#/test-user-admin', desc: 'Einladungen verwalten' },
       ],
     },
   ];
