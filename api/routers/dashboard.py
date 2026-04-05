@@ -18,6 +18,11 @@ from api.dependencies import (
     get_email_service,
     get_notification_service,
 )
+from api.schemas.dashboard import (
+    BriefingResponse,
+    DashboardTodayResponse,
+    WeeklyReviewResponse,
+)
 from config.settings import settings
 
 router = APIRouter()
@@ -25,7 +30,7 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.get("/today")
+@router.get("/today", response_model=DashboardTodayResponse)
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def dashboard_today(
     request: Request,
@@ -97,7 +102,7 @@ async def dashboard_today(
     }
 
 
-@router.get("/briefing")
+@router.get("/briefing", response_model=BriefingResponse)
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def get_briefing(
     request: Request,
@@ -253,7 +258,7 @@ async def get_briefing(
     return {"sections": sections, "generated_at": _dt.utcnow().isoformat()}
 
 
-@router.get("/weekly-review")
+@router.get("/weekly-review", response_model=WeeklyReviewResponse)
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def weekly_review(
     request: Request,

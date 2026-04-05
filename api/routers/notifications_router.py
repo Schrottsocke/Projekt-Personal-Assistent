@@ -315,6 +315,7 @@ async def delete_preference(
 
 
 # --- Legacy-Compat-Endpoints (Web-App erwartet flache /notifications Pfade) ---
+# TODO: remove after frontend migration to /notifications/events/* endpoints (see api/static/js/api.js)
 
 
 @router.get("", response_model=list[NotificationEventOut])
