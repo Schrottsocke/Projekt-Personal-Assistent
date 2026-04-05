@@ -11,9 +11,17 @@ const MehrView = (() => {
       ],
     },
     {
+      label: 'Finanzen & Haushalt',
+      items: [
+        { id: 'finance', icon: 'account_balance', label: 'Finanzen', route: '#/finance', desc: 'Transaktionen, Budgets, Vertraege' },
+        { id: 'invoices', icon: 'receipt_long', label: 'Rechnungen', route: '#/invoices', desc: 'Rechnungen erstellen und verwalten' },
+        { id: 'inventory', icon: 'inventory_2', label: 'Inventar', route: '#/inventory', desc: 'Gegenstaende, Garantien, Dokumente' },
+        { id: 'family', icon: 'group', label: 'Familie', route: '#/family', desc: 'Listen, Aufgaben, Routinen teilen' },
+      ],
+    },
+    {
       label: 'Werkzeuge',
       items: [
-        { id: 'invoices', icon: 'receipt_long', label: 'Rechnungen', route: '#/invoices', desc: 'Rechnungen erstellen und verwalten' },
         { id: 'documents', icon: 'scanner', label: 'Dokumente', route: '#/documents', desc: 'Scannen, OCR, Ablage' },
         { id: 'drive', icon: 'folder', label: 'Drive', route: '#/drive', desc: 'Dateien und Uploads' },
         { id: 'email', icon: 'mail', label: 'E-Mail', route: '#/email', desc: 'Gmail Posteingang' },
@@ -27,6 +35,8 @@ const MehrView = (() => {
       items: [
         { id: 'automation', icon: 'smart_toy', label: 'Automation', route: '#/automation', desc: 'Wenn-Dann-Regeln' },
         { id: 'memory', icon: 'psychology', label: 'Gedaechtnis', route: '#/memory', desc: 'Was der Assistent sich merkt' },
+        { id: 'notification-center', icon: 'notifications_active', label: 'Benachrichtigungen', route: '#/notification-center', desc: 'Alle Benachrichtigungen verwalten' },
+        { id: 'gdpr', icon: 'shield', label: 'Datenschutz', route: '#/gdpr', desc: 'DSGVO, Datenexport, Follow-ups' },
         { id: 'weather', icon: 'cloud', label: 'Wetter', route: '#/weather', desc: 'Vorhersage und Details' },
         { id: 'mobility', icon: 'route', label: 'Mobilitaet', route: '#/mobility', desc: 'Reisezeiten und Routen' },
         { id: 'issues', icon: 'bug_report', label: 'Issues', route: '#/issues', desc: 'GitHub Bug-Tracker' },
