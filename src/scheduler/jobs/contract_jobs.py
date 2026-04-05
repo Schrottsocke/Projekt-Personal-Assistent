@@ -75,4 +75,4 @@ async def check_contract_deadlines():
 
         logger.info("Contract-Deadline-Check: %d Benachrichtigungen erstellt.", notifications_created)
     except Exception as e:
-        logger.error("Contract-Deadline-Check-Fehler: %s", e)
+        logger.error("Contract-Deadline-Check-Fehler: %s", e, exc_info=True)

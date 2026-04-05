@@ -63,4 +63,4 @@ async def check_overdue_invoices():
 
         logger.info("Overdue-Invoice-Check: %d Rechnungen als ueberfaellig markiert.", len(overdue))
     except Exception as e:
-        logger.error("Overdue-Invoice-Check-Fehler: %s", e)
+        logger.error("Overdue-Invoice-Check-Fehler: %s", e, exc_info=True)

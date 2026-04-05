@@ -16,6 +16,14 @@ from config.settings import settings
 logger = logging.getLogger(__name__)
 
 
+async def _run_with_timeout(coro):
+    """Wrap a job coroutine with the configured timeout."""
+    try:
+        return await asyncio.wait_for(coro, timeout=settings.SCHEDULER_JOB_TIMEOUT_SECONDS)
+    except asyncio.TimeoutError:
+        logger.error("Scheduler-Job abgebrochen: Timeout nach %ds", settings.SCHEDULER_JOB_TIMEOUT_SECONDS)
+
+
 class AssistantScheduler:
     """
     Verwaltet alle geplanten Aufgaben:
@@ -108,7 +116,7 @@ class AssistantScheduler:
             from src.scheduler.jobs.contract_jobs import check_contract_deadlines
 
             self.scheduler.add_job(
-                check_contract_deadlines,
+                lambda: _run_with_timeout(check_contract_deadlines()),
                 CronTrigger(hour=7, minute=0, timezone=settings.TIMEZONE),
                 id="contract_deadline_check",
                 replace_existing=True,
@@ -121,7 +129,7 @@ class AssistantScheduler:
             from src.scheduler.jobs.invoice_jobs import check_overdue_invoices
 
             self.scheduler.add_job(
-                check_overdue_invoices,
+                lambda: _run_with_timeout(check_overdue_invoices()),
                 CronTrigger(hour=8, minute=0, timezone=settings.TIMEZONE),
                 id="overdue_invoice_check",
                 replace_existing=True,
@@ -134,7 +142,7 @@ class AssistantScheduler:
             from src.scheduler.jobs.inventory_jobs import check_warranty_expiry
 
             self.scheduler.add_job(
-                check_warranty_expiry,
+                lambda: _run_with_timeout(check_warranty_expiry()),
                 CronTrigger(day_of_week="mon", hour=7, minute=0, timezone=settings.TIMEZONE),
                 id="warranty_expiry_check",
                 replace_existing=True,
@@ -147,7 +155,7 @@ class AssistantScheduler:
             from src.scheduler.jobs.document_jobs import check_document_deadlines
 
             self.scheduler.add_job(
-                check_document_deadlines,
+                lambda: _run_with_timeout(check_document_deadlines()),
                 CronTrigger(hour=7, minute=30, timezone=settings.TIMEZONE),
                 id="document_deadline_check",
                 replace_existing=True,
@@ -160,7 +168,7 @@ class AssistantScheduler:
             from src.scheduler.jobs.routine_jobs import check_routine_reminders
 
             self.scheduler.add_job(
-                check_routine_reminders,
+                lambda: _run_with_timeout(check_routine_reminders()),
                 CronTrigger(hour=9, minute=0, timezone=settings.TIMEZONE),
                 id="routine_reminder_check",
                 replace_existing=True,

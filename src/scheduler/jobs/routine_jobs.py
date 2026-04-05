@@ -78,4 +78,4 @@ async def check_routine_reminders():
 
         logger.info("Routine-Reminder-Check: %d Benachrichtigungen erstellt.", len(due_routines))
     except Exception as e:
-        logger.error("Routine-Reminder-Check-Fehler: %s", e)
+        logger.error("Routine-Reminder-Check-Fehler: %s", e, exc_info=True)

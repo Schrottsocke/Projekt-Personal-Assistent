@@ -48,9 +48,12 @@
   Router.register('#/family', (c) => FamilyView.render(c));
   Router.register('#/notification-center', (c) => NotificationsView.render(c));
   Router.register('#/gdpr', (c) => GdprView.render(c));
+  // Testuser-Admin
+  Router.register('#/test-user-admin', (c) => TestUserAdminView.render(c));
   // Onboarding
   Router.register('#/onboarding', (c) => OnboardingView.render(c));
   Router.register('#/search', (c) => SearchView.render(c));
+  Router.register('#/feedback', (c) => FeedbackView.render(c));
 
   // ── Feste 4-Tab Navigation ──
   const FIXED_NAV = [
@@ -92,6 +95,7 @@
     family: { route: '#/family', icon: 'group', label: 'Familie' },
     'notification-center': { route: '#/notification-center', icon: 'notifications_active', label: 'Benachrichtigungen' },
     gdpr: { route: '#/gdpr', icon: 'shield', label: 'Datenschutz' },
+    'test-user-admin': { route: '#/test-user-admin', icon: 'admin_panel_settings', label: 'Testuser' },
   };
 
   // ── Cached Preferences ──
