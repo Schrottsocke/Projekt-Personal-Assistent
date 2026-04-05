@@ -159,6 +159,17 @@ class Settings:
 
     # Upload-Limits
     MAX_UPLOAD_SIZE: int = _safe_int(os.getenv("MAX_UPLOAD_SIZE"), 50 * 1024 * 1024, "MAX_UPLOAD_SIZE")
+    MAX_UPLOAD_SIZE_MB: int = _safe_int(os.getenv("MAX_UPLOAD_SIZE_MB"), 20, "MAX_UPLOAD_SIZE_MB")
+
+    # Performance Limits
+    OCR_TIMEOUT_SECONDS: int = _safe_int(os.getenv("OCR_TIMEOUT_SECONDS"), 30, "OCR_TIMEOUT_SECONDS")
+    OCR_MAX_PARALLEL_JOBS: int = _safe_int(os.getenv("OCR_MAX_PARALLEL_JOBS"), 3, "OCR_MAX_PARALLEL_JOBS")
+    SCHEDULER_JOB_TIMEOUT_SECONDS: int = _safe_int(
+        os.getenv("SCHEDULER_JOB_TIMEOUT_SECONDS"), 10, "SCHEDULER_JOB_TIMEOUT_SECONDS"
+    )
+    STORAGE_ALERT_THRESHOLD_PERCENT: int = _safe_int(
+        os.getenv("STORAGE_ALERT_THRESHOLD_PERCENT"), 80, "STORAGE_ALERT_THRESHOLD_PERCENT"
+    )
 
     # Webhook Deployer
     WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")

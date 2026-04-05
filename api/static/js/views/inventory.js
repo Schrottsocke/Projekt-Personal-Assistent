@@ -9,9 +9,11 @@ const InventoryView = (() => {
   let items = [];
   let rooms = [];
   let roomFilter = '';
+  let searchQuery = '';
   let valueSummary = null;
   let showItemForm = false;
   let editingItem = null;
+  let detailItem = null; // for object detail view
 
   // ── Garantien state
   let warranties = [];
@@ -72,6 +74,26 @@ const InventoryView = (() => {
     };
     const m = map[actionType] || { label: esc(actionType), cls: '' };
     return `<span class="badge ${m.cls}">${m.label}</span>`;
+  }
+
+  function itemWarrantyBadge(item) {
+    if (!item.warranty_end) return '';
+    const days = daysUntil(item.warranty_end);
+    if (days === null) return '';
+    if (days < 0) return '<span class="inventory-warranty-badge warranty-expired">&#10060; Abgelaufen</span>';
+    if (days <= 30) return `<span class="inventory-warranty-badge warranty-expiring">&#9888;&#65039; ${days}d</span>`;
+    return '<span class="inventory-warranty-badge warranty-valid">&#9989; Garantie</span>';
+  }
+
+  function getFilteredItems() {
+    if (!searchQuery) return items;
+    const q = searchQuery.toLowerCase();
+    return items.filter(i =>
+      (i.name || '').toLowerCase().includes(q) ||
+      (i.serial_number || '').toLowerCase().includes(q) ||
+      (i.room || '').toLowerCase().includes(q) ||
+      (i.description || '').toLowerCase().includes(q)
+    );
   }
 
   // ── Render Entry ─────────────────────────────────────────────
@@ -136,26 +158,32 @@ const InventoryView = (() => {
     const el = document.getElementById('inventory-content');
     if (!el) return;
 
+    const filteredItems = getFilteredItems();
+
     el.innerHTML = `
-      ${renderValueBanner()}
-      <div class="inventory-toolbar" style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
-        <select class="input" id="inv-room-filter" style="flex:1;min-width:140px;max-width:220px" onchange="InventoryView.applyRoomFilter(this.value)">
-          <option value="">Alle Räume</option>
-          ${rooms.map(r => `<option value="${esc(r)}" ${roomFilter === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}
-        </select>
-        <button class="btn btn-primary" onclick="InventoryView.openItemForm()">
-          <span class="material-symbols-outlined">add</span> Artikel
-        </button>
-      </div>
-      ${showItemForm ? renderItemForm() : ''}
-      ${items.length === 0
-        ? `<div class="empty-state">
-            <span class="material-symbols-outlined">inventory_2</span>
-            <p>Keine Artikel gefunden</p>
-            <button class="btn btn-primary" onclick="InventoryView.openItemForm()">Ersten Artikel anlegen</button>
-          </div>`
-        : `<div class="inventory-grid">${items.map(renderItemCard).join('')}</div>`
-      }
+      ${detailItem ? renderItemDetail(detailItem) : `
+        ${renderValueBanner()}
+        <div class="inventory-room-tabs">
+          <button class="inventory-room-tab ${!roomFilter ? 'active' : ''}" onclick="InventoryView.applyRoomFilter('')">Alle</button>
+          ${rooms.map(r => `<button class="inventory-room-tab ${roomFilter === r ? 'active' : ''}" onclick="InventoryView.applyRoomFilter('${esc(r)}')">${esc(r)}</button>`).join('')}
+        </div>
+        <input class="input inventory-search" id="inv-search" placeholder="Name, Seriennummer, Raum suchen..."
+               value="${esc(searchQuery)}" oninput="InventoryView.handleSearch(this.value)">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+          <button class="btn btn-primary" onclick="InventoryView.openItemForm()">
+            <span class="material-symbols-outlined">add</span> Artikel
+          </button>
+        </div>
+        ${showItemForm ? renderItemForm() : ''}
+        ${filteredItems.length === 0
+          ? `<div class="empty-state">
+              <span class="material-symbols-outlined">inventory_2</span>
+              <p>Keine Artikel gefunden</p>
+              <button class="btn btn-primary" onclick="InventoryView.openItemForm()">Ersten Artikel anlegen</button>
+            </div>`
+          : `<div class="inventory-grid">${filteredItems.map(renderItemCard).join('')}</div>`
+        }
+      `}
     `;
   }
 
@@ -176,7 +204,7 @@ const InventoryView = (() => {
   function renderItemCard(item) {
     const hasPhoto = !!item.photo_url;
     return `
-      <div class="card inventory-item-card" style="position:relative">
+      <div class="card inventory-item-card" style="position:relative;cursor:pointer" onclick="InventoryView.showDetail('${esc(item.id)}')">
         ${hasPhoto
           ? `<img src="${esc(item.photo_url)}" alt="${esc(item.name)}" style="width:100%;height:140px;object-fit:cover;border-radius:8px 8px 0 0;margin:-16px -16px 12px -16px;width:calc(100% + 32px)">`
           : `<div style="display:flex;justify-content:center;margin-bottom:12px">
@@ -186,17 +214,17 @@ const InventoryView = (() => {
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
           <div style="flex:1;min-width:0">
             <div style="font-weight:600;margin-bottom:4px">${esc(item.name)}</div>
-            ${item.room ? `<span class="badge" style="margin-bottom:6px">${esc(item.room)}</span>` : ''}
-            ${item.description ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px">${esc(item.description)}</div>` : ''}
-            ${item.serial_number ? `<div style="font-size:12px;color:var(--text-secondary)">S/N: ${esc(item.serial_number)}</div>` : ''}
-            ${item.box_label ? `<div style="font-size:12px;color:var(--text-secondary)">Box: ${esc(item.box_label)}</div>` : ''}
-            ${item.purchase_date ? `<div style="font-size:12px;color:var(--text-secondary)">Gekauft: ${formatDate(item.purchase_date)}</div>` : ''}
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+              ${item.room ? `<span class="badge">${esc(item.room)}</span>` : ''}
+              ${itemWarrantyBadge(item)}
+            </div>
+            ${item.description ? `<div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(item.description)}</div>` : ''}
           </div>
           <div style="text-align:right;flex-shrink:0">
             ${item.value ? `<div style="font-weight:700;color:var(--accent)">${currency(item.value)}</div>` : ''}
           </div>
         </div>
-        <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end">
+        <div style="display:flex;gap:6px;margin-top:10px;justify-content:flex-end" onclick="event.stopPropagation()">
           <label class="btn btn-secondary btn-sm" title="Foto hochladen" style="cursor:pointer">
             <span class="material-symbols-outlined">photo_camera</span>
             <input type="file" accept="image/*" hidden onchange="InventoryView.uploadPhoto('${esc(item.id)}', this)">
@@ -207,6 +235,74 @@ const InventoryView = (() => {
           <button class="btn btn-danger btn-sm" onclick="InventoryView.deleteItem('${esc(item.id)}')" title="Löschen">
             <span class="material-symbols-outlined">delete</span>
           </button>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderItemDetail(item) {
+    const hasPhoto = !!item.photo_url;
+    return `
+      <div class="inventory-detail-overlay" onclick="InventoryView.closeDetail()">
+        <div class="inventory-detail-sheet" onclick="event.stopPropagation()">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+            <h3 style="margin:0">${esc(item.name)}</h3>
+            <button class="btn btn-secondary btn-sm" onclick="InventoryView.closeDetail()">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          ${hasPhoto
+            ? `<img src="${esc(item.photo_url)}" alt="${esc(item.name)}" class="inventory-detail-photo">`
+            : `<div style="display:flex;justify-content:center;padding:24px;background:var(--bg-input);border-radius:var(--radius);margin-bottom:12px">
+                <span class="material-symbols-outlined" style="font-size:64px;color:var(--text-secondary)">inventory_2</span>
+              </div>`
+          }
+
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+            ${item.room ? `<span class="badge">${esc(item.room)}</span>` : ''}
+            ${itemWarrantyBadge(item)}
+            ${item.value ? `<span class="badge badge-accent">${currency(item.value)}</span>` : ''}
+          </div>
+
+          ${item.description ? `<p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:12px">${esc(item.description)}</p>` : ''}
+
+          <div class="inventory-detail-fields">
+            ${item.serial_number ? `
+              <div>
+                <div class="inventory-detail-field-label">Seriennummer</div>
+                <div class="inventory-detail-field-value">${esc(item.serial_number)}</div>
+              </div>
+            ` : ''}
+            ${item.box_label ? `
+              <div>
+                <div class="inventory-detail-field-label">Box-Label</div>
+                <div class="inventory-detail-field-value">${esc(item.box_label)}</div>
+              </div>
+            ` : ''}
+            ${item.purchase_date ? `
+              <div>
+                <div class="inventory-detail-field-label">Kaufdatum</div>
+                <div class="inventory-detail-field-value">${formatDate(item.purchase_date)}</div>
+              </div>
+            ` : ''}
+            ${item.warranty_end ? `
+              <div>
+                <div class="inventory-detail-field-label">Garantie bis</div>
+                <div class="inventory-detail-field-value">${formatDate(item.warranty_end)}</div>
+              </div>
+            ` : ''}
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:16px;justify-content:flex-end">
+            <label class="btn btn-secondary btn-sm" style="cursor:pointer">
+              <span class="material-symbols-outlined">photo_camera</span> Foto
+              <input type="file" accept="image/*" hidden onchange="InventoryView.uploadPhoto('${esc(item.id)}', this)">
+            </label>
+            <button class="btn btn-secondary btn-sm" onclick="InventoryView.closeDetail(); InventoryView.openItemForm('${esc(item.id)}')">
+              <span class="material-symbols-outlined">edit</span> Bearbeiten
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -223,43 +319,63 @@ const InventoryView = (() => {
             <span class="material-symbols-outlined">close</span>
           </button>
         </div>
+
+        ${!isEdit ? `
+          <label class="doc-scan-btn-large" style="margin-bottom:12px">
+            <span class="material-symbols-outlined">photo_camera</span>
+            Foto aufnehmen
+            <input type="file" accept="image/*" capture="environment" id="item-photo-capture" hidden>
+          </label>
+        ` : ''}
+
         <div class="form-row">
           <div class="form-group">
             <label>Name *</label>
             <input class="input" id="item-name" value="${esc(item.name)}" placeholder="z.B. Kaffeemaschine">
           </div>
           <div class="form-group">
-            <label>Raum</label>
+            <label>Raum *</label>
             <select class="input" id="item-room">
-              <option value="">– kein Raum –</option>
+              <option value="">– Raum waehlen –</option>
               ${rooms.map(r => `<option value="${esc(r)}" ${item.room === r ? 'selected' : ''}>${esc(r)}</option>`).join('')}
             </select>
           </div>
         </div>
-        <div class="form-group">
-          <label>Beschreibung</label>
-          <textarea class="input" id="item-description" rows="2" placeholder="Kurze Beschreibung">${esc(item.description)}</textarea>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Wert (€)</label>
-            <input class="input" type="number" id="item-value" value="${item.value || ''}" placeholder="0.00" step="0.01" min="0">
+
+        <details class="inventory-add-collapsible" ${isEdit ? 'open' : ''}>
+          <summary>Weitere Details</summary>
+          <div style="margin-top:8px">
+            <div class="form-group">
+              <label>Beschreibung</label>
+              <textarea class="input" id="item-description" rows="2" placeholder="Kurze Beschreibung">${esc(item.description)}</textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Wert (EUR)</label>
+                <input class="input" type="number" id="item-value" value="${item.value || ''}" placeholder="0.00" step="0.01" min="0">
+              </div>
+              <div class="form-group">
+                <label>Kaufdatum</label>
+                <input class="input" type="date" id="item-purchase-date" value="${esc(item.purchase_date || '')}">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Garantie bis</label>
+                <input class="input" type="date" id="item-warranty-end" value="${esc(item.warranty_end || '')}">
+              </div>
+              <div class="form-group">
+                <label>Seriennummer</label>
+                <input class="input" id="item-serial" value="${esc(item.serial_number)}" placeholder="Optional">
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Box-Label</label>
+              <input class="input" id="item-box" value="${esc(item.box_label)}" placeholder="z.B. Kiste A3">
+            </div>
           </div>
-          <div class="form-group">
-            <label>Kaufdatum</label>
-            <input class="input" type="date" id="item-purchase-date" value="${esc(item.purchase_date || '')}">
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Seriennummer</label>
-            <input class="input" id="item-serial" value="${esc(item.serial_number)}" placeholder="Optional">
-          </div>
-          <div class="form-group">
-            <label>Box-Label</label>
-            <input class="input" id="item-box" value="${esc(item.box_label)}" placeholder="z.B. Kiste A3">
-          </div>
-        </div>
+        </details>
+
         <div style="display:flex;gap:8px;margin-top:12px">
           <button class="btn btn-primary" onclick="InventoryView.saveItem()">
             <span class="material-symbols-outlined">save</span> Speichern
@@ -294,6 +410,7 @@ const InventoryView = (() => {
       description: document.getElementById('item-description')?.value || '',
       value: parseFloat(document.getElementById('item-value')?.value) || null,
       purchase_date: document.getElementById('item-purchase-date')?.value || null,
+      warranty_end: document.getElementById('item-warranty-end')?.value || null,
       serial_number: document.getElementById('item-serial')?.value || '',
       box_label: document.getElementById('item-box')?.value || '',
     };
@@ -342,9 +459,30 @@ const InventoryView = (() => {
 
   async function applyRoomFilter(room) {
     roomFilter = room;
+    searchQuery = '';
+    detailItem = null;
     const el = document.getElementById('inventory-content');
     if (el) el.innerHTML = '<div class="skeleton skeleton-card"></div>';
     await loadInventarTab();
+  }
+
+  let searchDebounce = null;
+  function handleSearch(value) {
+    searchQuery = value.trim();
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(() => renderInventarTab(), 200);
+  }
+
+  function showDetail(id) {
+    const item = items.find(i => String(i.id) === String(id));
+    if (!item) return;
+    detailItem = item;
+    renderInventarTab();
+  }
+
+  function closeDetail() {
+    detailItem = null;
+    renderInventarTab();
   }
 
   // ════════════════════════════════════════════════════════════
@@ -683,6 +821,9 @@ const InventoryView = (() => {
     deleteItem,
     uploadPhoto,
     applyRoomFilter,
+    handleSearch,
+    showDetail,
+    closeDetail,
     // Garantien
     openWarrantyForm,
     closeWarrantyForm,

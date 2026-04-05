@@ -28,3 +28,14 @@ class DocumentOut(BaseModel):
 class DocumentListResponse(BaseModel):
     items: list[DocumentOut]
     total: int
+
+
+class DocumentActionResponse(BaseModel):
+    """Generic response for document follow-up actions."""
+    status: str
+    action: str
+    doc_id: int
+    task: Optional[dict] = None
+    memory_id: Optional[str] = None
+    message: Optional[str] = None
+    draft: Optional[dict] = None
