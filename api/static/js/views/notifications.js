@@ -10,6 +10,7 @@ const NotificationsView = (() => {
   let channelSetup = { push: false, telegram: false, email: false };
   let savingSettings = false;
   let testingChannel = null;
+  let quietHours = {};  // category -> { quiet_start, quiet_end }
 
   const CATEGORY_ICONS = {
     finance:   'account_balance',
@@ -270,6 +271,10 @@ const NotificationsView = (() => {
           quiet_start: p.quiet_start,
           quiet_end: p.quiet_end,
         };
+        quietHours[p.category] = {
+          quiet_start: p.quiet_start || '22:00',
+          quiet_end: p.quiet_end || '07:00',
+        };
       });
       channelSetup = {
         push: false,
@@ -411,11 +416,12 @@ const NotificationsView = (() => {
       // Save each alert type channel as a preference
       const alertChannels = settings.alert_channels || {};
       await Promise.all(Object.entries(alertChannels).map(([category, channel]) => {
+        const qh = quietHours[category] || {};
         return Api.put(`/notifications/preferences/${category}`, {
           push_enabled: channel === 'push',
           email_enabled: channel === 'email',
-          quiet_start: '22:00',
-          quiet_end: '07:00',
+          quiet_start: qh.quiet_start || '22:00',
+          quiet_end: qh.quiet_end || '07:00',
         });
       }));
       Toast.show('Kanal-Einstellungen gespeichert', 'success');
@@ -492,6 +498,10 @@ const NotificationsView = (() => {
           push: p.push_enabled,
           email: p.email_enabled,
           in_app: true,
+        };
+        quietHours[p.category] = {
+          quiet_start: p.quiet_start || '22:00',
+          quiet_end: p.quiet_end || '07:00',
         };
       });
       renderSettingsTab();
@@ -623,11 +633,12 @@ const NotificationsView = (() => {
 
     try {
       await Promise.all(Object.entries(payload).map(([cat, vals]) => {
+        const qh = quietHours[cat] || {};
         return Api.put(`/notifications/preferences/${cat}`, {
           push_enabled: !!vals.push,
           email_enabled: !!vals.email,
-          quiet_start: '22:00',
-          quiet_end: '07:00',
+          quiet_start: qh.quiet_start || '22:00',
+          quiet_end: qh.quiet_end || '07:00',
         });
       }));
       settings = payload;
