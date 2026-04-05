@@ -1,4 +1,4 @@
-const CACHE_NAME = 'dualmind-v10';
+const CACHE_NAME = 'dualmind-v11';
 const API_CACHE_NAME = 'dualmind-api-v1';
 
 const SHELL_ASSETS = [
@@ -32,7 +32,9 @@ const SHELL_ASSETS = [
   '/static/js/views/planen.js',
   '/static/js/views/mehr.js',
   '/static/js/app.js',
-  '/static/favicon.svg'
+  '/static/favicon.svg',
+  '/static/icons/icon-192.png',
+  '/static/icons/icon-512.png'
 ];
 
 // API paths eligible for stale-while-revalidate caching
@@ -58,7 +60,7 @@ self.addEventListener('activate', (e) => {
     caches.keys().then((names) =>
       Promise.all(
         names
-          .filter((n) => n !== CACHE_NAME && n !== API_CACHE_NAME)
+          .filter((n) => n !== 'dualmind-v11' && n !== API_CACHE_NAME)
           .map((n) => caches.delete(n))
       )
     )

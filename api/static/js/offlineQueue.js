@@ -6,8 +6,8 @@
  */
 const OfflineQueue = (() => {
   const STORAGE_KEY = 'dm_offline_queue';
-  const MAX_RETRIES = 3;
-  const RETRY_DELAY = 2000;
+  const MAX_RETRIES = 4;
+  const RETRY_DELAYS = [1500, 3000, 6000, 12000];
 
   let online = navigator.onLine;
   let syncing = false;
@@ -171,9 +171,10 @@ const OfflineQueue = (() => {
         }
       }
 
-      // Small delay between requests
+      // Delay between requests: exponential backoff based on retry count
       if (toProcess.indexOf(item) < toProcess.length - 1) {
-        await new Promise(r => setTimeout(r, RETRY_DELAY));
+        const delay = RETRY_DELAYS[Math.min(item.retries, RETRY_DELAYS.length - 1)];
+        await new Promise(r => setTimeout(r, delay));
       }
     }
 

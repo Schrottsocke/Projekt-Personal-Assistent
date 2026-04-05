@@ -81,17 +81,47 @@ const Api = (() => {
     return !!getToken();
   }
 
-  async function refreshToken() {
+  function _sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  function _isRetryableError(err, status) {
+    if (err && (err.message === 'Failed to fetch' || err.name === 'TypeError' || !navigator.onLine)) return true;
+    return status === 503 || status === 504 || status === 502;
+  }
+
+  async function refreshToken(attempt = 0) {
+    const DELAYS = [1000, 2000, 4000];
     const rt = getRefreshToken();
     if (!rt) { throw new Error('No refresh token'); }
 
-    const res = await fetch('/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: rt }),
-    });
+    let res;
+    try {
+      res = await fetch('/auth/refresh', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: rt }),
+      });
+    } catch (err) {
+      // Network error — retry if possible
+      if (attempt < DELAYS.length && _isRetryableError(err)) {
+        await _sleep(DELAYS[attempt]);
+        return refreshToken(attempt + 1);
+      }
+      clearAuth();
+      throw new Error('Refresh failed');
+    }
 
+    // 401 from refresh endpoint itself → token is truly invalid, no retry
+    if (res.status === 401) {
+      clearAuth();
+      throw new Error('Refresh failed');
+    }
+
+    // Server error → retryable
     if (!res.ok) {
+      if (attempt < DELAYS.length && _isRetryableError(null, res.status)) {
+        await _sleep(DELAYS[attempt]);
+        return refreshToken(attempt + 1);
+      }
       clearAuth();
       throw new Error('Refresh failed');
     }
