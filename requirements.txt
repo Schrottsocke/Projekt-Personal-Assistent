@@ -48,10 +48,12 @@ PyPDF2>=3.0.0
 
 # Dokument-Scan-Workflow: OCR + durchsuchbare PDFs
 pytesseract>=0.3.13
+pdf2image>=1.17.0
 img2pdf>=0.5.1
 pypdf>=4.0.0
 reportlab>=4.0.0
 Pillow>=10.0.0
+google-cloud-vision>=3.9.0  # optional – nur wenn Google Vision OCR gewünscht
 
 # Mobilität: Fahrzeiten via OpenRouteService (httpx bereits vorhanden)
 
