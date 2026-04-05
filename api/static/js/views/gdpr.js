@@ -143,18 +143,14 @@ const GdprView = (() => {
 
   async function loadDatenschutzTab(container) {
     try {
-      const [summaryRes, consentsRes, logRes] = await Promise.all([
-        Api.get('/gdpr/data-summary'),
-        Api.get('/gdpr/consent'),
-        Api.get('/gdpr/processing-log'),
-      ]);
-      dataSummary = summaryRes;
-      consents = consentsRes || [];
-      processingLog = (logRes || []).slice().reverse();
+      const consentsRes = await Api.get('/gdpr/consents');
+      dataSummary = null;
+      consents = consentsRes && consentsRes.consents ? consentsRes.consents : {};
+      processingLog = [];
     } catch (e) {
       showToast('Fehler beim Laden der Datenschutzdaten', 'error');
       dataSummary = null;
-      consents = [];
+      consents = {};
       processingLog = [];
     }
     renderDatenschutzTab(container);
@@ -209,26 +205,20 @@ const GdprView = (() => {
 
     // Consent management with individual revoke
     const CONSENT_CATEGORIES = ['analytics', 'personalization', 'email_notifications', 'data_sharing'];
-    const consentMap = {};
-    consents.forEach(c => { consentMap[c.category] = c; });
 
     const consentRows = CONSENT_CATEGORIES.map(cat => {
-      const entry = consentMap[cat] || {};
-      const granted = entry.granted === true || entry.granted === 1;
-      const updatedAt = entry.updated_at ? `<span class="text-muted text-xs">Aktualisiert: ${formatDate(entry.updated_at)}</span>` : '';
-      const consentId = entry.id || '';
+      const granted = consents[cat] === true;
       return `
         <div class="consent-row">
           <div class="consent-info">
             <span class="consent-label">${consentLabel(cat)}</span>
-            ${updatedAt}
           </div>
           <div class="consent-actions">
             <label class="toggle-switch">
               <input type="checkbox" id="consent-${esc(cat)}" ${granted ? 'checked' : ''}>
               <span class="toggle-slider"></span>
             </label>
-            ${granted && consentId ? `<button class="btn btn-sm btn-danger gdpr-revoke-btn" onclick="GdprView.revokeConsent('${esc(cat)}', '${esc(consentId)}')" title="Einwilligung widerrufen">
+            ${granted ? `<button class="btn btn-sm btn-danger gdpr-revoke-btn" onclick="GdprView.revokeConsent('${esc(cat)}')" title="Einwilligung widerrufen">
               <span class="material-symbols-outlined mi-sm">block</span>
             </button>` : ''}
           </div>
@@ -378,57 +368,24 @@ const GdprView = (() => {
     }
 
     try {
-      const res = await Api.post('/gdpr/export', {});
-      if (res && res.download_url) {
-        exportUrl = res.download_url;
+      const res = await Api.get('/gdpr/data-export');
+      if (res && res.data) {
+        // Create a downloadable JSON blob from the export data
+        const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' });
+        exportUrl = URL.createObjectURL(blob);
         exportPolling = false;
         _updateExportArea();
         showToast('Export bereit. Download-Link ist verf\u00fcgbar.', 'success');
-      } else if (res && res.export_id) {
-        // Poll for status
-        pollExportStatus(res.export_id);
       } else {
-        exportUrl = '/gdpr/export/download';
         exportPolling = false;
         _updateExportArea();
-        showToast('Export angefordert. Download-Link ist bereit.', 'success');
+        showToast('Export fehlgeschlagen: keine Daten erhalten', 'error');
       }
     } catch (e) {
       exportPolling = false;
       _updateExportArea();
       showToast('Fehler beim Anfordern des Exports', 'error');
     }
-  }
-
-  async function pollExportStatus(exportId) {
-    let attempts = 0;
-    const maxAttempts = 30;
-    const interval = setInterval(async () => {
-      attempts++;
-      try {
-        const status = await Api.get(`/gdpr/export/status?export_id=${exportId}`);
-        if (status && status.status === 'ready' && status.download_url) {
-          clearInterval(interval);
-          exportUrl = status.download_url;
-          exportPolling = false;
-          _updateExportArea();
-          showToast('Export bereit zum Download', 'success');
-        } else if (status && status.status === 'failed') {
-          clearInterval(interval);
-          exportPolling = false;
-          _updateExportArea();
-          showToast('Export fehlgeschlagen', 'error');
-        }
-      } catch {
-        // continue polling
-      }
-      if (attempts >= maxAttempts) {
-        clearInterval(interval);
-        exportPolling = false;
-        _updateExportArea();
-        showToast('Export-Timeout. Bitte erneut versuchen.', 'warning');
-      }
-    }, 2000);
   }
 
   function _updateExportArea() {
@@ -456,22 +413,28 @@ const GdprView = (() => {
       return { category: cat, granted: el ? el.checked : false };
     });
     try {
-      await Api.patch('/gdpr/consent', { consents: updates });
+      await Promise.all(updates.map(u => {
+        if (u.granted) {
+          return Api.post(`/gdpr/consents/${u.category}`, {});
+        } else {
+          return Api.delete(`/gdpr/consents/${u.category}`);
+        }
+      }));
       showToast('Einwilligungen gespeichert', 'success');
-      const consentsRes = await Api.get('/gdpr/consent');
-      consents = consentsRes || [];
+      const consentsRes = await Api.get('/gdpr/consents');
+      consents = consentsRes && consentsRes.consents ? consentsRes.consents : {};
     } catch (e) {
       showToast('Fehler beim Speichern der Einwilligungen', 'error');
     }
   }
 
-  async function revokeConsent(category, consentId) {
+  async function revokeConsent(category) {
     if (!confirm(`Einwilligung f\u00fcr "${consentLabel(category)}" wirklich widerrufen?`)) return;
     try {
-      await Api.delete(`/gdpr/consents/${consentId}`);
+      await Api.delete(`/gdpr/consents/${category}`);
       showToast('Einwilligung widerrufen', 'success');
-      const consentsRes = await Api.get('/gdpr/consent');
-      consents = consentsRes || [];
+      const consentsRes = await Api.get('/gdpr/consents');
+      consents = consentsRes && consentsRes.consents ? consentsRes.consents : {};
       // Re-render consent rows
       const container = { querySelector: (sel) => document.querySelector(sel) };
       renderDatenschutzTab(container);
@@ -499,7 +462,7 @@ const GdprView = (() => {
       return;
     }
     try {
-      await Api.delete('/users/me');
+      await Api.delete('/gdpr/account');
       showToast('Account zur L\u00f6schung vorgemerkt. Du hast 7 Tage, um dies r\u00fcckg\u00e4ngig zu machen.', 'success');
       deleteStep = 0;
       setTimeout(() => {
