@@ -405,14 +405,36 @@ const OnboardingView = (() => {
       } else if (step === TOTAL_STEPS) {
         // Save profile data via dedicated endpoint before completing
         if (state.usage_type || state.household_name) {
-          const householdSize = state.usage_type === 'solo' ? 1 : state.usage_type === 'partner' ? 2 : 4;
+          const sizeMap = { solo: 'single', partner: 'couple', family: 'family' };
           try {
             await Api.post('/onboarding/profile', {
               name: state.household_name || '',
-              household_size: householdSize,
+              household_size: sizeMap[state.usage_type] || 'single',
               has_side_business: false,
             });
           } catch { /* non-blocking, profile may already be saved */ }
+        }
+        // Save area selection as product-lines
+        if (state.area) {
+          const all = state.area === 'alles';
+          try {
+            await Api.post('/onboarding/product-lines', {
+              finance: all || state.area === 'finanzen',
+              inventory: all || state.area === 'dokumente',
+              family: all || state.area === 'haushalt',
+            });
+          } catch { /* non-blocking */ }
+        }
+        // Save notification channel preference
+        if (state.notification_channel && state.notification_channel !== 'none') {
+          try {
+            await Api.put('/notifications/preferences/general', {
+              push_enabled: state.notification_channel === 'push',
+              email_enabled: state.notification_channel === 'email',
+              quiet_start: '22:00',
+              quiet_end: '07:00',
+            });
+          } catch { /* non-blocking */ }
         }
         // Complete onboarding (endpoint accepts no body)
         await Api.post('/onboarding/complete');
