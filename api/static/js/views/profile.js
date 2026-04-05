@@ -82,19 +82,53 @@ const ProfileView = (() => {
 
   let _devDataLoaded = false;
 
+  let _profileData = null;
+  let _editingProfile = false;
+
   /* ── Render ── */
 
   async function render(container) {
     _devDataLoaded = false;
+    _editingProfile = false;
     const user = Api.getUserKey() || '';
-    const initial = user.charAt(0).toUpperCase();
-    const name = user.charAt(0).toUpperCase() + user.slice(1);
+
+    // Profil-Daten laden
+    try {
+      _profileData = await Api.get('/auth/profile');
+    } catch {
+      _profileData = null;
+    }
+
+    const displayName = (_profileData && _profileData.nickname) || user.charAt(0).toUpperCase() + user.slice(1);
+    const displayEmail = (_profileData && _profileData.email) || `${user}@dualmind.app`;
+    const initial = displayName.charAt(0).toUpperCase();
 
     container.innerHTML = `
       <div class="profile-header">
         <div class="profile-avatar">${initial}</div>
-        <div class="profile-name">${escapeHtml(name)}</div>
-        <div class="profile-email">${escapeHtml(user)}@dualmind.app</div>
+        <div id="profile-identity">
+          <div class="profile-name" id="profile-display-name">${escapeHtml(displayName)}</div>
+          <div class="profile-email" id="profile-display-email">${escapeHtml(displayEmail)}</div>
+          <button class="btn btn-sm btn-ghost" id="profile-edit-btn" onclick="ProfileView.toggleEditProfile()" style="margin-top:4px">
+            <span class="material-symbols-outlined mi-sm">edit</span> Bearbeiten
+          </button>
+        </div>
+        <div id="profile-edit-form" style="display:none;width:100%;max-width:300px;margin-top:8px">
+          <div class="form-group" style="margin-bottom:8px">
+            <label style="font-size:0.8rem;color:var(--text-secondary)">Name</label>
+            <input type="text" class="input" id="profile-edit-name" value="${escapeHtml(displayName)}" placeholder="Dein Name">
+          </div>
+          <div class="form-group" style="margin-bottom:8px">
+            <label style="font-size:0.8rem;color:var(--text-secondary)">E-Mail</label>
+            <input type="email" class="input" id="profile-edit-email" value="${escapeHtml(displayEmail)}" placeholder="name@example.com">
+          </div>
+          <div style="display:flex;gap:8px;justify-content:center">
+            <button class="btn btn-sm btn-secondary" onclick="ProfileView.toggleEditProfile()">Abbrechen</button>
+            <button class="btn btn-sm btn-primary" onclick="ProfileView.saveProfile()">
+              <span class="material-symbols-outlined mi-sm">save</span> Speichern
+            </button>
+          </div>
+        </div>
         <div class="profile-status-bar" id="profile-status-bar">
           <div class="profile-stat"><div class="spinner" style="width:12px;height:12px;border-width:1.5px"></div></div>
         </div>
@@ -627,6 +661,49 @@ const ProfileView = (() => {
     }
   }
 
+  /* ── Profile Edit ── */
+
+  function toggleEditProfile() {
+    _editingProfile = !_editingProfile;
+    const identity = document.getElementById('profile-identity');
+    const form = document.getElementById('profile-edit-form');
+    if (identity) identity.style.display = _editingProfile ? 'none' : '';
+    if (form) form.style.display = _editingProfile ? 'block' : 'none';
+  }
+
+  async function saveProfile() {
+    const nameInput = document.getElementById('profile-edit-name');
+    const emailInput = document.getElementById('profile-edit-email');
+    const nickname = nameInput ? nameInput.value.trim() : '';
+    const email = emailInput ? emailInput.value.trim() : '';
+
+    if (!nickname) {
+      Toast.show('Name darf nicht leer sein', 'error');
+      return;
+    }
+
+    try {
+      await Api.patch('/auth/profile', { nickname });
+      // Store email locally (no DB column yet)
+      if (email) localStorage.setItem('dm_profile_email', email);
+      Toast.show('Profil aktualisiert', 'success');
+      _editingProfile = false;
+      // Update display
+      const nameEl = document.getElementById('profile-display-name');
+      const emailEl = document.getElementById('profile-display-email');
+      if (nameEl) nameEl.textContent = nickname;
+      if (emailEl) emailEl.textContent = email;
+      const avatar = document.querySelector('.profile-avatar');
+      if (avatar) avatar.textContent = nickname.charAt(0).toUpperCase();
+      const identity = document.getElementById('profile-identity');
+      const form = document.getElementById('profile-edit-form');
+      if (identity) identity.style.display = '';
+      if (form) form.style.display = 'none';
+    } catch (err) {
+      Toast.show('Fehler: ' + err.message, 'error');
+    }
+  }
+
   /* ── Logout ── */
 
   function confirmLogout() {
@@ -786,6 +863,8 @@ const ProfileView = (() => {
     toggleWidget,
     refreshHealth,
     toggleProactive,
-    toggleNotifWidget
+    toggleNotifWidget,
+    toggleEditProfile,
+    saveProfile,
   };
 })();
