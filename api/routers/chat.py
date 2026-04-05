@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.post("/message", response_model=ChatResponse)
+@router.post("/message", response_model=ChatResponse, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_CHAT)
 async def send_message(
     request: Request,
@@ -133,6 +133,7 @@ async def get_history(
     limit: int = 50,
 ):
     """Gibt die letzten N Chat-Nachrichten aus der DB zurück."""
+    # TODO(#778): Direct DB access – extract into ChatService (src/services/chat_service.py)
     from src.services.database import ConversationHistory, get_db
 
     with get_db()() as session:

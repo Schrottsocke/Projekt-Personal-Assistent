@@ -52,7 +52,7 @@ async def list_files(
         raise HTTPException(status_code=500, detail="Drive-Fehler.")
 
 
-@router.post("/upload", response_model=DriveUploadResponse)
+@router.post("/upload", response_model=DriveUploadResponse, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_UPLOAD)
 async def upload_file(
     request: Request,

@@ -88,7 +88,7 @@ async def delete_meal(
         session.delete(entry)
 
 
-@router.post("/week/to-shopping")
+@router.post("/week/to-shopping", status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def week_to_shopping(
     request: Request,

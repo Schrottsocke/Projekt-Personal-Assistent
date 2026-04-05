@@ -95,7 +95,7 @@ async def delete_item(
         raise HTTPException(status_code=404, detail="Item nicht gefunden.")
 
 
-@router.post("/from-recipe/{chefkoch_id}")
+@router.post("/from-recipe/{chefkoch_id}", status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def add_from_recipe(
     request: Request,

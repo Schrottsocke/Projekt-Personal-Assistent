@@ -42,6 +42,24 @@ class UxRatingCreate(BaseModel):
     comment: Optional[str] = None
 
 
+class FeedbackOut(BaseModel):
+    id: int
+    feedback_type: str
+    user_key: Optional[str] = None
+    title: Optional[str] = None
+    area: Optional[str] = None
+    severity: Optional[str] = None
+    triage_status: Optional[str] = None
+    created_at: Optional[str] = None
+
+    model_config = {"extra": "allow", "from_attributes": True}
+
+
+class FeedbackHealthOut(BaseModel):
+    status: str
+    module: str
+
+
 class TriageUpdate(BaseModel):
     status: str = Field(..., description=f"Neuer Status. Erlaubt: {', '.join(sorted(VALID_TRIAGE_STATES))}")
 
@@ -49,12 +67,12 @@ class TriageUpdate(BaseModel):
 # --- Endpoints ---
 
 
-@router.get("/health")
+@router.get("/health", response_model=FeedbackHealthOut)
 async def health():
     return {"status": "ok", "module": "feedback"}
 
 
-@router.post("/bugs")
+@router.post("/bugs", status_code=201, response_model=FeedbackOut)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def create_bug_report(
     request: Request,
@@ -75,7 +93,7 @@ async def create_bug_report(
     return result
 
 
-@router.post("/ux")
+@router.post("/ux", status_code=201, response_model=FeedbackOut)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def create_ux_rating(
     request: Request,
@@ -95,7 +113,7 @@ async def create_ux_rating(
     return result
 
 
-@router.get("")
+@router.get("", response_model=list[FeedbackOut])
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def get_all_feedback(
     request: Request,
@@ -116,7 +134,7 @@ async def get_all_feedback(
     return items
 
 
-@router.patch("/{feedback_id}/triage")
+@router.patch("/{feedback_id}/triage", response_model=FeedbackOut)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def update_triage(
     request: Request,
