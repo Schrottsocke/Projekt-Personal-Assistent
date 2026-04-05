@@ -222,16 +222,23 @@ async def upload_household_document(
     """Datei hochladen, in Storage speichern, Metadaten in household_documents anlegen."""
     from src.services.database import HouseholdDocument, get_db
 
+    # Pre-check file size if available (avoids loading oversized files into RAM)
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if file.size and file.size > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Datei zu gross: {file.size / 1024 / 1024:.1f} MB (max {settings.MAX_UPLOAD_SIZE_MB} MB).",
+        )
+
     file_data = await file.read()
     if not file_data:
         raise HTTPException(status_code=400, detail="Leere Datei.")
 
-    # File size check (MAX_UPLOAD_SIZE_MB)
-    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    # Fallback size check for chunked uploads where file.size was None
     if len(file_data) > max_bytes:
         raise HTTPException(
             status_code=413,
-            detail=f"Datei zu gross ({len(file_data) / 1024 / 1024:.1f} MB). Maximum: {settings.MAX_UPLOAD_SIZE_MB} MB.",
+            detail=f"Datei zu gross: {len(file_data) / 1024 / 1024:.1f} MB (max {settings.MAX_UPLOAD_SIZE_MB} MB).",
         )
 
     # Validate + save to storage
