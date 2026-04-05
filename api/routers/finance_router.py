@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from api.dependencies import get_current_user
+from api.dependencies import get_current_user, get_invoice_service
 from api.schemas.finance import (
     BudgetAlert,
     BudgetCreate,
@@ -32,6 +32,7 @@ from api.schemas.finance import (
     TransactionCreate,
     TransactionOut,
 )
+from api.schemas.invoices import InvoiceCreate, InvoiceOut, InvoiceUpdate
 from config.settings import settings
 from src.services.database import (
     Budget,
@@ -801,3 +802,74 @@ async def delete_finance_invoice(
         if not inv:
             raise HTTPException(404, "Rechnung nicht gefunden.")
         db.delete(inv)
+
+
+# --- Advanced Invoices (Kleinunternehmer / Regelbesteuerung, JSON-basiert) ---
+
+
+@router.get("/invoices/full", response_model=list[InvoiceOut])
+async def list_advanced_invoices(
+    user_key: Annotated[str, Depends(get_current_user)],
+    status: Optional[str] = None,
+    svc=Depends(get_invoice_service),
+):
+    """Erweiterte Rechnungen auflisten (Kleinunternehmer / Regelbesteuerung)."""
+    return await svc.list_invoices(user_key, status_filter=status or "")
+
+
+@router.get("/invoices/full/{invoice_id}", response_model=InvoiceOut)
+async def get_advanced_invoice(
+    invoice_id: str,
+    user_key: Annotated[str, Depends(get_current_user)],
+    svc=Depends(get_invoice_service),
+):
+    inv = await svc.get_invoice(user_key, invoice_id)
+    if not inv:
+        raise HTTPException(404, "Rechnung nicht gefunden.")
+    return inv
+
+
+@router.post("/invoices/full", response_model=InvoiceOut, status_code=201)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def create_advanced_invoice(
+    request: Request,
+    body: InvoiceCreate,
+    user_key: Annotated[str, Depends(get_current_user)],
+    svc=Depends(get_invoice_service),
+):
+    """Erweiterte Rechnung erstellen (Kleinunternehmer / Regelbesteuerung)."""
+    try:
+        return await svc.create_invoice(user_key, body.model_dump())
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+
+@router.patch("/invoices/full/{invoice_id}", response_model=InvoiceOut)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def update_advanced_invoice(
+    request: Request,
+    invoice_id: str,
+    body: InvoiceUpdate,
+    user_key: Annotated[str, Depends(get_current_user)],
+    svc=Depends(get_invoice_service),
+):
+    try:
+        result = await svc.update_invoice(user_key, invoice_id, body.model_dump(exclude_unset=True))
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+    if not result:
+        raise HTTPException(404, "Rechnung nicht gefunden.")
+    return result
+
+
+@router.delete("/invoices/full/{invoice_id}", status_code=204)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def delete_advanced_invoice(
+    request: Request,
+    invoice_id: str,
+    user_key: Annotated[str, Depends(get_current_user)],
+    svc=Depends(get_invoice_service),
+):
+    deleted = await svc.delete_invoice(user_key, invoice_id)
+    if not deleted:
+        raise HTTPException(404, "Rechnung nicht gefunden.")
