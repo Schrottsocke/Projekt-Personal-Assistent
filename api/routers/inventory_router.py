@@ -3,7 +3,7 @@
 from datetime import date, timedelta
 from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -14,6 +14,8 @@ from api.schemas.inventory import (
     InventoryItemCreate,
     InventoryItemOut,
     InventoryItemUpdate,
+    ReceiptLinkRequest,
+    RoomListOut,
     ValueSummary,
     WarrantyCreate,
     WarrantyOut,
@@ -21,12 +23,17 @@ from api.schemas.inventory import (
 )
 from config.settings import settings
 from src.services.database import (
+    HouseholdDocument,
     InventoryItem,
     ScannedDocument,
     UserProfile,
     Warranty,
     get_db,
 )
+from src.services.storage_service import StorageService
+
+ALLOWED_PHOTO_TYPES = {"image/jpeg", "image/png", "image/webp"}
+ALLOWED_PHOTO_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -149,6 +156,53 @@ async def create_item(
         return item
 
 
+@router.post("/items-with-photo", response_model=InventoryItemOut, status_code=201)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def create_item_with_photo(
+    request: Request,
+    user_key: Annotated[str, Depends(get_current_user)],
+    name: str = Form(...),
+    description: Optional[str] = Form(None),
+    room: Optional[str] = Form(None),
+    value: Optional[float] = Form(None),
+    purchase_date: Optional[date] = Form(None),
+    receipt_doc_id: Optional[int] = Form(None),
+    workspace_id: Optional[int] = Form(None),
+    photo: Optional[UploadFile] = File(None),
+):
+    """Create inventory item with optional photo upload in a single request."""
+    photo_url = None
+    if photo and photo.filename:
+        from pathlib import Path as _P
+
+        ext = _P(photo.filename).suffix.lower()
+        if ext not in ALLOWED_PHOTO_EXTENSIONS:
+            raise HTTPException(400, f"Fototyp '{ext}' nicht erlaubt. Erlaubt: {ALLOWED_PHOTO_EXTENSIONS}")
+        if photo.content_type and photo.content_type not in ALLOWED_PHOTO_TYPES:
+            raise HTTPException(400, f"MIME-Type '{photo.content_type}' nicht erlaubt.")
+        data = await photo.read()
+        storage = StorageService()
+        photo_url = await storage.save(user_key, photo.filename, data, photo.content_type or "")
+
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+        item = InventoryItem(
+            user_id=uid,
+            name=name,
+            description=description,
+            room=room,
+            photo_url=photo_url,
+            value=value,
+            purchase_date=purchase_date,
+            receipt_doc_id=receipt_doc_id,
+            workspace_id=workspace_id,
+        )
+        db.add(item)
+        db.flush()
+        db.refresh(item)
+        return item
+
+
 @router.patch("/items/{item_id}", response_model=InventoryItemOut)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def update_item(
@@ -164,6 +218,80 @@ async def update_item(
             raise HTTPException(404, "Gegenstand nicht gefunden.")
         for k, v in body.model_dump(exclude_unset=True).items():
             setattr(item, k, v)
+        db.flush()
+        db.refresh(item)
+        return item
+
+
+@router.post("/items/{item_id}/photo", response_model=InventoryItemOut)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def upload_item_photo(
+    request: Request,
+    item_id: int,
+    user_key: Annotated[str, Depends(get_current_user)],
+    photo: UploadFile = File(...),
+):
+    """Upload a photo for an existing inventory item."""
+    from pathlib import Path as _P
+
+    ext = _P(photo.filename or "").suffix.lower()
+    if ext not in ALLOWED_PHOTO_EXTENSIONS:
+        raise HTTPException(400, f"Fototyp '{ext}' nicht erlaubt. Erlaubt: {ALLOWED_PHOTO_EXTENSIONS}")
+    if photo.content_type and photo.content_type not in ALLOWED_PHOTO_TYPES:
+        raise HTTPException(400, f"MIME-Type '{photo.content_type}' nicht erlaubt.")
+
+    data = await photo.read()
+    storage = StorageService()
+    photo_url = await storage.save(user_key, photo.filename or "photo.jpg", data, photo.content_type or "")
+
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+        item = db.query(InventoryItem).filter(InventoryItem.id == item_id, InventoryItem.user_id == uid).first()
+        if not item:
+            raise HTTPException(404, "Gegenstand nicht gefunden.")
+        item.photo_url = photo_url
+        db.flush()
+        db.refresh(item)
+        return item
+
+
+@router.get("/rooms", response_model=RoomListOut)
+async def list_rooms(user_key: Annotated[str, Depends(get_current_user)]):
+    """Return distinct room values from the user's inventory items."""
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+        rows = (
+            db.query(InventoryItem.room)
+            .filter(InventoryItem.user_id == uid, InventoryItem.room != None, InventoryItem.room != "")  # noqa: E711
+            .distinct()
+            .order_by(InventoryItem.room)
+            .all()
+        )
+        return RoomListOut(rooms=[r[0] for r in rows])
+
+
+@router.post("/items/{item_id}/link-receipt", response_model=InventoryItemOut)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def link_receipt(
+    request: Request,
+    item_id: int,
+    body: ReceiptLinkRequest,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    """Link an existing HouseholdDocument as receipt for an inventory item."""
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+        item = db.query(InventoryItem).filter(InventoryItem.id == item_id, InventoryItem.user_id == uid).first()
+        if not item:
+            raise HTTPException(404, "Gegenstand nicht gefunden.")
+        doc = (
+            db.query(HouseholdDocument)
+            .filter(HouseholdDocument.id == body.document_id, HouseholdDocument.user_id == uid)
+            .first()
+        )
+        if not doc:
+            raise HTTPException(404, "Dokument nicht gefunden oder gehoert einem anderen Benutzer.")
+        item.receipt_doc_id = body.document_id
         db.flush()
         db.refresh(item)
         return item
