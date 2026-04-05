@@ -464,11 +464,7 @@ async def get_finance_invoice(
 ):
     with get_db()() as db:
         uid = _resolve_user_id(db, user_key)
-        inv = (
-            db.query(FinanceInvoice)
-            .filter(FinanceInvoice.id == invoice_id, FinanceInvoice.user_id == uid)
-            .first()
-        )
+        inv = db.query(FinanceInvoice).filter(FinanceInvoice.id == invoice_id, FinanceInvoice.user_id == uid).first()
         if not inv:
             raise HTTPException(404, "Rechnung nicht gefunden.")
         return inv
@@ -510,11 +506,7 @@ async def delete_finance_invoice(
 ):
     with get_db()() as db:
         uid = _resolve_user_id(db, user_key)
-        inv = (
-            db.query(FinanceInvoice)
-            .filter(FinanceInvoice.id == invoice_id, FinanceInvoice.user_id == uid)
-            .first()
-        )
+        inv = db.query(FinanceInvoice).filter(FinanceInvoice.id == invoice_id, FinanceInvoice.user_id == uid).first()
         if not inv:
             raise HTTPException(404, "Rechnung nicht gefunden.")
         db.delete(inv)
