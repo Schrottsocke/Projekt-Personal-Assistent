@@ -42,6 +42,12 @@
   // Neue Hub-Views
   Router.register('#/planen', (c) => PlanenView.render(c));
   Router.register('#/mehr', (c) => MehrView.render(c));
+  // Frontend-Views für Backend-Router (#682–#686)
+  Router.register('#/finance', (c) => FinanceView.render(c));
+  Router.register('#/inventory', (c) => InventoryView.render(c));
+  Router.register('#/family', (c) => FamilyView.render(c));
+  Router.register('#/notification-center', (c) => NotificationsView.render(c));
+  Router.register('#/gdpr', (c) => GdprView.render(c));
   // Onboarding
   Router.register('#/onboarding', (c) => OnboardingView.render(c));
   Router.register('#/search', (c) => SearchView.render(c));
@@ -81,6 +87,11 @@
     'unified-inbox': { route: '#/inbox', icon: 'all_inbox', label: 'Inbox' },
     invoices: { route: '#/invoices', icon: 'receipt_long', label: 'Rechnungen' },
     memory: { route: '#/memory', icon: 'psychology', label: 'Gedaechtnis' },
+    finance: { route: '#/finance', icon: 'account_balance', label: 'Finanzen' },
+    inventory: { route: '#/inventory', icon: 'inventory_2', label: 'Inventar' },
+    family: { route: '#/family', icon: 'group', label: 'Familie' },
+    'notification-center': { route: '#/notification-center', icon: 'notifications_active', label: 'Benachrichtigungen' },
+    gdpr: { route: '#/gdpr', icon: 'shield', label: 'Datenschutz' },
   };
 
   // ── Cached Preferences ──
