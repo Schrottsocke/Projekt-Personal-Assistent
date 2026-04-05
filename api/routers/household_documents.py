@@ -1,9 +1,11 @@
 """CRUD /documents – Household Documents mit Multipart Upload und Storage-Backend."""
 
 import logging
+from datetime import date, datetime, timedelta, timezone
 from typing import Annotated, Optional
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Request, UploadFile
+from pydantic import BaseModel
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
@@ -41,7 +43,7 @@ def _get_user_id(user_key: str) -> int:
 
 
 async def _run_ocr_background(doc_id: int, file_path: str, user_key: str):
-    """Background-Task: OCR ausfuehren und Dokument aktualisieren."""
+    """Background-Task: OCR ausfuehren, klassifizieren, Frist extrahieren, Task/Notification erstellen."""
     try:
         from api.dependencies import _svc
         from src.services.database import HouseholdDocument, get_db
@@ -58,15 +60,62 @@ async def _run_ocr_background(doc_id: int, file_path: str, user_key: str):
             logger.warning("OCR-Background: Datei nicht lesbar: %s", file_path)
             return
 
+        # 1. OCR
         result = await ocr.extract_text(file_data, ai)
         ocr_text = result.get("text", "")
 
+        # 2. Classify
+        category = await ocr.classify_document(ocr_text, ai)
+
+        # 3. Extract deadline
+        deadline = await ocr.extract_deadline(ocr_text)
+
+        # 4. Update document in DB
+        doc_title = None
         db = get_db()
         with db() as session:
             doc = session.query(HouseholdDocument).filter_by(id=doc_id).first()
             if doc:
                 doc.ocr_text = ocr_text[:10000] if ocr_text else None
-                logger.info("OCR abgeschlossen fuer Dokument #%d (%d Zeichen)", doc_id, len(ocr_text))
+                if category and category != "other":
+                    doc.category = category
+                if deadline:
+                    doc.deadline_date = deadline
+                doc_title = doc.title
+                logger.info(
+                    "OCR abgeschlossen fuer Dokument #%d (%d Zeichen, Kategorie=%s, Frist=%s)",
+                    doc_id, len(ocr_text), category, deadline,
+                )
+
+        # 5. Create task if deadline found
+        if deadline and doc_title:
+            task_svc = _svc.get("task")
+            if task_svc:
+                try:
+                    await task_svc.create_task(
+                        user_key=user_key,
+                        title=f"Frist: {doc_title} am {deadline.isoformat()}",
+                        due_date=datetime(deadline.year, deadline.month, deadline.day, tzinfo=timezone.utc),
+                        priority="high",
+                    )
+                    logger.info("Frist-Task erstellt fuer Dokument #%d", doc_id)
+                except Exception as e:
+                    logger.warning("Task-Erstellung fehlgeschlagen fuer Dokument #%d: %s", doc_id, e)
+
+        # 6. Create notification
+        notif_svc = _svc.get("notification")
+        if notif_svc and doc_title:
+            try:
+                await notif_svc.create(
+                    user_key=user_key,
+                    type="document",
+                    title=f"Dokument verarbeitet: {category} - {doc_title}",
+                    message=f"OCR abgeschlossen. Kategorie: {category}"
+                    + (f", Frist: {deadline.isoformat()}" if deadline else ""),
+                )
+            except Exception as e:
+                logger.warning("Notification-Erstellung fehlgeschlagen fuer Dokument #%d: %s", doc_id, e)
+
     except Exception as e:
         logger.error("OCR-Background-Fehler fuer Dokument #%d: %s", doc_id, e)
 
@@ -93,6 +142,48 @@ async def list_household_documents(
             items=[HouseholdDocumentOut.model_validate(d) for d in items],
             total=total,
         )
+
+
+class DocumentStatsOut(BaseModel):
+    """Response-Schema fuer Dokument-Statistiken."""
+    categories: dict[str, int]
+    upcoming_deadlines: int
+
+
+@router.get("/stats", response_model=DocumentStatsOut)
+async def get_document_stats(
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    """Statistiken: Anzahl pro Kategorie + Dokumente mit Frist in den naechsten 30 Tagen."""
+    from sqlalchemy import func
+    from src.services.database import HouseholdDocument, get_db
+
+    user_id = _get_user_id(user_key)
+    db = get_db()
+    with db() as session:
+        # Counts per category
+        rows = (
+            session.query(HouseholdDocument.category, func.count(HouseholdDocument.id))
+            .filter(HouseholdDocument.user_id == user_id)
+            .group_by(HouseholdDocument.category)
+            .all()
+        )
+        categories = {cat or "uncategorized": cnt for cat, cnt in rows}
+
+        # Upcoming deadlines (next 30 days)
+        today = date.today()
+        deadline_cutoff = today + timedelta(days=30)
+        upcoming = (
+            session.query(func.count(HouseholdDocument.id))
+            .filter(
+                HouseholdDocument.user_id == user_id,
+                HouseholdDocument.deadline_date >= today,
+                HouseholdDocument.deadline_date <= deadline_cutoff,
+            )
+            .scalar()
+        )
+
+    return DocumentStatsOut(categories=categories, upcoming_deadlines=upcoming or 0)
 
 
 @router.get("/{doc_id}", response_model=HouseholdDocumentOut)
@@ -238,3 +329,34 @@ async def download_household_document(
     ct = content_types.get(ext, "application/octet-stream")
 
     return Response(content=data, media_type=ct, headers={"Content-Disposition": f'attachment; filename="{title}"'})
+
+
+@router.post("/{doc_id}/reprocess", response_model=HouseholdDocumentOut)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def reprocess_document(
+    request: Request,
+    doc_id: int,
+    background_tasks: BackgroundTasks,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    """Re-run OCR + Klassifikation + Frist-Extraktion fuer ein bestehendes Dokument."""
+    from src.services.database import HouseholdDocument, get_db
+
+    user_id = _get_user_id(user_key)
+    db = get_db()
+    with db() as session:
+        doc = (
+            session.query(HouseholdDocument)
+            .filter(HouseholdDocument.id == doc_id, HouseholdDocument.user_id == user_id)
+            .first()
+        )
+        if not doc:
+            raise HTTPException(status_code=404, detail="Dokument nicht gefunden.")
+        if not doc.file_path:
+            raise HTTPException(status_code=400, detail="Keine Datei vorhanden fuer OCR.")
+
+        file_path = doc.file_path
+        result = HouseholdDocumentOut.model_validate(doc)
+
+    background_tasks.add_task(_run_ocr_background, doc_id, file_path, user_key)
+    return result
