@@ -51,6 +51,7 @@
   // Onboarding
   Router.register('#/onboarding', (c) => OnboardingView.render(c));
   Router.register('#/search', (c) => SearchView.render(c));
+  Router.register('#/feedback', (c) => FeedbackView.render(c));
 
   // ── Feste 4-Tab Navigation ──
   const FIXED_NAV = [

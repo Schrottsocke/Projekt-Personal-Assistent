@@ -1,0 +1,109 @@
+"""Monitoring-Router: Beta-Start KPIs, Event-Tracking und Fehler-Uebersicht."""
+
+import logging
+from typing import Annotated, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+from api.dependencies import get_current_user
+from config.settings import settings
+from src.services.monitoring_service import MonitoringService, VALID_EVENT_TYPES
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
+
+_service = MonitoringService()
+
+
+# --- Schemas ---
+
+
+class EventCreate(BaseModel):
+    event_type: str = Field(..., description=f"Event-Typ. Erlaubt: {', '.join(sorted(VALID_EVENT_TYPES))}")
+    user_key: Optional[str] = None
+    metadata: Optional[str] = None
+
+
+class ErrorCreate(BaseModel):
+    source: str = Field(..., description="Fehler-Quelle: 'frontend' oder 'backend'")
+    message: str
+    stack_trace: Optional[str] = None
+    url: Optional[str] = None
+    user_agent: Optional[str] = None
+
+
+# --- Endpoints ---
+
+
+@router.get("/health")
+async def health():
+    return {"status": "ok", "module": "monitoring"}
+
+
+@router.get("/dashboard")
+async def get_dashboard(user_key: Annotated[str, Depends(get_current_user)]):
+    """KPIs und Aktivierungsmetriken abrufen."""
+    return _service.get_dashboard()
+
+
+@router.post("/events")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def track_event(
+    request: Request,
+    body: EventCreate,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    """Monitoring-Event erfassen."""
+    try:
+        result = _service.track_event(
+            event_type=body.event_type,
+            user_key=body.user_key or user_key,
+            metadata=body.metadata,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/errors")
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def log_error(
+    request: Request,
+    body: ErrorCreate,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    """Frontend- oder Backend-Fehler erfassen."""
+    result = _service.log_error(
+        source=body.source,
+        message=body.message,
+        stack_trace=body.stack_trace,
+        user_key=user_key,
+        url=body.url,
+        user_agent=body.user_agent,
+    )
+    return result
+
+
+@router.get("/errors")
+async def get_errors(
+    user_key: Annotated[str, Depends(get_current_user)],
+    limit: int = 50,
+    source: Optional[str] = None,
+):
+    """Fehler-Uebersicht abrufen."""
+    return _service.get_errors(limit=limit, source=source)
+
+
+@router.get("/events")
+async def get_events(
+    user_key: Annotated[str, Depends(get_current_user)],
+    event_type: Optional[str] = None,
+    limit: int = 100,
+):
+    """Events abrufen, optional nach Typ gefiltert."""
+    return _service.get_events(event_type=event_type, limit=limit)
