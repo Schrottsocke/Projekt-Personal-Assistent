@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 
 class WorkspaceCreate(BaseModel):
@@ -16,8 +16,7 @@ class WorkspaceOut(BaseModel):
     owner_id: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WorkspaceMemberAdd(BaseModel):
@@ -33,8 +32,7 @@ class WorkspaceMemberOut(BaseModel):
     invited_at: datetime
     accepted_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MemberRoleUpdate(BaseModel):
@@ -64,8 +62,7 @@ class RoutineOut(BaseModel):
     current_assignee_id: Optional[int]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RoutineCompletionCreate(BaseModel):
@@ -79,8 +76,7 @@ class RoutineCompletionOut(BaseModel):
     completed_at: datetime
     photo_url: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WorkspaceDetail(BaseModel):

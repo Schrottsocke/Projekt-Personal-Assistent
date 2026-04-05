@@ -457,6 +457,19 @@ async def list_finance_invoices(
         return q.order_by(FinanceInvoice.due_date.desc()).all()
 
 
+@router.get("/invoices/{invoice_id}", response_model=FinanceInvoiceOut)
+async def get_finance_invoice(
+    invoice_id: int,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+        inv = db.query(FinanceInvoice).filter(FinanceInvoice.id == invoice_id, FinanceInvoice.user_id == uid).first()
+        if not inv:
+            raise HTTPException(404, "Rechnung nicht gefunden.")
+        return inv
+
+
 @router.patch("/invoices/{invoice_id}", response_model=FinanceInvoiceOut)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def update_finance_invoice(
@@ -482,3 +495,18 @@ async def update_finance_invoice(
         db.flush()
         db.refresh(inv)
         return inv
+
+
+@router.delete("/invoices/{invoice_id}", status_code=204)
+@limiter.limit(settings.RATE_LIMIT_WRITE)
+async def delete_finance_invoice(
+    request: Request,
+    invoice_id: int,
+    user_key: Annotated[str, Depends(get_current_user)],
+):
+    with get_db()() as db:
+        uid = _resolve_user_id(db, user_key)
+        inv = db.query(FinanceInvoice).filter(FinanceInvoice.id == invoice_id, FinanceInvoice.user_id == uid).first()
+        if not inv:
+            raise HTTPException(404, "Rechnung nicht gefunden.")
+        db.delete(inv)

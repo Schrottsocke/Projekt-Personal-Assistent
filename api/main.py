@@ -43,7 +43,6 @@ from api.routers import (
     email,
     features,
     github,
-    notifications,
     shifts,
     status,
     search,
@@ -58,7 +57,6 @@ from api.routers import (
     templates,
     automation,
     inbox,
-    invoices,
     finance_router,
     inventory_router,
     family_router,
@@ -318,7 +316,6 @@ app.include_router(recipes.router, prefix="/recipes", tags=["Rezepte"])
 app.include_router(mealplan.router, prefix="/meal-plan", tags=["Wochenplan"])
 app.include_router(drive.router, prefix="/drive", tags=["Drive"])
 app.include_router(email.router, prefix="/email", tags=["Email"])
-app.include_router(notifications.router, prefix="/notifications", tags=["Notifications"])
 app.include_router(shifts.router, prefix="/shifts", tags=["Dienstplan"])
 app.include_router(features.router)
 app.include_router(github.router, prefix="/github", tags=["GitHub"])
@@ -334,11 +331,10 @@ app.include_router(memories.router, prefix="/memories", tags=["Memories"])
 app.include_router(templates.router, prefix="/templates", tags=["Vorlagen"])
 app.include_router(automation.router, prefix="/automation", tags=["Automation"])
 app.include_router(inbox.router, prefix="/inbox", tags=["Inbox"])
-app.include_router(invoices.router, prefix="/invoices", tags=["Rechnungen"])
 app.include_router(finance_router.router, prefix="/finance", tags=["Finance"])
 app.include_router(inventory_router.router, prefix="/inventory", tags=["Inventory"])
 app.include_router(family_router.router, prefix="/family", tags=["Family"])
-app.include_router(notifications_router.router, prefix="/notifications-v2", tags=["Notifications V2"])
+app.include_router(notifications_router.router, prefix="/notifications", tags=["Notifications"])
 app.include_router(gdpr_router.router, prefix="/gdpr", tags=["GDPR"])
 app.include_router(onboarding_router.router, prefix="/onboarding", tags=["Onboarding"])
 app.include_router(status.router)

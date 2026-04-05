@@ -3,7 +3,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 
 class InventoryItemCreate(BaseModel):
@@ -41,8 +41,7 @@ class InventoryItemOut(BaseModel):
     receipt_doc_id: Optional[int]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ValueSummary(BaseModel):
@@ -79,8 +78,7 @@ class WarrantyOut(BaseModel):
     inventory_item_id: Optional[int]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DocumentScanResult(BaseModel):
@@ -100,5 +98,4 @@ class DocumentSearchResult(BaseModel):
     category: Optional[str]
     scanned_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

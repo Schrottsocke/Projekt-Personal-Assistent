@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 
 # --- ShiftType ---
@@ -47,8 +47,7 @@ class ShiftTypeOut(BaseModel):
     is_active: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- ShiftEntry ---
@@ -128,8 +127,7 @@ class ShiftEntryOut(BaseModel):
     shift_type_end_time: Optional[str] = None
     shift_type_category: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # --- Report ---

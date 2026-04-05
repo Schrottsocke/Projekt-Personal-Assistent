@@ -54,7 +54,7 @@ class TestDetectIntent:
         ai_service._client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         with patch("src.services.ai_service.get_enabled_intents", return_value=["calendar_read", "chat"]):
-            result = await ai_service._detect_intent("Was habe ich heute?", "taake")
+            result = await ai_service._detect_intent("Welche Termine habe ich heute Nachmittag?", "taake")
 
         assert result.get("intent") == "calendar_read"
 
@@ -105,7 +105,7 @@ class TestComplete:
         async def mock_create(**kwargs):
             nonlocal call_count
             call_count += 1
-            if kwargs.get("model") == "test-model":
+            if kwargs.get("model") == "test-chat-model":
                 raise APITimeoutError(request=MagicMock())
             return mock_response
 

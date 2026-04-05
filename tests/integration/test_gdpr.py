@@ -26,7 +26,7 @@ class TestDataExport:
             headers=auth_headers,
         )
         client.post(
-            "/notifications-v2/events",
+            "/notifications/events",
             json={"type": "test", "title": "GDPR Event"},
             headers=auth_headers,
         )
@@ -104,7 +104,7 @@ class TestSelectiveDeletion:
 
     def test_delete_notifications(self, client, auth_headers):
         client.post(
-            "/notifications-v2/events",
+            "/notifications/events",
             json={"type": "test", "title": "To Delete"},
             headers=auth_headers,
         )

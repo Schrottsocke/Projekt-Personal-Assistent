@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import ConfigDict, BaseModel, Field, field_validator
 
 
 def _validate_quantity(v: str | None) -> str | None:
@@ -34,8 +34,7 @@ class ShoppingItemOut(BaseModel):
     source: Optional[str]
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ShoppingItemUpdate(BaseModel):

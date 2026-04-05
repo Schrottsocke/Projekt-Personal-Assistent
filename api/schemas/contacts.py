@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import ConfigDict, BaseModel, Field
 
 
 class ContactCreate(BaseModel):
@@ -31,5 +31,4 @@ class ContactOut(BaseModel):
     last_interaction: Optional[str] = None
     source: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
