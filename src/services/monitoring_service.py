@@ -81,7 +81,7 @@ class MonitoringService:
                 (event_type, user_key, metadata, now),
             )
             conn.commit()
-            return {"id": cur.lastrowid, "event_type": event_type, "user_key": user_key, "created_at": now}
+            return {"id": cur.lastrowid, "event_type": event_type, "user_key": user_key, "metadata": metadata, "created_at": now}
         finally:
             conn.close()
 
@@ -104,7 +104,7 @@ class MonitoringService:
                 (source, message, stack_trace, user_key, url, user_agent, now),
             )
             conn.commit()
-            return {"id": cur.lastrowid, "source": source, "message": message, "created_at": now}
+            return {"id": cur.lastrowid, "source": source, "message": message, "stack_trace": stack_trace, "user_key": user_key, "url": url, "user_agent": user_agent, "created_at": now}
         finally:
             conn.close()
 
