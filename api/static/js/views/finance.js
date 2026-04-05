@@ -104,6 +104,164 @@ const FinanceView = (() => {
     }
   }
 
+  // ── Donut Chart (SVG) ──────────────────────────────────────────────────
+
+  const CATEGORY_COLORS = [
+    '#7c4dff', '#42a5f5', '#66bb6a', '#ffa726', '#ef5350',
+    '#ab47bc', '#26c6da', '#ffca28', '#8d6e63', '#78909c'
+  ];
+
+  function renderDonutChart(categories) {
+    if (!categories || Object.keys(categories).length === 0) return '';
+    const entries = Object.entries(categories).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    const total = entries.reduce((s, [, v]) => s + Math.abs(v), 0);
+    if (total === 0) return '';
+
+    const r = 60, cx = 80, cy = 80, strokeWidth = 24;
+    const circumference = 2 * Math.PI * r;
+    let offset = 0;
+    const arcs = entries.map(([cat, amount], i) => {
+      const pct = Math.abs(amount) / total;
+      const dash = pct * circumference;
+      const gap = circumference - dash;
+      const arc = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none"
+        stroke="${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}" stroke-width="${strokeWidth}"
+        stroke-dasharray="${dash} ${gap}" stroke-dashoffset="-${offset}"
+        style="transition:stroke-dashoffset 0.5s ease"/>`;
+      offset += dash;
+      return arc;
+    });
+
+    const legendItems = entries.slice(0, 8).map(([cat, amount], i) => `
+      <div class="fin-donut-legend-item">
+        <span class="fin-donut-dot" style="background:${CATEGORY_COLORS[i % CATEGORY_COLORS.length]}"></span>
+        <span class="fin-donut-legend-label">${esc(cat)}</span>
+        <span class="fin-donut-legend-value">${currency(amount)}</span>
+      </div>
+    `).join('');
+
+    return `
+      <div class="fin-donut-wrapper">
+        <div class="fin-donut-chart">
+          <svg viewBox="0 0 160 160" width="160" height="160">
+            ${arcs.join('')}
+            <text x="${cx}" y="${cy - 6}" text-anchor="middle" fill="var(--text-primary)" font-size="14" font-weight="700">${currency(total)}</text>
+            <text x="${cx}" y="${cy + 12}" text-anchor="middle" fill="var(--text-secondary)" font-size="10">Gesamt</text>
+          </svg>
+        </div>
+        <div class="fin-donut-legend">${legendItems}</div>
+      </div>
+    `;
+  }
+
+  // ── Budget Progress Bars ──────────────────────────────────────────────
+
+  function renderBudgetBars(budgetAlerts) {
+    if (!budgetAlerts || budgetAlerts.length === 0) return '';
+    const bars = budgetAlerts.map(a => {
+      const pct = Math.round(a.percentage || 0);
+      const colorClass = pct >= 100 ? 'fin-bar-red' : pct >= 80 ? 'fin-bar-orange' : 'fin-bar-green';
+      return `
+        <div class="fin-budget-bar-row">
+          <div class="fin-budget-bar-label">
+            <span>${esc(a.category)}</span>
+            <span class="fin-budget-bar-pct">${pct}%</span>
+          </div>
+          <div class="fin-budget-bar-track">
+            <div class="fin-budget-bar-fill ${colorClass}" style="width:${Math.min(pct, 100)}%"></div>
+          </div>
+          <div class="fin-budget-bar-meta">${currency(a.spent)} / ${currency(a.limit || a.monthly_limit || 0)}</div>
+        </div>
+      `;
+    }).join('');
+    return `
+      <div class="card" style="margin-top:16px">
+        <div class="finance-section-title">
+          <span class="material-symbols-outlined mi-sm">pie_chart</span> Budget-Fortschritt
+        </div>
+        ${bars}
+      </div>
+    `;
+  }
+
+  // ── Contract Deadlines ──────────────────────────────────────────────
+
+  function renderContractDeadlines(contractsList) {
+    if (!contractsList || contractsList.length === 0) return '';
+    const withDeadline = contractsList
+      .filter(c => c.end_date)
+      .map(c => {
+        const days = Math.ceil((new Date(c.end_date) - Date.now()) / 86400000);
+        return { ...c, _daysLeft: days };
+      })
+      .filter(c => c._daysLeft > -30)
+      .sort((a, b) => a._daysLeft - b._daysLeft)
+      .slice(0, 5);
+    if (withDeadline.length === 0) return '';
+
+    const items = withDeadline.map(c => {
+      let badgeCls, badgeText;
+      if (c._daysLeft < 0) { badgeCls = 'badge-error'; badgeText = 'Abgelaufen'; }
+      else if (c._daysLeft <= 14) { badgeCls = 'badge-error'; badgeText = `${c._daysLeft}d`; }
+      else if (c._daysLeft <= 30) { badgeCls = 'badge-warning'; badgeText = `${c._daysLeft}d`; }
+      else { badgeCls = 'badge-success'; badgeText = `${c._daysLeft}d`; }
+      return `
+        <div class="fin-contract-deadline-row">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:0.9rem">${esc(c.name)}</div>
+            <div style="font-size:0.8rem;color:var(--text-secondary)">${esc(c.provider || '')} · ${currency(c.amount)}</div>
+          </div>
+          <span class="badge ${badgeCls}">Kuendigung in ${badgeText}</span>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="card" style="margin-top:16px">
+        <div class="finance-section-title">
+          <span class="material-symbols-outlined mi-sm">event_upcoming</span> Vertrags-Fristen
+        </div>
+        ${items}
+      </div>
+    `;
+  }
+
+  // ── Open Invoices Widget ──────────────────────────────────────────────
+
+  function renderOpenInvoicesWidget(openInvoices) {
+    if (!openInvoices || openInvoices.length === 0) return '';
+    const items = openInvoices.slice(0, 5).map(inv => {
+      const daysLeft = inv.due_date ? Math.ceil((new Date(inv.due_date) - Date.now()) / 86400000) : null;
+      let badgeCls = 'badge-accent', badgeLabel = 'Offen';
+      if (inv.status === 'overdue' || (daysLeft !== null && daysLeft < 0)) {
+        badgeCls = 'badge-error'; badgeLabel = 'Ueberfaellig';
+      } else if (daysLeft !== null && daysLeft <= 7) {
+        badgeCls = 'badge-warning'; badgeLabel = `Faellig in ${daysLeft}d`;
+      }
+      return `
+        <div class="fin-contract-deadline-row">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600;font-size:0.9rem">${esc(inv.invoice_number || inv.recipient || '–')}</div>
+            <div style="font-size:0.8rem;color:var(--text-secondary)">${esc(inv.recipient || '')} · Faellig: ${fmtDate(inv.due_date)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-weight:700;color:var(--accent)">${currency(inv.total)}</div>
+            <span class="badge ${badgeCls}" style="font-size:0.7rem">${badgeLabel}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="card" style="margin-top:16px">
+        <div class="finance-section-title">
+          <span class="material-symbols-outlined mi-sm">receipt_long</span> Offene Rechnungen
+        </div>
+        ${items}
+      </div>
+    `;
+  }
+
   function renderOverview(el, summary, monthly, byCategory) {
     const nextPayment = summary.next_payment_date
       ? `${fmtDate(summary.next_payment_date)} · ${currency(summary.next_payment_amount)}`
@@ -112,17 +270,6 @@ const FinanceView = (() => {
     const budgetUsed = summary.budget_total > 0
       ? Math.round((summary.spending_this_month / summary.budget_total) * 100)
       : 0;
-
-    const categoryRows = byCategory.categories && Object.keys(byCategory.categories).length > 0
-      ? Object.entries(byCategory.categories)
-          .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-          .map(([cat, amount]) => `
-            <div class="finance-cat-row">
-              <span class="finance-cat-name">${esc(cat)}</span>
-              <span class="finance-cat-amount">${currency(amount)}</span>
-            </div>
-          `).join('')
-      : '<p class="text-muted" style="font-size:0.85rem">Keine Kategoriedaten</p>';
 
     el.innerHTML = `
       <div class="finance-widget-grid">
@@ -142,7 +289,7 @@ const FinanceView = (() => {
 
         <div class="card finance-widget">
           <div class="finance-widget-label">
-            <span class="material-symbols-outlined mi-sm">event_repeat</span> Nächste Zahlung
+            <span class="material-symbols-outlined mi-sm">event_repeat</span> Naechste Zahlung
           </div>
           <div class="finance-widget-value" style="font-size:1rem">${esc(nextPayment)}</div>
         </div>
@@ -158,7 +305,7 @@ const FinanceView = (() => {
       <div class="card" style="margin-top:16px">
         <div class="finance-section-title">
           <span class="material-symbols-outlined mi-sm">bar_chart</span>
-          Monatsübersicht – ${monthName(monthly.month)} ${monthly.year}
+          Monatsuebersicht – ${monthName(monthly.month)} ${monthly.year}
         </div>
         <div class="finance-monthly-row">
           <div class="finance-monthly-item">
@@ -180,12 +327,33 @@ const FinanceView = (() => {
 
       <div class="card" style="margin-top:16px">
         <div class="finance-section-title">
-          <span class="material-symbols-outlined mi-sm">category</span>
-          Nach Kategorie
+          <span class="material-symbols-outlined mi-sm">donut_large</span>
+          Ausgaben nach Kategorie
         </div>
-        <div class="finance-cat-list">${categoryRows}</div>
+        ${renderDonutChart(byCategory.categories)}
       </div>
+
+      <div id="fin-overview-extras"></div>
     `;
+
+    // Load extra widgets asynchronously
+    loadOverviewExtras();
+  }
+
+  async function loadOverviewExtras() {
+    const extrasEl = document.getElementById('fin-overview-extras');
+    if (!extrasEl) return;
+    try {
+      const [alertsRes, contractsRes, openInvRes] = await Promise.all([
+        Api.get('/finance/budgets/alerts').catch(() => []),
+        Api.get('/finance/contracts').catch(() => []),
+        Api.get('/finance/invoices?status=open').catch(() => [])
+      ]);
+      extrasEl.innerHTML =
+        renderBudgetBars(alertsRes) +
+        renderContractDeadlines(contractsRes) +
+        renderOpenInvoicesWidget(openInvRes);
+    } catch { /* ignore */ }
   }
 
   function monthName(m) {

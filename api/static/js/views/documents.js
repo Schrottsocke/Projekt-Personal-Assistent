@@ -1,6 +1,7 @@
 /**
  * DualMind Dokumente View
  * Dokumenten-Scanner: Upload, Kamera, Multi-Page, OCR, Detail-Ansicht, Folgeaktionen.
+ * Enhanced: Drag & Drop, OCR-Preview with field highlighting, confirmation screen, card grid.
  */
 const DocumentsView = (() => {
   let documents = [];
@@ -9,6 +10,8 @@ const DocumentsView = (() => {
   let typeFilter = null;
   let currentDetail = null;
   let selectedFiles = [];
+  let ocrResult = null;  // holds OCR result for confirmation screen
+  let viewMode = 'grid'; // 'grid' or 'list'
 
   const DOC_TYPES = {
     'Rechnung': { icon: 'receipt_long', color: 'var(--accent)' },
@@ -30,9 +33,14 @@ const DocumentsView = (() => {
     return `
       <div class="section-header">
         <h2><span class="material-symbols-outlined">document_scanner</span> Dokumente</h2>
-        <button class="btn btn-sm btn-primary" id="doc-upload-btn">
-          <span class="material-symbols-outlined">add</span> Neu
-        </button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="btn btn-sm btn-secondary" id="doc-view-toggle" title="${viewMode === 'grid' ? 'Listenansicht' : 'Rasteransicht'}">
+            <span class="material-symbols-outlined">${viewMode === 'grid' ? 'view_list' : 'grid_view'}</span>
+          </button>
+          <button class="btn btn-sm btn-primary" id="doc-upload-btn">
+            <span class="material-symbols-outlined">add</span> Neu
+          </button>
+        </div>
       </div>
     `;
   }
@@ -45,17 +53,17 @@ const DocumentsView = (() => {
           Lade Bilder oder PDFs hoch. OCR und Analyse laufen automatisch.
         </p>
 
-        <div class="doc-capture-row">
-          <label class="doc-capture-btn" id="doc-camera-label">
-            <span class="material-symbols-outlined">photo_camera</span>
-            <span>Kamera</span>
-            <input type="file" accept="image/*" capture="environment" id="doc-camera-input" hidden>
-          </label>
-          <label class="doc-capture-btn" id="doc-file-label">
-            <span class="material-symbols-outlined">upload_file</span>
-            <span>Datei</span>
-            <input type="file" accept="image/*,.pdf" multiple id="doc-file-input" hidden>
-          </label>
+        <label class="doc-scan-btn-large" id="doc-scan-label">
+          <span class="material-symbols-outlined">photo_camera</span>
+          Dokument scannen
+          <input type="file" accept="image/*" capture="environment" id="doc-camera-input" hidden>
+        </label>
+
+        <div class="doc-dropzone" id="doc-dropzone">
+          <span class="material-symbols-outlined">cloud_upload</span>
+          <div>Dateien hierher ziehen oder klicken</div>
+          <div style="font-size:12px;margin-top:4px">Bilder und PDFs</div>
+          <input type="file" accept="image/*,.pdf" multiple id="doc-file-input" hidden>
         </div>
 
         <div id="doc-preview-area" class="doc-preview-area" style="display:none"></div>
@@ -112,6 +120,25 @@ const DocumentsView = (() => {
     `;
   }
 
+  function renderDocumentGridCard(doc) {
+    const meta = DOC_TYPES[doc.doc_type] || DOC_TYPES['Sonstiges'];
+    return `
+      <div class="doc-grid-card" data-id="${doc.id}">
+        <div class="doc-grid-thumb">
+          <span class="material-symbols-outlined" style="color:${meta.color}">${meta.icon}</span>
+        </div>
+        <div class="doc-grid-info">
+          <div class="doc-grid-title">${doc.doc_type}${doc.sender ? ' – ' + doc.sender : ''}</div>
+          <div class="doc-grid-meta">
+            ${doc.amount ? `<span style="color:var(--accent);font-weight:500">${doc.amount}</span> · ` : ''}
+            ${formatDate(doc.scanned_at)}
+          </div>
+          <span class="badge" style="font-size:0.7rem;margin-top:4px">${doc.doc_type || 'Sonstiges'}</span>
+        </div>
+      </div>
+    `;
+  }
+
   function renderList() {
     if (loading) return '<div class="loading"><div class="spinner"></div></div>';
     if (!documents.length) {
@@ -122,6 +149,9 @@ const DocumentsView = (() => {
           <p style="font-size:13px;color:var(--text-secondary)">Scanne dein erstes Dokument per Kamera oder Datei-Upload.</p>
         </div>
       `;
+    }
+    if (viewMode === 'grid') {
+      return `<div class="doc-card-grid">${documents.map(renderDocumentGridCard).join('')}</div>`;
     }
     return documents.map(renderDocument).join('');
   }
@@ -191,6 +221,95 @@ const DocumentsView = (() => {
 
   // escapeHtml: nutzt globale Funktion aus utils.js
 
+  // ── OCR Confirmation Screen ──
+
+  function highlightOcrText(text, fields) {
+    if (!text) return '';
+    let html = escapeHtml(text);
+    // Highlight extracted fields if present
+    if (fields) {
+      if (fields.amount) {
+        const escaped = escapeHtml(String(fields.amount));
+        html = html.replace(
+          new RegExp(escaped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+          `<span class="doc-ocr-highlight doc-ocr-highlight-amount">${escaped}</span>`
+        );
+      }
+      if (fields.date) {
+        const escaped = escapeHtml(String(fields.date));
+        html = html.replace(
+          new RegExp(escaped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+          `<span class="doc-ocr-highlight doc-ocr-highlight-date">${escaped}</span>`
+        );
+      }
+      if (fields.sender) {
+        const escaped = escapeHtml(String(fields.sender));
+        html = html.replace(
+          new RegExp(escaped.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'),
+          `<span class="doc-ocr-highlight doc-ocr-highlight-sender">${escaped}</span>`
+        );
+      }
+    }
+    return html;
+  }
+
+  function renderOcrConfirmation(result) {
+    const types = Object.keys(DOC_TYPES);
+    const fields = { amount: result.amount, date: result.doc_date || result.date, sender: result.sender };
+    const ocrHtml = highlightOcrText(result.ocr_text ? result.ocr_text.substring(0, 2000) : '', fields);
+
+    return `
+      <div class="doc-confirm">
+        <button class="doc-back-btn" id="doc-confirm-back">
+          <span class="material-symbols-outlined">arrow_back</span> Zurueck
+        </button>
+
+        <div class="card" style="margin-bottom:12px">
+          <h3 style="margin:0 0 8px">
+            <span class="material-symbols-outlined" style="vertical-align:middle">fact_check</span>
+            OCR-Ergebnis bestaetigen
+          </h3>
+
+          ${fields.amount || fields.date || fields.sender ? `
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+              ${fields.amount ? `<div class="doc-meta-chip"><span class="material-symbols-outlined">payments</span> ${escapeHtml(String(fields.amount))}</div>` : ''}
+              ${fields.date ? `<div class="doc-meta-chip"><span class="material-symbols-outlined">calendar_today</span> ${escapeHtml(String(fields.date))}</div>` : ''}
+              ${fields.sender ? `<div class="doc-meta-chip"><span class="material-symbols-outlined">person</span> ${escapeHtml(String(fields.sender))}</div>` : ''}
+            </div>
+          ` : ''}
+
+          <div class="doc-ocr-preview">${ocrHtml || 'Kein OCR-Text verfuegbar.'}</div>
+        </div>
+
+        <div class="card">
+          <h4 style="margin:0 0 12px">Kategorie und Details bestaetigen</h4>
+          <div class="doc-confirm-form">
+            <div class="form-group">
+              <label>Kategorie</label>
+              <select class="input" id="doc-confirm-type">
+                ${types.map(t => `<option value="${t}" ${result.doc_type === t ? 'selected' : ''}>${t}</option>`).join('')}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Titel</label>
+              <input class="input" id="doc-confirm-title" value="${escapeHtml(result.summary || result.doc_type || '')}" placeholder="Dokumenttitel">
+            </div>
+            <div class="form-group">
+              <label>Faelligkeitsdatum</label>
+              <input class="input" type="date" id="doc-confirm-due" value="${escapeHtml(result.due_date || '')}">
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px">
+              <button class="btn btn-primary" id="doc-confirm-save">
+                <span class="material-symbols-outlined" style="font-size:18px">check</span> Speichern
+              </button>
+              <button class="btn btn-secondary" id="doc-confirm-cancel">Verwerfen</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   // ── Data Loading ──
 
   async function load() {
@@ -225,7 +344,10 @@ const DocumentsView = (() => {
   function update() {
     if (!container) return;
 
-    if (currentDetail) {
+    if (ocrResult) {
+      container.innerHTML = renderOcrConfirmation(ocrResult);
+      bindConfirmEvents();
+    } else if (currentDetail) {
       container.innerHTML = renderDetail(currentDetail);
       bindDetailEvents();
     } else {
@@ -303,8 +425,8 @@ const DocumentsView = (() => {
       if (uploadForm) uploadForm.style.display = 'none';
       selectedFiles = [];
 
-      // Detail anzeigen
-      currentDetail = result;
+      // Show OCR confirmation screen
+      ocrResult = result;
       update();
     } catch (err) {
       Toast.show(err.message || 'Verarbeitung fehlgeschlagen', 'error');
@@ -316,8 +438,52 @@ const DocumentsView = (() => {
 
   // ── Event Binding ──
 
+  function bindConfirmEvents() {
+    if (!container) return;
+
+    container.querySelector('#doc-confirm-back')?.addEventListener('click', () => {
+      // Go back to list, keep the result as detail
+      currentDetail = ocrResult;
+      ocrResult = null;
+      update();
+    });
+
+    container.querySelector('#doc-confirm-save')?.addEventListener('click', async () => {
+      if (!ocrResult || !ocrResult.id) return;
+      const docType = container.querySelector('#doc-confirm-type')?.value;
+      const title = container.querySelector('#doc-confirm-title')?.value?.trim();
+      const dueDate = container.querySelector('#doc-confirm-due')?.value;
+
+      try {
+        const payload = {};
+        if (docType) payload.doc_type = docType;
+        if (title) payload.summary = title;
+        if (dueDate) payload.due_date = dueDate;
+        const updated = await Api.request(`/documents/${ocrResult.id}`, { method: 'PATCH', body: payload });
+        Toast.show('Dokument gespeichert', 'success');
+        currentDetail = updated || { ...ocrResult, ...payload };
+        ocrResult = null;
+        update();
+      } catch (err) {
+        Toast.show(err.message || 'Fehler beim Speichern', 'error');
+      }
+    });
+
+    container.querySelector('#doc-confirm-cancel')?.addEventListener('click', () => {
+      ocrResult = null;
+      currentDetail = null;
+      load();
+    });
+  }
+
   function bindListEvents() {
     if (!container) return;
+
+    // View mode toggle
+    container.querySelector('#doc-view-toggle')?.addEventListener('click', () => {
+      viewMode = viewMode === 'grid' ? 'list' : 'grid';
+      update();
+    });
 
     // Upload-Toggle
     const uploadBtn = container.querySelector('#doc-upload-btn');
@@ -326,6 +492,7 @@ const DocumentsView = (() => {
     const fileInput = container.querySelector('#doc-file-input');
     const submitBtn = container.querySelector('#doc-submit-btn');
     const cancelBtn = container.querySelector('#doc-cancel-btn');
+    const dropzone = container.querySelector('#doc-dropzone');
 
     uploadBtn?.addEventListener('click', () => {
       uploadForm.style.display = uploadForm.style.display === 'none' ? 'block' : 'none';
@@ -349,6 +516,32 @@ const DocumentsView = (() => {
       }
     });
 
+    // Drag & drop on dropzone
+    if (dropzone) {
+      dropzone.addEventListener('click', () => fileInput?.click());
+
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        const files = Array.from(e.dataTransfer.files).filter(f =>
+          f.type.startsWith('image/') || f.type === 'application/pdf'
+        );
+        if (files.length) {
+          selectedFiles.push(...files);
+          updatePreviewArea();
+        }
+      });
+    }
+
     // Datei-Auswahl (multiple)
     fileInput?.addEventListener('change', () => {
       if (fileInput.files.length) {
@@ -369,8 +562,16 @@ const DocumentsView = (() => {
       });
     });
 
-    // Dokument-Cards -> Detail
+    // Dokument-Cards -> Detail (list view)
     container.querySelectorAll('.doc-card[data-id]').forEach(card => {
+      card.addEventListener('click', () => {
+        const docId = card.dataset.id;
+        loadDetail(docId);
+      });
+    });
+
+    // Grid cards -> Detail
+    container.querySelectorAll('.doc-grid-card[data-id]').forEach(card => {
       card.addEventListener('click', () => {
         const docId = card.dataset.id;
         loadDetail(docId);
@@ -486,6 +687,7 @@ const DocumentsView = (() => {
     typeFilter = null;
     currentDetail = null;
     selectedFiles = [];
+    ocrResult = null;
     await load();
   }
 

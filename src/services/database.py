@@ -6,7 +6,8 @@ Speichert: Notizen, Erinnerungen, User-Profile, Konversations-History, Proposals
 import logging
 import threading
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from uuid import uuid4
 from sqlalchemy import (
     create_engine,
     event,
@@ -540,6 +541,23 @@ class InventoryItem(Base):
     serial_number = Column(String(200), nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime, onupdate=lambda: datetime.now(timezone.utc))
+
+
+class TestUserInvitation(Base):
+    """Einladung fuer Testuser mit sicherem Token-Hash."""
+
+    __tablename__ = "test_user_invitations"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
+    email = Column(String, nullable=False)
+    display_name = Column(String, nullable=True)
+    note = Column(String, nullable=True)
+    token_hash = Column(String, nullable=False, unique=True)
+    invited_by_user_id = Column(String, nullable=False)
+    status = Column(String, default="pending")  # pending, accepted, expired, revoked
+    expires_at = Column(DateTime, nullable=False)
+    accepted_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class Warranty(Base):

@@ -196,7 +196,20 @@ const FamilyView = (() => {
     const content = document.getElementById('family-content');
     if (!content) return;
 
+    // Avatar row of household members
+    const avatarRow = members.map(m => {
+      const name = m.display_name || m.username || m.user_id || '';
+      const initial = name.charAt(0).toUpperCase() || '?';
+      const uid = currentUserId();
+      const isMe = String(m.user_id || m.id) === String(uid);
+      return `<div class="family-avatar${isMe ? ' family-avatar--me' : ''}" title="${esc(name)}">
+        <span class="family-avatar-initial">${esc(initial)}</span>
+        <span class="family-avatar-name">${esc(name.split(' ')[0])}</span>
+      </div>`;
+    }).join('');
+
     content.innerHTML = `
+      <div class="family-avatar-row">${avatarRow}</div>
       <div class="family-tabs">
         <button class="family-tab ${activeTab === 'members' ? 'active' : ''}" onclick="FamilyView.switchTab('members')">
           <span class="material-symbols-outlined mi-sm">group</span> Mitglieder
@@ -673,6 +686,9 @@ const FamilyView = (() => {
     let filtered = tasks;
     if (taskFilter === 'mine' && uid) {
       filtered = tasks.filter(t => String(t.assigned_to) === String(uid));
+    } else if (taskFilter !== 'all') {
+      // Per-member filter
+      filtered = tasks.filter(t => String(t.assigned_to) === taskFilter);
     }
 
     if (filtered.length === 0) {
@@ -681,29 +697,50 @@ const FamilyView = (() => {
         ${tasks.length === 0 ? 'Noch keine Aufgaben.' : 'Keine passenden Aufgaben.'}
       </div>`;
     } else {
-      filtered.forEach(t => {
+      // Kanban-style columns
+      const open = filtered.filter(t => t.status !== 'in_progress' && t.status !== 'done');
+      const inProgress = filtered.filter(t => t.status === 'in_progress');
+      const done = filtered.filter(t => t.status === 'done');
+
+      function renderTaskCard(t) {
         const assignee = t.assigned_to ? memberName(t.assigned_to) : null;
-        html += `
-          <div class="card family-task-item">
-            <div class="family-task-main">
+        const initial = assignee ? assignee.charAt(0).toUpperCase() : '';
+        return `
+          <div class="card family-task-card">
+            <div class="family-task-card-header">
               <span class="family-task-title">${esc(t.title)}</span>
-              <div class="family-task-meta">
-                ${assignee ? `<span class="text-muted" style="font-size:0.8rem"><span class="material-symbols-outlined mi-sm">person</span>${esc(assignee)}</span>` : ''}
-                ${t.due_date ? `<span class="text-muted" style="font-size:0.8rem"><span class="material-symbols-outlined mi-sm">event</span>${formatDate(t.due_date)}</span>` : ''}
-              </div>
-              ${t.description ? `<div class="text-muted" style="font-size:0.85rem;margin-top:2px">${esc(t.description)}</div>` : ''}
+              ${assignee ? `<span class="family-avatar family-avatar--sm" title="${esc(assignee)}"><span class="family-avatar-initial">${esc(initial)}</span></span>` : ''}
             </div>
-            <div class="family-task-actions">
-              ${taskStatusBadge(t)}
+            <div class="family-task-meta">
+              ${t.due_date ? `<span class="text-muted" style="font-size:0.8rem"><span class="material-symbols-outlined mi-sm">event</span>${formatDate(t.due_date)}</span>` : ''}
+              ${isOverdue(t.due_date, t.status) ? '<span class="badge badge-error" style="font-size:0.7rem">Überfällig</span>' : ''}
+            </div>
+            ${t.description ? `<div class="text-muted" style="font-size:0.82rem;margin-top:4px">${esc(t.description)}</div>` : ''}
+            <div class="family-task-actions" style="margin-top:6px">
               ${t.status !== 'done' ? `<button class="btn btn-sm btn-secondary" onclick="FamilyView.markTaskDone(${esc(t.id)})">
-                <span class="material-symbols-outlined mi-sm">check</span> Erledigt
+                <span class="material-symbols-outlined mi-sm">check</span>
               </button>` : ''}
               <button class="btn-icon" onclick="FamilyView.deleteTask(${esc(t.id)})" title="Löschen">
                 <span class="material-symbols-outlined" style="font-size:16px">delete</span>
               </button>
             </div>
           </div>`;
-      });
+      }
+
+      html += `<div class="family-kanban">
+        <div class="family-kanban-col">
+          <div class="family-kanban-header"><span class="badge badge-accent">Offen</span> <span class="text-muted">${open.length}</span></div>
+          ${open.map(renderTaskCard).join('')}
+        </div>
+        <div class="family-kanban-col">
+          <div class="family-kanban-header"><span class="badge badge-warning">In Arbeit</span> <span class="text-muted">${inProgress.length}</span></div>
+          ${inProgress.map(renderTaskCard).join('')}
+        </div>
+        <div class="family-kanban-col">
+          <div class="family-kanban-header"><span class="badge badge-success">Erledigt</span> <span class="text-muted">${done.length}</span></div>
+          ${done.map(renderTaskCard).join('')}
+        </div>
+      </div>`;
     }
 
     el.innerHTML = html;
