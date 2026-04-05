@@ -403,14 +403,19 @@ const OnboardingView = (() => {
           state.telegram_chat_id = (document.getElementById('ob-telegram-chat-id')?.value || '').trim();
         }
       } else if (step === TOTAL_STEPS) {
-        // Complete onboarding
-        await Api.post('/onboarding/complete', {
-          usage_type: state.usage_type,
-          household_name: state.household_name,
-          area: state.area,
-          notification_channel: state.notification_channel,
-          telegram_chat_id: state.telegram_chat_id || undefined,
-        });
+        // Save profile data via dedicated endpoint before completing
+        if (state.usage_type || state.household_name) {
+          const householdSize = state.usage_type === 'solo' ? 1 : state.usage_type === 'partner' ? 2 : 4;
+          try {
+            await Api.post('/onboarding/profile', {
+              name: state.household_name || '',
+              household_size: householdSize,
+              has_side_business: false,
+            });
+          } catch { /* non-blocking, profile may already be saved */ }
+        }
+        // Complete onboarding (endpoint accepts no body)
+        await Api.post('/onboarding/complete');
         window.location.hash = '#/dashboard';
         return;
       }
@@ -423,7 +428,7 @@ const OnboardingView = (() => {
 
   async function handleSkip(container) {
     if (state.step === TOTAL_STEPS) {
-      try { await Api.post('/onboarding/complete', {}); } catch { /* ignore */ }
+      try { await Api.post('/onboarding/complete'); } catch { /* ignore */ }
       window.location.hash = '#/dashboard';
       return;
     }
