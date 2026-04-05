@@ -29,6 +29,16 @@ class EventCreate(BaseModel):
     metadata: Optional[str] = None
 
 
+class EventOut(BaseModel):
+    id: int
+    event_type: str
+    user_key: Optional[str] = None
+    metadata: Optional[str] = None
+    created_at: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
 class ErrorCreate(BaseModel):
     source: str = Field(..., description="Fehler-Quelle: 'frontend' oder 'backend'")
     message: str
@@ -37,21 +47,57 @@ class ErrorCreate(BaseModel):
     user_agent: Optional[str] = None
 
 
+class ErrorOut(BaseModel):
+    id: int
+    source: str
+    message: str
+    stack_trace: Optional[str] = None
+    user_key: Optional[str] = None
+    url: Optional[str] = None
+    user_agent: Optional[str] = None
+    created_at: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class MonitoringHealthOut(BaseModel):
+    status: str
+    module: str
+
+
+class MonitoringMetrics(BaseModel):
+    activation_rate: float = 0.0
+    login_rate: float = 0.0
+    onboarding_rate: float = 0.0
+
+
+class MonitoringErrors(BaseModel):
+    total: int = 0
+    last_24h: int = 0
+
+
+class MonitoringDashboardOut(BaseModel):
+    event_counts: dict[str, int] = {}
+    total_events: int = 0
+    metrics: MonitoringMetrics = MonitoringMetrics()
+    errors: MonitoringErrors = MonitoringErrors()
+
+
 # --- Endpoints ---
 
 
-@router.get("/health")
+@router.get("/health", response_model=MonitoringHealthOut)
 async def health():
     return {"status": "ok", "module": "monitoring"}
 
 
-@router.get("/dashboard")
+@router.get("/dashboard", response_model=MonitoringDashboardOut)
 async def get_dashboard(user_key: Annotated[str, Depends(get_current_user)]):
     """KPIs und Aktivierungsmetriken abrufen."""
     return _service.get_dashboard()
 
 
-@router.post("/events")
+@router.post("/events", status_code=201, response_model=EventOut)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def track_event(
     request: Request,
@@ -70,7 +116,7 @@ async def track_event(
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@router.post("/errors")
+@router.post("/errors", status_code=201, response_model=ErrorOut)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def log_error(
     request: Request,
@@ -89,7 +135,7 @@ async def log_error(
     return result
 
 
-@router.get("/errors")
+@router.get("/errors", response_model=list[ErrorOut])
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def get_errors(
     request: Request,
@@ -101,7 +147,7 @@ async def get_errors(
     return _service.get_errors(limit=limit, source=source)
 
 
-@router.get("/events")
+@router.get("/events", response_model=list[EventOut])
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def get_events(
     request: Request,

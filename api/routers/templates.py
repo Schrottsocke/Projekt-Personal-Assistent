@@ -96,7 +96,7 @@ async def delete_template(
 # ── Apply ────────────────────────────────────────────────────────────
 
 
-@router.post("/{template_id}/apply", response_model=ApplyResult)
+@router.post("/{template_id}/apply", response_model=ApplyResult, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def apply_template(
     request: Request,
@@ -186,6 +186,7 @@ async def _apply_checklist(user_key: str, content: dict, task_svc) -> tuple[list
 
 
 async def _apply_mealplan(user_key: str, content: dict) -> tuple[list[dict], str]:
+    # TODO(#778): Direct DB access – extract into MealPlanService (src/services/)
     from src.services.database import MealPlanEntry, get_db
 
     recipe_title = content.get("recipe_title", "").strip()
