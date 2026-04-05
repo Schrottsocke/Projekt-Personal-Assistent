@@ -52,7 +52,12 @@ def _resolve_profile(profile: str) -> str:
     return _PROFILE_MAP.get(profile.lower(), profile)
 
 
-@router.post("/travel-time", response_model=TravelTimeResponse)
+@router.post(
+    "/travel-time",
+    response_model=TravelTimeResponse,
+    summary="Query: Fahrzeit berechnen",
+    description="Semantisch eine Leseabfrage (Query). Verwendet POST wegen des strukturierten Request-Body. Berechnet die Fahrzeit zwischen zwei Orten.",
+)
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def travel_time(
     request: Request,
@@ -60,7 +65,7 @@ async def travel_time(
     user_key: Annotated[str, Depends(get_current_user)],
     mobility_svc=Depends(get_mobility_service),
 ):
-    """Berechnet die Fahrzeit zwischen zwei Orten."""
+    """Berechnet die Fahrzeit zwischen zwei Orten (Query-Semantik, kein Schreibvorgang)."""
     ors_profile = _resolve_profile(body.profile)
     result = await mobility_svc.get_travel_time(
         origin=body.origin,
@@ -86,7 +91,12 @@ async def travel_time(
     )
 
 
-@router.post("/departure-time", response_model=DepartureTimeResponse)
+@router.post(
+    "/departure-time",
+    response_model=DepartureTimeResponse,
+    summary="Query: Abfahrtszeit berechnen",
+    description="Semantisch eine Leseabfrage (Query). Verwendet POST wegen des strukturierten Request-Body. Berechnet wann man losfahren muss um puenktlich anzukommen.",
+)
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def departure_time(
     request: Request,
@@ -94,7 +104,7 @@ async def departure_time(
     user_key: Annotated[str, Depends(get_current_user)],
     mobility_svc=Depends(get_mobility_service),
 ):
-    """Berechnet wann man losfahren muss um puenktlich anzukommen."""
+    """Berechnet wann man losfahren muss um puenktlich anzukommen (Query-Semantik, kein Schreibvorgang)."""
     ors_profile = _resolve_profile(body.profile)
     result = await mobility_svc.get_departure_time(
         destination=body.destination,
