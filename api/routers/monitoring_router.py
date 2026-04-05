@@ -90,7 +90,9 @@ async def log_error(
 
 
 @router.get("/errors")
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def get_errors(
+    request: Request,
     user_key: Annotated[str, Depends(get_current_user)],
     limit: int = 50,
     source: Optional[str] = None,
@@ -100,7 +102,9 @@ async def get_errors(
 
 
 @router.get("/events")
+@limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def get_events(
+    request: Request,
     user_key: Annotated[str, Depends(get_current_user)],
     event_type: Optional[str] = None,
     limit: int = 100,

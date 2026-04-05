@@ -536,24 +536,36 @@ Wenn keine Aufgaben/Termine/Fristen gefunden, leere Listen verwenden."""
     @staticmethod
     def send_invite_email(to: str, invite_link: str, display_name: str) -> bool:
         """Sendet eine Einladungs-E-Mail."""
-        html = EmailService._render_template("invite.html", {
-            "invite_link": invite_link,
-            "display_name": display_name,
-        })
+        try:
+            html = EmailService._render_template("invite.html", {
+                "invite_link": invite_link,
+                "display_name": display_name,
+            })
+        except FileNotFoundError:
+            logger.error("Einladungs-E-Mail-Template fehlt – Versand abgebrochen.")
+            return False
         return EmailService._send_smtp(to, f"Einladung zu DualMind von {display_name}", html)
 
     @staticmethod
     def send_password_reset_email(to: str, reset_link: str) -> bool:
         """Sendet eine Passwort-Reset-E-Mail."""
-        html = EmailService._render_template("password_reset.html", {
-            "reset_link": reset_link,
-        })
+        try:
+            html = EmailService._render_template("password_reset.html", {
+                "reset_link": reset_link,
+            })
+        except FileNotFoundError:
+            logger.error("Passwort-Reset-E-Mail-Template fehlt – Versand abgebrochen.")
+            return False
         return EmailService._send_smtp(to, "Passwort zuruecksetzen – DualMind", html)
 
     @staticmethod
     def send_activation_email(to: str, activation_link: str) -> bool:
         """Sendet eine Konto-Aktivierungs-E-Mail."""
-        html = EmailService._render_template("activation.html", {
-            "activation_link": activation_link,
-        })
+        try:
+            html = EmailService._render_template("activation.html", {
+                "activation_link": activation_link,
+            })
+        except FileNotFoundError:
+            logger.error("Aktivierungs-E-Mail-Template fehlt – Versand abgebrochen.")
+            return False
         return EmailService._send_smtp(to, "Konto aktivieren – DualMind", html)
