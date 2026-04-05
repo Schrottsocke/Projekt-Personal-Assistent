@@ -9,9 +9,7 @@ Getestet:
 """
 
 import asyncio
-import json
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -256,9 +254,7 @@ class TestCRUD:
         """Rechnung kann aktualisiert werden."""
         data = {"recipient_name": "Old", "items": [{"quantity": 1, "unit_price": 100.0}]}
         created = _run(invoice_service.create_invoice("testuser", data))
-        updated = _run(
-            invoice_service.update_invoice("testuser", created["id"], {"recipient_name": "New"})
-        )
+        updated = _run(invoice_service.update_invoice("testuser", created["id"], {"recipient_name": "New"}))
         assert updated["recipient_name"] == "New"
 
     def test_delete_invoice(self, invoice_service):

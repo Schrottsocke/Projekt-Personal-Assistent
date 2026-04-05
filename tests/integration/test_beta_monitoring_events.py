@@ -3,7 +3,6 @@
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
 
 
 class TestMonitoringService(unittest.TestCase):
@@ -15,17 +14,22 @@ class TestMonitoringService(unittest.TestCase):
         self._db_path = os.path.join(self._tmpdir, "monitoring.db")
 
         import src.services.monitoring_service as mod
+
         self._original_db_path = mod.DB_PATH
         from pathlib import Path
+
         mod.DB_PATH = Path(self._db_path)
 
         from src.services.monitoring_service import MonitoringService
+
         self.service = MonitoringService()
 
     def tearDown(self):
         import src.services.monitoring_service as mod
+
         mod.DB_PATH = self._original_db_path
         import shutil
+
         shutil.rmtree(self._tmpdir, ignore_errors=True)
 
     def test_track_valid_event(self):
@@ -96,6 +100,7 @@ class TestMonitoringService(unittest.TestCase):
     def test_all_valid_event_types(self):
         """Alle definierten Event-Typen koennen getracked werden."""
         from src.services.monitoring_service import VALID_EVENT_TYPES
+
         for event_type in VALID_EVENT_TYPES:
             result = self.service.track_event(event_type)
             self.assertEqual(result["event_type"], event_type)

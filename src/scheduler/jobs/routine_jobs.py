@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -45,12 +45,14 @@ async def check_routine_reminders():
                         is_due = last_date <= today - timedelta(days=30)
 
                     if is_due:
-                        results.append({
-                            "id": routine.id,
-                            "name": routine.name,
-                            "interval": routine.interval,
-                            "user_key": user_key,
-                        })
+                        results.append(
+                            {
+                                "id": routine.id,
+                                "name": routine.name,
+                                "interval": routine.interval,
+                                "user_key": user_key,
+                            }
+                        )
                 return results
 
         due_routines = await asyncio.to_thread(_query_due_routines)

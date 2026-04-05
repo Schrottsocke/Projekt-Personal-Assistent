@@ -87,7 +87,9 @@ async def create_invitation(
 @router.get("/invitations", response_model=InvitationListResponse)
 async def list_invitations(
     user_key: Annotated[str, Depends(get_current_user)],
-    status_filter: Optional[str] = Query(None, alias="status", description="Filter nach Status: pending, accepted, expired, revoked"),
+    status_filter: Optional[str] = Query(
+        None, alias="status", description="Filter nach Status: pending, accepted, expired, revoked"
+    ),
 ):
     """Listet alle Einladungen auf (nur Admin). Optional nach Status filtern."""
     if user_key not in _ADMIN_USERS:
@@ -150,9 +152,7 @@ async def accept_invitation(
             )
 
         # Passwort hashen (PBKDF2-SHA256)
-        password_hash = hashlib.pbkdf2_hmac(
-            "sha256", body.password.encode(), user_key.encode(), 100_000
-        ).hex()
+        password_hash = hashlib.pbkdf2_hmac("sha256", body.password.encode(), user_key.encode(), 100_000).hex()
 
         # UserProfile erstellen
         profile = UserProfile(
@@ -194,7 +194,9 @@ async def resend_invitation(
 ):
     """Generiert einen neuen Token fuer eine bestehende Einladung (nur Admin)."""
     if user_key not in _ADMIN_USERS:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Nur Admins duerfen Einladungen erneut senden.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN, detail="Nur Admins duerfen Einladungen erneut senden."
+        )
 
     with get_db()() as db:
         invitation = db.query(TestUserInvitation).filter(TestUserInvitation.id == invitation_id).first()

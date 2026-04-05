@@ -9,7 +9,6 @@ Usage:
     python scripts/seed_demo.py
 """
 
-import json
 import logging
 import sys
 from datetime import date, datetime, timedelta, timezone
@@ -19,7 +18,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.services.database import (
-    Base,
     Budget,
     BudgetCategory,
     Contract,
@@ -89,6 +87,7 @@ def _date_future(days: int) -> date:
 
 # ── Cleanup ────────────────────────────────────────────────────────────────
 
+
 def cleanup_demo_data(db):
     """Loescht alle Demo-Daten (user_key LIKE 'demo_%')."""
     demo_keys = [u["user_key"] for u in DEMO_USERS]
@@ -108,7 +107,9 @@ def cleanup_demo_data(db):
         db.query(Contract).filter(Contract.user_id.in_(demo_user_ids)).delete(synchronize_session=False)
         db.query(Budget).filter(Budget.user_id.in_(demo_user_ids)).delete(synchronize_session=False)
         db.query(BudgetCategory).filter(BudgetCategory.user_id.in_(demo_user_ids)).delete(synchronize_session=False)
-        db.query(HouseholdDocument).filter(HouseholdDocument.user_id.in_(demo_user_ids)).delete(synchronize_session=False)
+        db.query(HouseholdDocument).filter(HouseholdDocument.user_id.in_(demo_user_ids)).delete(
+            synchronize_session=False
+        )
         db.query(InventoryItem).filter(InventoryItem.user_id.in_(demo_user_ids)).delete(synchronize_session=False)
 
     for key in demo_keys:
@@ -121,6 +122,7 @@ def cleanup_demo_data(db):
 
 
 # ── Seed functions ─────────────────────────────────────────────────────────
+
 
 def seed_users(db) -> dict[str, int]:
     """Erstellt Demo-User und gibt {user_key: user_id} zurueck."""
@@ -175,10 +177,17 @@ def seed_transactions(db, user_ids: dict[str, int]):
     ]
 
     for user_id, dt, amount, category, description, source in transactions:
-        db.add(Transaction(
-            user_id=user_id, date=dt, amount=amount, currency="EUR",
-            category=category, description=description, source=source,
-        ))
+        db.add(
+            Transaction(
+                user_id=user_id,
+                date=dt,
+                amount=amount,
+                currency="EUR",
+                category=category,
+                description=description,
+                source=source,
+            )
+        )
     db.flush()
     logger.info("%d Transaktionen erstellt.", len(transactions))
 
@@ -189,17 +198,29 @@ def seed_contracts(db, user_ids: dict[str, int]):
 
     contracts = [
         Contract(
-            user_id=max_id, name="Mobilfunk Tarif L", provider="Telekom",
-            category="Telekommunikation", amount=29.99, interval="monthly",
-            start_date=_date_ago(365), end_date=_date_future(365),
-            cancellation_days=90, status="active",
+            user_id=max_id,
+            name="Mobilfunk Tarif L",
+            provider="Telekom",
+            category="Telekommunikation",
+            amount=29.99,
+            interval="monthly",
+            start_date=_date_ago(365),
+            end_date=_date_future(365),
+            cancellation_days=90,
+            status="active",
             notes="24-Monats-Vertrag, 10 GB Daten",
         ),
         Contract(
-            user_id=max_id, name="Haftpflichtversicherung", provider="HUK-COBURG",
-            category="Versicherung", amount=89.00, interval="yearly",
-            start_date=_date_ago(730), cancellation_days=30,
-            status="active", notes="Familien-Haftpflicht",
+            user_id=max_id,
+            name="Haftpflichtversicherung",
+            provider="HUK-COBURG",
+            category="Versicherung",
+            amount=89.00,
+            interval="yearly",
+            start_date=_date_ago(730),
+            cancellation_days=30,
+            status="active",
+            notes="Familien-Haftpflicht",
         ),
     ]
     for c in contracts:
@@ -214,18 +235,27 @@ def seed_invoices(db, user_ids: dict[str, int]):
 
     invoice_data = [
         {
-            "user_id": max_id, "invoice_number": "RE-2026-001",
-            "recipient": "Hausverwaltung Sonnenberg", "issue_date": _date_ago(30),
-            "total": 85.00, "due_date": _date_ago(0), "status": "paid",
-            "payment_date": _date_ago(5), "notes": "Nebenkostenabrechnung",
+            "user_id": max_id,
+            "invoice_number": "RE-2026-001",
+            "recipient": "Hausverwaltung Sonnenberg",
+            "issue_date": _date_ago(30),
+            "total": 85.00,
+            "due_date": _date_ago(0),
+            "status": "paid",
+            "payment_date": _date_ago(5),
+            "notes": "Nebenkostenabrechnung",
             "items": [
                 ("Nebenkostenabrechnung 2025", 1, 85.00),
             ],
         },
         {
-            "user_id": max_id, "invoice_number": "RE-2026-002",
-            "recipient": "Stadtwerke Musterstadt", "issue_date": _date_ago(14),
-            "total": 128.50, "due_date": _date_future(14), "status": "open",
+            "user_id": max_id,
+            "invoice_number": "RE-2026-002",
+            "recipient": "Stadtwerke Musterstadt",
+            "issue_date": _date_ago(14),
+            "total": 128.50,
+            "due_date": _date_future(14),
+            "status": "open",
             "notes": "Strom-Jahresabrechnung",
             "items": [
                 ("Stromverbrauch 2025 Nachzahlung", 1, 98.50),
@@ -233,9 +263,13 @@ def seed_invoices(db, user_ids: dict[str, int]):
             ],
         },
         {
-            "user_id": max_id, "invoice_number": "RE-2026-003",
-            "recipient": "Zahnarztpraxis Dr. Zahn", "issue_date": _date_ago(45),
-            "total": 180.00, "due_date": _date_ago(15), "status": "overdue",
+            "user_id": max_id,
+            "invoice_number": "RE-2026-003",
+            "recipient": "Zahnarztpraxis Dr. Zahn",
+            "issue_date": _date_ago(45),
+            "total": 180.00,
+            "due_date": _date_ago(15),
+            "status": "overdue",
             "notes": "Zahnreinigung und Kontrolluntersuchung",
             "items": [
                 ("Professionelle Zahnreinigung", 1, 120.00),
@@ -243,9 +277,13 @@ def seed_invoices(db, user_ids: dict[str, int]):
             ],
         },
         {
-            "user_id": max_id, "invoice_number": "RE-2026-004",
-            "recipient": "KFZ-Werkstatt Motorfix", "issue_date": _date_ago(7),
-            "total": 345.80, "due_date": _date_future(21), "status": "open",
+            "user_id": max_id,
+            "invoice_number": "RE-2026-004",
+            "recipient": "KFZ-Werkstatt Motorfix",
+            "issue_date": _date_ago(7),
+            "total": 345.80,
+            "due_date": _date_future(21),
+            "status": "open",
             "notes": "Inspektion und Oelwechsel",
             "items": [
                 ("Inspektion nach Herstellervorgabe", 1, 189.00),
@@ -262,10 +300,15 @@ def seed_invoices(db, user_ids: dict[str, int]):
         db.add(invoice)
         db.flush()
         for desc, qty, price in items:
-            db.add(InvoiceItem(
-                invoice_id=invoice.id, description=desc,
-                quantity=qty, unit_price=price, total=qty * price,
-            ))
+            db.add(
+                InvoiceItem(
+                    invoice_id=invoice.id,
+                    description=desc,
+                    quantity=qty,
+                    unit_price=price,
+                    total=qty * price,
+                )
+            )
     db.flush()
     logger.info("%d Rechnungen erstellt.", len(invoice_data))
 
@@ -282,10 +325,15 @@ def seed_budgets(db, user_ids: dict[str, int]):
         ("Kleidung", 100.00, "#9c27b0", "checkroom"),
     ]
     for name, limit_val, color, icon in categories:
-        db.add(BudgetCategory(
-            user_id=max_id, name=name, monthly_limit=limit_val,
-            color=color, icon=icon,
-        ))
+        db.add(
+            BudgetCategory(
+                user_id=max_id,
+                name=name,
+                monthly_limit=limit_val,
+                color=color,
+                icon=icon,
+            )
+        )
     db.flush()
     logger.info("%d Budget-Kategorien erstellt.", len(categories))
 
@@ -296,26 +344,37 @@ def seed_documents(db, user_ids: dict[str, int]):
 
     documents = [
         HouseholdDocument(
-            user_id=max_id, title="Nebenkostenabrechnung 2025",
-            category="invoice", issuer="Hausverwaltung Sonnenberg",
-            amount=85.00, deadline_date=_date_ago(0),
+            user_id=max_id,
+            title="Nebenkostenabrechnung 2025",
+            category="invoice",
+            issuer="Hausverwaltung Sonnenberg",
+            amount=85.00,
+            deadline_date=_date_ago(0),
             ocr_text="Nebenkostenabrechnung fuer das Jahr 2025\nMieter: Familie Beispiel\nGesamt: 85,00 EUR\nFaellig bis: sofort",
         ),
         HouseholdDocument(
-            user_id=max_id, title="KFZ-Versicherungsschein 2026",
-            category="insurance", issuer="HUK-COBURG",
-            amount=420.00, deadline_date=_date_future(330),
+            user_id=max_id,
+            title="KFZ-Versicherungsschein 2026",
+            category="insurance",
+            issuer="HUK-COBURG",
+            amount=420.00,
+            deadline_date=_date_future(330),
             ocr_text="Versicherungsschein Nr. KFZ-2026-88432\nFahrzeug: VW Golf VIII\nJahresbeitrag: 420,00 EUR\nGueltig bis: 31.12.2026",
         ),
         HouseholdDocument(
-            user_id=max_id, title="Garantieschein Waschmaschine",
-            category="warranty", issuer="Bosch Hausgeraete",
-            amount=None, deadline_date=_date_future(540),
+            user_id=max_id,
+            title="Garantieschein Waschmaschine",
+            category="warranty",
+            issuer="Bosch Hausgeraete",
+            amount=None,
+            deadline_date=_date_future(540),
             ocr_text="Garantieschein\nProdukt: Bosch WAX32M00 Waschmaschine\nKaufdatum: 15.03.2025\nGarantie: 2 Jahre\nSerien-Nr: BSH-WM-2025-44821",
         ),
         HouseholdDocument(
-            user_id=max_id, title="Mietvertrag Wohnung",
-            category="other", issuer="Hausverwaltung Sonnenberg",
+            user_id=max_id,
+            title="Mietvertrag Wohnung",
+            category="other",
+            issuer="Hausverwaltung Sonnenberg",
             amount=750.00,
             ocr_text="Mietvertrag\nVermieter: Sonnenberg Immobilien GmbH\nMieter: Max Beispiel\nKaltmiete: 750,00 EUR\nNebenkosten: 180,00 EUR\nBeginn: 01.04.2023",
         ),
@@ -336,7 +395,14 @@ def seed_inventory(db, user_ids: dict[str, int]):
         ("IKEA Sofa Kivik 3-Sitzer", "Wohnzimmer", "Bezug: Grau, waschbar", 699.00, _date_ago(365), None),
         ("Sonos Beam Soundbar", "Wohnzimmer", "Dolby Atmos, WLAN", 449.00, _date_ago(90), "SN-SONOS-2025"),
         # Kueche
-        ("Bosch WAX32M00 Waschmaschine", "Kueche", "8kg, 1600 U/min, Energieklasse A", 629.00, _date_ago(300), "BSH-WM-2025-44821"),
+        (
+            "Bosch WAX32M00 Waschmaschine",
+            "Kueche",
+            "8kg, 1600 U/min, Energieklasse A",
+            629.00,
+            _date_ago(300),
+            "BSH-WM-2025-44821",
+        ),
         ("Siemens Kuehlschrank", "Kueche", "No-Frost, 300L", 549.00, _date_ago(500), None),
         ("KitchenAid Kuechenmaschine", "Kueche", "Artisan 5KSM175, Rot", 479.00, _date_ago(150), "KA-ART-2025"),
         # Arbeitszimmer
@@ -352,10 +418,17 @@ def seed_inventory(db, user_ids: dict[str, int]):
     ]
 
     for name, room, desc, value, purchase, serial in items:
-        db.add(InventoryItem(
-            user_id=max_id, name=name, room=room, description=desc,
-            value=value, purchase_date=purchase, serial_number=serial,
-        ))
+        db.add(
+            InventoryItem(
+                user_id=max_id,
+                name=name,
+                room=room,
+                description=desc,
+                value=value,
+                purchase_date=purchase,
+                serial_number=serial,
+            )
+        )
     db.flush()
     logger.info("%d Inventar-Gegenstaende erstellt.", len(items))
 
@@ -364,32 +437,77 @@ def seed_tasks(db):
     """Erstellt Aufgaben: offene, erledigte, wiederkehrende."""
     tasks = [
         # Max – offene Aufgaben
-        Task(user_key="demo_max", title="Nebenkostenabrechnung pruefen", priority="high",
-             due_date=_dt_ago(-2), status="open"),
-        Task(user_key="demo_max", title="Auto zur Inspektion bringen", priority="medium",
-             due_date=_dt_ago(-7), status="open"),
-        Task(user_key="demo_max", title="Geburtstag Oma – Geschenk besorgen", priority="high",
-             due_date=_dt_ago(-14), status="open"),
-        Task(user_key="demo_max", title="Steuererklärung 2025 vorbereiten", priority="low",
-             due_date=_dt_ago(-60), status="open"),
+        Task(
+            user_key="demo_max",
+            title="Nebenkostenabrechnung pruefen",
+            priority="high",
+            due_date=_dt_ago(-2),
+            status="open",
+        ),
+        Task(
+            user_key="demo_max",
+            title="Auto zur Inspektion bringen",
+            priority="medium",
+            due_date=_dt_ago(-7),
+            status="open",
+        ),
+        Task(
+            user_key="demo_max",
+            title="Geburtstag Oma – Geschenk besorgen",
+            priority="high",
+            due_date=_dt_ago(-14),
+            status="open",
+        ),
+        Task(
+            user_key="demo_max",
+            title="Steuererklärung 2025 vorbereiten",
+            priority="low",
+            due_date=_dt_ago(-60),
+            status="open",
+        ),
         # Max – erledigte Aufgaben
-        Task(user_key="demo_max", title="Waschmaschine entkalken", priority="low",
-             status="done", last_completed_at=_dt_ago(5)),
-        Task(user_key="demo_max", title="Muell rausbringen", priority="medium",
-             status="done", recurrence="weekly", last_completed_at=_dt_ago(1)),
+        Task(
+            user_key="demo_max",
+            title="Waschmaschine entkalken",
+            priority="low",
+            status="done",
+            last_completed_at=_dt_ago(5),
+        ),
+        Task(
+            user_key="demo_max",
+            title="Muell rausbringen",
+            priority="medium",
+            status="done",
+            recurrence="weekly",
+            last_completed_at=_dt_ago(1),
+        ),
         # Lisa – offene Aufgaben
-        Task(user_key="demo_lisa", title="Fotokurs Hausaufgabe abgeben", priority="high",
-             due_date=_dt_ago(-3), status="open"),
-        Task(user_key="demo_lisa", title="Kinderzimmer aufraumen", priority="medium",
-             status="open"),
+        Task(
+            user_key="demo_lisa",
+            title="Fotokurs Hausaufgabe abgeben",
+            priority="high",
+            due_date=_dt_ago(-3),
+            status="open",
+        ),
+        Task(user_key="demo_lisa", title="Kinderzimmer aufraumen", priority="medium", status="open"),
         # Lisa – erledigte
-        Task(user_key="demo_lisa", title="Yoga-Matte bestellen", priority="low",
-             status="done", last_completed_at=_dt_ago(10)),
+        Task(
+            user_key="demo_lisa",
+            title="Yoga-Matte bestellen",
+            priority="low",
+            status="done",
+            last_completed_at=_dt_ago(10),
+        ),
         # Routinen (wiederkehrend)
-        Task(user_key="demo_max", title="Wocheneinkauf planen", priority="medium",
-             recurrence="weekly", status="open"),
-        Task(user_key="demo_lisa", title="Blumen giessen", priority="low",
-             recurrence="daily", status="open", last_completed_at=_dt_ago(1)),
+        Task(user_key="demo_max", title="Wocheneinkauf planen", priority="medium", recurrence="weekly", status="open"),
+        Task(
+            user_key="demo_lisa",
+            title="Blumen giessen",
+            priority="low",
+            recurrence="daily",
+            status="open",
+            last_completed_at=_dt_ago(1),
+        ),
     ]
 
     for t in tasks:
@@ -414,15 +532,23 @@ def seed_shopping(db):
     ]
 
     for name, qty, unit, category, checked in items:
-        db.add(ShoppingItem(
-            user_key="demo_max", name=name, quantity=qty, unit=unit,
-            category=category, checked=checked, source="seed",
-        ))
+        db.add(
+            ShoppingItem(
+                user_key="demo_max",
+                name=name,
+                quantity=qty,
+                unit=unit,
+                category=category,
+                checked=checked,
+                source="seed",
+            )
+        )
     db.flush()
     logger.info("%d Einkaufsliste-Eintraege erstellt.", len(items))
 
 
 # ── Main ───────────────────────────────────────────────────────────────────
+
 
 def run_seed():
     """Fuehrt das komplette Seeding durch."""

@@ -4,8 +4,6 @@ Prueft, dass seed_demo.py deterministisch und idempotent laeuft
 und die erwarteten Daten in der Datenbank anlegt.
 """
 
-import pytest
-
 from src.services.database import (
     BudgetCategory,
     Contract,
@@ -19,7 +17,7 @@ from src.services.database import (
     UserProfile,
     get_db,
 )
-from scripts.seed_demo import cleanup_demo_data, run_seed, seed_users, DEMO_USERS
+from scripts.seed_demo import cleanup_demo_data, run_seed, DEMO_USERS
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -54,9 +52,7 @@ class TestSeedDemo:
         run_seed()
 
         with get_db()() as db:
-            profiles = db.query(UserProfile).filter(
-                UserProfile.user_key.in_(["demo_max", "demo_lisa"])
-            ).all()
+            profiles = db.query(UserProfile).filter(UserProfile.user_key.in_(["demo_max", "demo_lisa"])).all()
             user_ids = [p.id for p in profiles]
             count = db.query(Transaction).filter(Transaction.user_id.in_(user_ids)).count()
             assert count >= 20, f"Erwartet >= 20 Transaktionen, gefunden: {count}"
@@ -143,9 +139,9 @@ class TestSeedDemo:
         run_seed()
 
         with get_db()() as db:
-            user_count = db.query(UserProfile).filter(
-                UserProfile.user_key.in_(["demo_max", "demo_lisa", "demo_finn"])
-            ).count()
+            user_count = (
+                db.query(UserProfile).filter(UserProfile.user_key.in_(["demo_max", "demo_lisa", "demo_finn"])).count()
+            )
             assert user_count == 3, f"Erwartet 3 User nach doppeltem Seed, gefunden: {user_count}"
 
     def test_cleanup_removes_all_demo_data(self, client):

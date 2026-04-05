@@ -29,14 +29,16 @@ async def check_document_deadlines():
                 )
                 results = []
                 for doc, user_key in docs:
-                    results.append({
-                        "id": doc.id,
-                        "title": doc.title,
-                        "category": doc.category,
-                        "deadline_date": doc.deadline_date.isoformat() if doc.deadline_date else "",
-                        "issuer": doc.issuer,
-                        "user_key": user_key,
-                    })
+                    results.append(
+                        {
+                            "id": doc.id,
+                            "title": doc.title,
+                            "category": doc.category,
+                            "deadline_date": doc.deadline_date.isoformat() if doc.deadline_date else "",
+                            "issuer": doc.issuer,
+                            "user_key": user_key,
+                        }
+                    )
                 return results
 
         upcoming = await asyncio.to_thread(_query_documents)

@@ -1,8 +1,6 @@
 """Integration-Tests fuer Household Documents Upload/Download/Delete (#688)."""
 
 import io
-import pytest
-from unittest.mock import AsyncMock, patch
 
 
 class TestHouseholdDocumentsUpload:

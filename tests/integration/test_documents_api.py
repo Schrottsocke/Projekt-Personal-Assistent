@@ -8,10 +8,6 @@ Getestet:
 - Auth-Schutz
 """
 
-import io
-
-import pytest
-
 
 class TestDocumentsListEndpoint:
     """GET /documents – Dokumente auflisten."""

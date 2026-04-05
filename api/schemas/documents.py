@@ -32,6 +32,7 @@ class DocumentListResponse(BaseModel):
 
 class DocumentActionResponse(BaseModel):
     """Generic response for document follow-up actions."""
+
     status: str
     action: str
     doc_id: int

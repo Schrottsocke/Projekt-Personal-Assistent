@@ -10,7 +10,7 @@ Getestet:
 
 import asyncio
 from datetime import date
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -22,9 +22,7 @@ import pytest
 def ocr_service():
     with patch("src.services.ocr_service.settings") as mock_settings:
         mock_settings.OCR_CONFIDENCE_THRESHOLD = 70
-        with patch.object(
-            _ocr_module().OcrService, "_check_tesseract", return_value=False
-        ):
+        with patch.object(_ocr_module().OcrService, "_check_tesseract", return_value=False):
             svc = _ocr_module().OcrService()
     return svc
 
@@ -32,6 +30,7 @@ def ocr_service():
 def _ocr_module():
     """Import-Helfer, damit settings-Mock greift."""
     import src.services.ocr_service as m
+
     return m
 
 
@@ -42,9 +41,7 @@ class TestExtractDeadline:
     """Deadline-Extraktion aus OCR-Text."""
 
     def _run(self, svc, text: str):
-        return asyncio.get_event_loop().run_until_complete(
-            svc.extract_deadline(text)
-        )
+        return asyncio.get_event_loop().run_until_complete(svc.extract_deadline(text))
 
     def test_standard_date(self, ocr_service):
         text = "Bitte überweisen Sie bis zum 31.12.2030 den Betrag."
@@ -117,9 +114,7 @@ class TestClassifyDocument:
     """Keyword-basierte Dokumenten-Klassifikation."""
 
     def _run(self, svc, text: str):
-        return asyncio.get_event_loop().run_until_complete(
-            svc.classify_document(text)
-        )
+        return asyncio.get_event_loop().run_until_complete(svc.classify_document(text))
 
     def test_invoice(self, ocr_service):
         text = "Rechnung Nr. 12345\nRechnungsdatum: 01.01.2026\nNettobetrag: 100€\nUSt-ID: DE123"
@@ -163,9 +158,7 @@ class TestExtractText:
 
     def test_returns_dict_with_required_keys(self, ocr_service):
         """Ohne Tesseract und ohne AI-Service → 'none'-Fallback."""
-        result = asyncio.get_event_loop().run_until_complete(
-            ocr_service.extract_text(b"fake-image-bytes")
-        )
+        result = asyncio.get_event_loop().run_until_complete(ocr_service.extract_text(b"fake-image-bytes"))
         assert isinstance(result, dict)
         assert "text" in result
         assert "confidence" in result
@@ -185,18 +178,14 @@ class TestExtractTextFromFile:
         img_path = tmp_path / "test.png"
         img_path.write_bytes(b"fake-png-bytes")
 
-        with patch.object(
-            ocr_service, "extract_text", new_callable=AsyncMock
-        ) as mock_extract:
+        with patch.object(ocr_service, "extract_text", new_callable=AsyncMock) as mock_extract:
             mock_extract.return_value = {
                 "text": "Hello",
                 "confidence": 95.0,
                 "method": "tesseract",
                 "words_data": None,
             }
-            result = asyncio.get_event_loop().run_until_complete(
-                ocr_service.extract_text_from_file(str(img_path))
-            )
+            result = asyncio.get_event_loop().run_until_complete(ocr_service.extract_text_from_file(str(img_path)))
             mock_extract.assert_called_once()
             assert result["pages"] == 1
             assert result["text"] == "Hello"
@@ -218,7 +207,5 @@ class TestExtractTextFromFile:
                     "pages": 0,
                     "words_data": None,
                 }
-                result = asyncio.get_event_loop().run_until_complete(
-                    ocr_service.extract_text_from_file(str(pdf_path))
-                )
+                result = asyncio.get_event_loop().run_until_complete(ocr_service.extract_text_from_file(str(pdf_path)))
                 assert result["pages"] == 0

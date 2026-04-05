@@ -12,8 +12,6 @@ Getestet:
 
 import io
 
-import pytest
-
 
 class TestHouseholdDocumentsOCR:
     """OCR-Integration bei Dokument-Upload."""
