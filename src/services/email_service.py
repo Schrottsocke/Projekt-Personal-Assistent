@@ -1,12 +1,18 @@
 """
-Email Service: Gmail-Integration via Google OAuth2.
+Email Service: Gmail-Integration via Google OAuth2 + SMTP-Versand fuer System-Mails.
 Nutzt dieselben Google Credentials wie CalendarService und DriveService.
 Scopes: gmail.readonly + gmail.compose (kein Vollzugriff).
 Token-Dateien: data/gmail_token_{user_key}.json
+
+SMTP-Versand (Einladungen, Passwort-Reset, Aktivierung) nutzt Jinja2-Templates
+aus api/templates/email/ und wird ueber settings.SMTP_* konfiguriert.
 """
 
 import asyncio
 import logging
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Optional
 import base64
@@ -458,3 +464,96 @@ Wenn keine Aufgaben/Termine/Fristen gefunden, leere Listen verwenden."""
         body = email_data.get("body", email_data.get("snippet", ""))[:1500]
 
         return f"📧 *{subject}*\nVon: {sender}\nDatum: {date}\n\n{body}"
+
+    # ------------------------------------------------------------------
+    # SMTP-Versand (System-Mails: Einladungen, Passwort-Reset, Aktivierung)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _render_template(template_name: str, context: dict) -> str:
+        """Rendert ein Jinja2-Template aus api/templates/email/."""
+        template_dir = Path(__file__).parent.parent.parent / "api" / "templates" / "email"
+        template_path = template_dir / template_name
+        if not template_path.exists():
+            raise FileNotFoundError(f"E-Mail-Template nicht gefunden: {template_path}")
+        template_content = template_path.read_text(encoding="utf-8")
+        # Einfaches Template-Rendering ohne Jinja2-Dependency
+        result = template_content
+        for key, value in context.items():
+            result = result.replace("{{ " + key + " }}", str(value))
+        return result
+
+    @staticmethod
+    def _plaintext_from_html(html: str) -> str:
+        """Erzeugt einen Plaintext-Fallback aus HTML (vereinfacht)."""
+        import re
+        text = re.sub(r"<style[^>]*>.*?</style>", "", html, flags=re.DOTALL)
+        text = re.sub(r"<[^>]+>", "\n", text)
+        text = re.sub(r"\n{3,}", "\n\n", text)
+        return text.strip()
+
+    @staticmethod
+    def _send_smtp(to: str, subject: str, html_body: str) -> bool:
+        """Sendet eine E-Mail via SMTP. Gibt True bei Erfolg zurueck."""
+        smtp_host = settings.SMTP_HOST
+        smtp_port = settings.SMTP_PORT
+        smtp_user = settings.SMTP_USER
+        smtp_password = settings.SMTP_PASSWORD
+        from_name = settings.SMTP_FROM_NAME
+        from_email = settings.SMTP_FROM_EMAIL
+
+        if not smtp_host or not smtp_user:
+            logger.warning("SMTP nicht konfiguriert – E-Mail-Versand uebersprungen.")
+            return False
+
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"] = f"{from_name} <{from_email}>" if from_name else from_email
+        msg["To"] = to
+
+        plaintext = EmailService._plaintext_from_html(html_body)
+        msg.attach(MIMEText(plaintext, "plain", "utf-8"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
+
+        try:
+            if smtp_port == 465:
+                with smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15) as server:
+                    server.login(smtp_user, smtp_password)
+                    server.sendmail(from_email, [to], msg.as_string())
+            else:
+                with smtplib.SMTP(smtp_host, smtp_port, timeout=15) as server:
+                    server.ehlo()
+                    server.starttls()
+                    server.ehlo()
+                    server.login(smtp_user, smtp_password)
+                    server.sendmail(from_email, [to], msg.as_string())
+            logger.info("E-Mail gesendet an %s: %s", to, subject)
+            return True
+        except Exception as e:
+            logger.error("SMTP-Versand fehlgeschlagen an %s: %s", to, e)
+            return False
+
+    @staticmethod
+    def send_invite_email(to: str, invite_link: str, display_name: str) -> bool:
+        """Sendet eine Einladungs-E-Mail."""
+        html = EmailService._render_template("invite.html", {
+            "invite_link": invite_link,
+            "display_name": display_name,
+        })
+        return EmailService._send_smtp(to, f"Einladung zu DualMind von {display_name}", html)
+
+    @staticmethod
+    def send_password_reset_email(to: str, reset_link: str) -> bool:
+        """Sendet eine Passwort-Reset-E-Mail."""
+        html = EmailService._render_template("password_reset.html", {
+            "reset_link": reset_link,
+        })
+        return EmailService._send_smtp(to, "Passwort zuruecksetzen – DualMind", html)
+
+    @staticmethod
+    def send_activation_email(to: str, activation_link: str) -> bool:
+        """Sendet eine Konto-Aktivierungs-E-Mail."""
+        html = EmailService._render_template("activation.html", {
+            "activation_link": activation_link,
+        })
+        return EmailService._send_smtp(to, "Konto aktivieren – DualMind", html)
