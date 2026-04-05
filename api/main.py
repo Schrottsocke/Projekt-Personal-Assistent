@@ -66,6 +66,8 @@ from api.routers import (
     documents,
     household_documents,
     test_users,
+    monitoring_router,
+    feedback_router,
 )
 
 logger = structlog.get_logger(__name__)
@@ -343,6 +345,8 @@ app.include_router(onboarding_router.router, prefix="/onboarding", tags=["Onboar
 app.include_router(documents.router, prefix="/documents", tags=["Dokumente"])
 app.include_router(household_documents.router, prefix="/household-documents", tags=["Haushalts-Dokumente"])
 app.include_router(test_users.router, prefix="/test-users", tags=["Test-Users"])
+app.include_router(monitoring_router.router, prefix="/monitoring", tags=["Monitoring"])
+app.include_router(feedback_router.router, prefix="/feedback", tags=["Feedback"])
 app.include_router(status.router)
 
 

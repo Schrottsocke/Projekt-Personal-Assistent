@@ -1,6 +1,7 @@
 """POST /auth/login, POST /auth/refresh"""
 
 import hashlib
+import logging
 import secrets
 
 from fastapi import APIRouter, HTTPException, Request, status
@@ -11,6 +12,8 @@ from api.auth.jwt_handler import create_access_token, create_refresh_token, veri
 from api.auth.models import LoginRequest, TokenResponse, RefreshRequest
 from config.settings import settings
 from src.services.database import UserProfile, get_db
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -39,18 +42,21 @@ async def login(request: Request, body: LoginRequest):
             )
 
     # --- Fallback: DB-Passwort-Check (Test-User mit password_hash) ---
-    with get_db()() as db:
-        profile = db.query(UserProfile).filter(UserProfile.user_key == user_key).first()
-        if profile and profile.password_hash:
-            candidate_hash = hashlib.pbkdf2_hmac(
-                "sha256", body.password.encode(), user_key.encode(), 100_000
-            ).hex()
-            if secrets.compare_digest(profile.password_hash, candidate_hash):
-                return TokenResponse(
-                    access_token=create_access_token(user_key),
-                    refresh_token=create_refresh_token(user_key),
-                    user_key=user_key,
-                )
+    try:
+        with get_db()() as db:
+            profile = db.query(UserProfile).filter(UserProfile.user_key == user_key).first()
+            if profile and profile.password_hash:
+                candidate_hash = hashlib.pbkdf2_hmac(
+                    "sha256", body.password.encode(), user_key.encode(), 100_000
+                ).hex()
+                if secrets.compare_digest(profile.password_hash, candidate_hash):
+                    return TokenResponse(
+                        access_token=create_access_token(user_key),
+                        refresh_token=create_refresh_token(user_key),
+                        user_key=user_key,
+                    )
+    except Exception:
+        logger.warning("DB-Passwort-Check fehlgeschlagen fuer user=%s", user_key)
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Falsches Passwort oder unbekannter Nutzer.")
 

@@ -6323,3 +6323,83 @@ select:focus-visible,
 .inventory-add-collapsible summary:hover {
   color: var(--accent);
 }
+
+/* ── Responsive helpers ────────────────────────────────────── */
+@media (max-width: 768px) {
+  .desktop-only { display: none !important; }
+}
+@media (min-width: 769px) {
+  .mobile-only { display: none !important; }
+}
+
+/* ── Data table ────────────────────────────────────────────── */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.data-table th,
+.data-table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.data-table th {
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.data-table tbody tr:hover {
+  background: var(--bg-hover, rgba(255,255,255,0.04));
+}
+.tua-table-wrap {
+  overflow-x: auto;
+}
+
+/* ── Testuser Admin cards (mobile) ─────────────────────────── */
+.tua-card {
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+.tua-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.tua-card-email {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.tua-card-name {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+.tua-card-note {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+.tua-card-meta {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+.tua-card-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.tua-actions {
+  white-space: nowrap;
+}
+.tua-actions .btn-icon {
+  display: inline-flex;
+}

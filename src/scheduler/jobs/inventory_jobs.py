@@ -63,4 +63,4 @@ async def check_warranty_expiry():
 
         logger.info("Warranty-Expiry-Check: %d Benachrichtigungen erstellt.", len(expiring))
     except Exception as e:
-        logger.error("Warranty-Expiry-Check-Fehler: %s", e)
+        logger.error("Warranty-Expiry-Check-Fehler: %s", e, exc_info=True)

@@ -293,6 +293,70 @@ systemctl stop personal-assistant
 
 ---
 
+## Staging-Deployment
+
+Das Staging-Environment ermoeglicht Tests vor dem Production-Deploy.
+
+### Staging-Workflow
+
+1. Code auf den `staging` Branch pushen
+2. GitHub Actions fuehrt automatisch aus:
+   - Lint + Tests
+   - Docker-Build
+   - SSH-Deploy auf Staging-VPS
+   - Health-Check
+   - Status-Notification
+3. Staging-API laeuft auf Port 8001 (statt 8000 in Production)
+
+### Staging einrichten
+
+```bash
+# .env.staging aus Vorlage erstellen
+cp .env.staging.example .env.staging
+# Staging-Werte eintragen (eigene Bot-Tokens, DB-Pfad etc.)
+
+# Lokal testen mit Docker Compose
+docker compose -f docker-compose.staging.yml up -d
+```
+
+### Benoetigte GitHub Secrets (Staging)
+
+| Secret | Beschreibung |
+|---|---|
+| `STAGING_SSH_KEY` | SSH Private Key fuer Staging-VPS |
+| `STAGING_HOST` | Staging-Server IP/Hostname |
+| `STAGING_USER` | SSH-User auf dem Staging-Server |
+| `STAGING_HEALTH_URL` | Health-Check URL (z.B. `http://staging:8001/status`) |
+
+### robots.txt
+
+Staging wird automatisch mit `Disallow: /` konfiguriert, um Suchmaschinen-Indexierung zu verhindern.
+
+---
+
+## Test-Coverage
+
+Coverage wird automatisch in CI gemessen und als GitHub Actions Summary angezeigt.
+
+### Coverage lokal pruefen
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest tests/ --cov=src --cov=api --cov-report=term-missing
+```
+
+### Coverage-Badge (optional)
+
+Um einen Coverage-Badge in der README anzuzeigen, kann ein Service wie [Codecov](https://codecov.io) oder [coveralls.io](https://coveralls.io) eingebunden werden:
+
+```markdown
+[![Coverage](https://codecov.io/gh/schrottsocke/projekt-personal-assistent/branch/main/graph/badge.svg)](https://codecov.io/gh/schrottsocke/projekt-personal-assistent)
+```
+
+Dazu `coverage.xml` als Artifact in den entsprechenden Service hochladen. Der CI-Workflow erzeugt dieses Artifact bereits.
+
+---
+
 ## Lokale Entwicklung
 
 ```bash
