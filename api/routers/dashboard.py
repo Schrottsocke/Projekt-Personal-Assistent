@@ -54,13 +54,23 @@ async def dashboard_today(
     async def resolved(value):
         return value
 
+    # Pruefen ob Services verbunden (sicher, ohne Exception)
+    def _is_connected(svc, user_key):
+        try:
+            return svc.is_connected(user_key)
+        except Exception:
+            return False
+
+    cal_connected = _is_connected(calendar_svc, user_key)
+    email_connected = _is_connected(email_svc, user_key)
+
     # Alle Quellen parallel abrufen
     events, tasks, shopping_items, reminders, unread_count, notif_unread, notif_latest = await asyncio.gather(
-        safe(calendar_svc.get_todays_events(user_key), []) if calendar_svc.is_connected(user_key) else resolved([]),
+        safe(calendar_svc.get_todays_events(user_key), []) if cal_connected else resolved([]),
         safe(task_svc.get_open_tasks(user_key), []),
         safe(shopping_svc.get_items(user_key, include_checked=False), []),
         safe(reminder_svc.get_todays_reminders(user_key), []),
-        safe(email_svc.get_unread_count(user_key), 0) if email_svc.is_connected(user_key) else resolved(0),
+        safe(email_svc.get_unread_count(user_key), 0) if email_connected else resolved(0),
         safe(notif_svc.count_unread(user_key), 0),
         safe(notif_svc.list(user_key, status_filter="new", limit=3), []),
     )
@@ -83,7 +93,7 @@ async def dashboard_today(
 
     return {
         "user_key": user_key,
-        "calendar_connected": calendar_svc.is_connected(user_key),
+        "calendar_connected": cal_connected,
         "events_today": events[:5],
         "shifts_today": shifts_today,
         "open_tasks": tasks[:5],
@@ -96,7 +106,7 @@ async def dashboard_today(
         },
         "reminders_today": reminders,
         "unread_emails": unread_count,
-        "email_connected": email_svc.is_connected(user_key),
+        "email_connected": email_connected,
         "notifications_unread": notif_unread,
         "notifications_latest": notif_latest[:3],
     }
@@ -128,13 +138,23 @@ async def get_briefing(
 
     sections: list[dict] = []
 
+    # Pruefen ob Services verbunden (sicher, ohne Exception)
+    def _is_connected(svc, user_key):
+        try:
+            return svc.is_connected(user_key)
+        except Exception:
+            return False
+
+    cal_connected = _is_connected(calendar_svc, user_key)
+    email_connected = _is_connected(email_svc, user_key)
+
     # Parallel alle Quellen abrufen
     events, tasks, shopping_items, reminders, unread_count, notif_unread = await asyncio.gather(
-        safe(calendar_svc.get_todays_events(user_key), []) if calendar_svc.is_connected(user_key) else resolved([]),
+        safe(calendar_svc.get_todays_events(user_key), []) if cal_connected else resolved([]),
         safe(task_svc.get_open_tasks(user_key), []),
         safe(shopping_svc.get_items(user_key, include_checked=False), []),
         safe(reminder_svc.get_todays_reminders(user_key), []),
-        safe(email_svc.get_unread_count(user_key), 0) if email_svc.is_connected(user_key) else resolved(0),
+        safe(email_svc.get_unread_count(user_key), 0) if email_connected else resolved(0),
         safe(notif_svc.count_unread(user_key), 0),
     )
 
