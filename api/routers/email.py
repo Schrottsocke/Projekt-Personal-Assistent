@@ -8,6 +8,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from api.dependencies import get_current_user, get_email_service
+from api.schemas.email import EmailDetail, EmailHealthResponse, EmailSummary
 from config.settings import settings
 
 router = APIRouter()
@@ -15,12 +16,12 @@ logger = logging.getLogger(__name__)
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.get("/health")
+@router.get("/health", response_model=EmailHealthResponse)
 async def health():
     return {"status": "ok"}
 
 
-@router.get("/inbox")
+@router.get("/inbox", response_model=list[EmailSummary])
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def get_inbox(
     request: Request,
@@ -37,7 +38,7 @@ async def get_inbox(
     return emails
 
 
-@router.get("/{email_id}")
+@router.get("/{email_id}", response_model=EmailDetail)
 @limiter.limit(settings.RATE_LIMIT_DEFAULT)
 async def get_email(
     request: Request,

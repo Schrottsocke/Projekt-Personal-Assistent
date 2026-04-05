@@ -4,17 +4,20 @@ Status-Endpunkt – zweistufig:
 - /status/detail (auth): Git-Details, Service-Status und Logs
 """
 
+import logging
 import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from api.dependencies import get_current_user
+from api.schemas.status import HealthResponse, StatusDetailResponse, StatusResponse
 
 router = APIRouter(tags=["Status"])
+logger = logging.getLogger(__name__)
 
 _start_time = time.time()
 PROJ_DIR = Path(__file__).parent.parent.parent
@@ -67,7 +70,7 @@ def _uptime_str() -> str:
     return f"{h}h {m}m {s}s"
 
 
-@router.get("/status")
+@router.get("/status", response_model=StatusResponse)
 async def status():
     """
     Oeffentlicher Health-Check: API-Status, Uptime, Timestamp.
@@ -80,14 +83,18 @@ async def status():
     }
 
 
-@router.get("/status/health")
+@router.get("/status/health", response_model=HealthResponse)
 async def status_health():
     """
     Oeffentlicher Health-Check mit Service-Status.
     Prueft Datenbank und alle registrierten Services mit Antwortzeiten.
     """
-    from api import dependencies
-    from api.main import _COMMIT_HASH, _STARTUP_TIME
+    try:
+        from api import dependencies
+        from api.main import _COMMIT_HASH, _STARTUP_TIME
+    except Exception as exc:
+        logger.error("Health-Check Import-Fehler: %s", exc)
+        raise HTTPException(status_code=500, detail="Health-Check nicht verfuegbar")
 
     services = {}
     overall_healthy = True
@@ -107,24 +114,27 @@ async def status_health():
             elapsed = round((time.monotonic() - t0) * 1000, 1)
             services["database"] = {"status": "healthy", "response_ms": elapsed}
     except Exception as exc:
-        elapsed = round((time.monotonic() - t0) * 1000, 1)
-        services["database"] = {"status": "down", "error": str(exc), "response_ms": elapsed}
+        logger.warning("Health-Check DB-Fehler: %s", exc)
+        services["database"] = {"status": "down", "error": str(exc)}
         overall_healthy = False
 
     # 2. Alle registrierten Services pruefen
     critical_services = {"ai"}
-    for name, svc in sorted(dependencies._svc.items()):
-        if name == "bot_shim":
-            continue
-        t0 = time.monotonic()
-        if hasattr(svc, "initialized") and not svc.initialized:
-            elapsed = round((time.monotonic() - t0) * 1000, 1)
-            services[name] = {"status": "down", "error": "init_failed", "response_ms": elapsed}
-            if name in critical_services:
-                overall_healthy = False
-        else:
-            elapsed = round((time.monotonic() - t0) * 1000, 1)
-            services[name] = {"status": "healthy", "response_ms": elapsed}
+    try:
+        for name, svc in sorted(dependencies._svc.items()):
+            if name == "bot_shim":
+                continue
+            t0 = time.monotonic()
+            if hasattr(svc, "initialized") and not svc.initialized:
+                elapsed = round((time.monotonic() - t0) * 1000, 1)
+                services[name] = {"status": "down", "error": "init_failed", "response_ms": elapsed}
+                if name in critical_services:
+                    overall_healthy = False
+            else:
+                elapsed = round((time.monotonic() - t0) * 1000, 1)
+                services[name] = {"status": "healthy", "response_ms": elapsed}
+    except Exception as exc:
+        logger.warning("Health-Check Service-Pruefung Fehler: %s", exc)
 
     # Kritische Services die gar nicht registriert sind
     for name in critical_services:
@@ -142,7 +152,7 @@ async def status_health():
     }
 
 
-@router.get("/status/detail")
+@router.get("/status/detail", response_model=StatusDetailResponse)
 async def status_detail(
     _user: Annotated[str, Depends(get_current_user)],
 ):
@@ -150,9 +160,13 @@ async def status_detail(
     Detaillierter Status: Git-Commit, Branch, Services, Logs.
     Erfordert Auth – nur fuer authentifizierte Nutzer und Monitoring.
     """
-    bot_active = _service_active("personal-assistant")
-    api_active = _service_active("personal-assistant-api")
-    webhook_active = _service_active("personal-assistant-webhook")
+    try:
+        bot_active = _service_active("personal-assistant")
+        api_active = _service_active("personal-assistant-api")
+        webhook_active = _service_active("personal-assistant-webhook")
+    except Exception as exc:
+        logger.error("Status-Detail Service-Check Fehler: %s", exc)
+        bot_active = api_active = webhook_active = False
 
     return {
         "api": "ok",
