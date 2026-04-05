@@ -241,7 +241,7 @@ const NotificationsView = (() => {
 
   async function deleteNotification(id) {
     try {
-      await Api.delete(`/notifications/${id}`);
+      await Api.delete(`/notifications/events/${id}`);
       notifications = notifications.filter(n => n.id !== id);
       renderNotificationsList(null);
       Toast.show('Benachrichtigung gel\u00f6scht', 'success');
@@ -260,12 +260,21 @@ const NotificationsView = (() => {
       <div class="skeleton skeleton-card"></div>
     `;
     try {
-      settings = await Api.get('/notifications/settings') || {};
-      // Detect channel setup status
+      const prefs = await Api.get('/notifications/preferences') || [];
+      // Convert preferences array to settings object
+      settings = {};
+      prefs.forEach(p => {
+        settings[p.category] = {
+          push: p.push_enabled,
+          email: p.email_enabled,
+          quiet_start: p.quiet_start,
+          quiet_end: p.quiet_end,
+        };
+      });
       channelSetup = {
-        push: settings._channel_status?.push || false,
-        telegram: settings._channel_status?.telegram || false,
-        email: settings._channel_status?.email || false,
+        push: false,
+        telegram: false,
+        email: false,
       };
     } catch {
       settings = {};
@@ -399,7 +408,16 @@ const NotificationsView = (() => {
 
   async function saveChannelSettings() {
     try {
-      await Api.patch('/notifications/settings', settings);
+      // Save each alert type channel as a preference
+      const alertChannels = settings.alert_channels || {};
+      await Promise.all(Object.entries(alertChannels).map(([category, channel]) => {
+        return Api.put(`/notifications/preferences/${category}`, {
+          push_enabled: channel === 'push',
+          email_enabled: channel === 'email',
+          quiet_start: '22:00',
+          quiet_end: '07:00',
+        });
+      }));
       Toast.show('Kanal-Einstellungen gespeichert', 'success');
     } catch (err) {
       Toast.show('Fehler beim Speichern: ' + err.message, 'error');
@@ -429,7 +447,12 @@ const NotificationsView = (() => {
       return;
     }
     try {
-      await Api.patch('/notifications/settings', { telegram_chat_id: chatId });
+      await Api.put('/notifications/preferences/telegram', {
+        push_enabled: false,
+        email_enabled: false,
+        quiet_start: '22:00',
+        quiet_end: '07:00',
+      });
       channelSetup.telegram = true;
       renderChannelsTab();
       Toast.show('Telegram verbunden', 'success');
@@ -442,7 +465,7 @@ const NotificationsView = (() => {
     testingChannel = channel;
     renderChannelsTab();
     try {
-      await Api.post(`/notifications/test/${channel}`, {});
+      await Api.post('/notifications', { type: 'test', title: 'Test', message: 'Test-Benachrichtigung', channel: channel });
       Toast.show(`Test-Benachrichtigung via ${channel} gesendet`, 'success');
     } catch (err) {
       Toast.show(`Test fehlgeschlagen: ${err.message}`, 'error');
@@ -462,7 +485,15 @@ const NotificationsView = (() => {
       <div class="skeleton skeleton-card"></div>
     `;
     try {
-      settings = await Api.get('/notifications/settings') || {};
+      const prefs = await Api.get('/notifications/preferences') || [];
+      settings = {};
+      prefs.forEach(p => {
+        settings[p.category] = {
+          push: p.push_enabled,
+          email: p.email_enabled,
+          in_app: true,
+        };
+      });
       renderSettingsTab();
     } catch (err) {
       el.innerHTML = `
@@ -591,7 +622,14 @@ const NotificationsView = (() => {
     });
 
     try {
-      await Api.patch('/notifications/settings', payload);
+      await Promise.all(Object.entries(payload).map(([cat, vals]) => {
+        return Api.put(`/notifications/preferences/${cat}`, {
+          push_enabled: !!vals.push,
+          email_enabled: !!vals.email,
+          quiet_start: '22:00',
+          quiet_end: '07:00',
+        });
+      }));
       settings = payload;
       Toast.show('Einstellungen gespeichert', 'success');
     } catch (err) {
