@@ -113,6 +113,14 @@ def client():
     drive_svc = AsyncMock()
     notes_svc = AsyncMock()
 
+    ocr_svc = MagicMock()
+    ocr_svc.extract_text = AsyncMock(return_value={"text": "Mocked OCR", "confidence": 95.0, "method": "mock", "words_data": None})
+
+    pdf_svc = MagicMock()
+
+    from src.services.storage_service import StorageService
+    storage_svc = StorageService(drive_service=drive_svc)
+
     bot_shim = MagicMock()
     bot_shim.ai_service = ai_svc
 
@@ -129,6 +137,9 @@ def client():
         "email": email_svc,
         "drive": drive_svc,
         "notification": notif_svc,
+        "ocr": ocr_svc,
+        "pdf": pdf_svc,
+        "storage": storage_svc,
         "bot_shim": bot_shim,
     }
 
