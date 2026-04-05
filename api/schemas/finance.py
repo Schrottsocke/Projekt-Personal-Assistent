@@ -184,6 +184,58 @@ class FinanceInvoiceOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# --- Widget Summary ---
+
+
+class FinanceWidgetSummary(BaseModel):
+    spending_this_month: float
+    budget_total: float
+    next_payment_date: Optional[str] = None
+    next_payment_amount: Optional[float] = None
+    open_invoices_count: int
+
+
+# --- Category Breakdown ---
+
+
+class CategoryBreakdown(BaseModel):
+    categories: dict[str, float]
+    total: float
+
+
+# --- Invoice Stats ---
+
+
+class InvoiceStatEntry(BaseModel):
+    count: int
+    total: float
+
+
+class InvoiceStats(BaseModel):
+    open: InvoiceStatEntry
+    paid: InvoiceStatEntry
+    overdue: InvoiceStatEntry
+    draft: InvoiceStatEntry
+
+
+# --- Health ---
+
+
+class HealthOut(BaseModel):
+    status: str
+    module: str
+
+
+class DetectedContract(BaseModel):
+    description: Optional[str] = None
+    amount: float
+    interval: str
+    occurrences: int
+    first_seen: str
+    last_seen: str
+    category: Optional[str] = None
+
+
 class FinanceInvoiceUpdate(BaseModel):
     recipient: Optional[str] = None
     recipient_address: Optional[str] = None

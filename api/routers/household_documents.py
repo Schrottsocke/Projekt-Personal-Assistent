@@ -226,6 +226,14 @@ async def upload_household_document(
     if not file_data:
         raise HTTPException(status_code=400, detail="Leere Datei.")
 
+    # File size check (MAX_UPLOAD_SIZE_MB)
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if len(file_data) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Datei zu gross ({len(file_data) / 1024 / 1024:.1f} MB). Maximum: {settings.MAX_UPLOAD_SIZE_MB} MB.",
+        )
+
     # Validate + save to storage
     try:
         file_path = await storage.save(
