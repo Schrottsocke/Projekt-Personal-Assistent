@@ -37,14 +37,36 @@ curl -s --max-time 10 "$APP_URL/health" | python3 -m json.tool 2>/dev/null || ec
 # === 2. ROUTER HEALTH-CHECKS ===
 echo ""
 echo "=== 2. ROUTER HEALTH-CHECKS ==="
-for prefix in finance inventory family notifications gdpr onboarding \
-              dashboard tasks calendar shopping recipes meal-plan \
-              drive email shifts contacts search weather \
-              suggestions templates automation inbox; do
+declare -A ROUTER_PATHS=(
+  [finance]="/finance/health"
+  [inventory]="/inventory/health"
+  [family]="/family/health"
+  [notifications]="/notifications"
+  [gdpr]="/gdpr/health"
+  [onboarding]="/onboarding/status"
+  [dashboard]="/dashboard/today"
+  [tasks]="/tasks"
+  [calendar]="/calendar/today"
+  [shopping]="/shopping/items"
+  [recipes]="/recipes/saved"
+  [meal-plan]="/meal-plan/week"
+  [drive]="/drive/files"
+  [email]="/email/health"
+  [shifts]="/shifts/types"
+  [contacts]="/contacts"
+  [search]="/search?q=ping"
+  [weather]="/weather/current"
+  [suggestions]="/suggestions/chat"
+  [templates]="/templates"
+  [automation]="/automation"
+  [inbox]="/inbox/unified"
+)
+for prefix in "${!ROUTER_PATHS[@]}"; do
+  ep="${ROUTER_PATHS[$prefix]}"
   CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
     -H "Authorization: Bearer $TOKEN" \
-    "$APP_URL/$prefix")
-  echo "$prefix → $CODE"
+    "$APP_URL$ep")
+  echo "$prefix ($ep) → $CODE"
 done
 
 # === 3. KERNFUNKTIONEN ===
@@ -77,7 +99,7 @@ echo "=== 3b. CALENDAR ==="
 EVENT=$(curl -s -X POST "$APP_URL/calendar/events" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Audit-Event","start":"2026-04-10T10:00:00","end":"2026-04-10T11:00:00"}')
+  -d '{"summary":"Audit-Event","start":"2026-04-10T10:00:00","end":"2026-04-10T11:00:00"}')
 echo "Create Response: $EVENT"
 EVENT_ID=$(echo "$EVENT" | python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('id',''))" 2>/dev/null)
 if [ -n "$EVENT_ID" ] && [ "$EVENT_ID" != "None" ] && [ "$EVENT_ID" != "" ]; then
@@ -105,7 +127,7 @@ echo "Response: ${CHAT_RESP:0:200}"
 
 echo ""
 echo "=== 3e. INBOX ==="
-INBOX_RESP=$(curl -s --max-time 10 "$APP_URL/inbox/messages" \
+INBOX_RESP=$(curl -s --max-time 10 "$APP_URL/inbox/unified" \
   -H "Authorization: Bearer $TOKEN")
 echo "$INBOX_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Messages: {len(d) if isinstance(d,list) else d}')" 2>/dev/null || echo "Response: $INBOX_RESP"
 
@@ -123,16 +145,21 @@ echo "$CONTACTS_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); pri
 
 echo ""
 echo "=== 3h. SHIFTS ==="
-SHIFTS_RESP=$(curl -s --max-time 10 "$APP_URL/shifts" \
+SHIFTS_RESP=$(curl -s --max-time 10 "$APP_URL/shifts/types" \
   -H "Authorization: Bearer $TOKEN")
-echo "$SHIFTS_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Shifts: {len(d) if isinstance(d,list) else d}')" 2>/dev/null || echo "Response: $SHIFTS_RESP"
+echo "$SHIFTS_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Shift Types: {len(d) if isinstance(d,list) else d}')" 2>/dev/null || echo "Response: $SHIFTS_RESP"
+
+ENTRIES_RESP=$(curl -s --max-time 10 "$APP_URL/shifts/entries" \
+  -H "Authorization: Bearer $TOKEN")
+echo "$ENTRIES_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Shift Entries: {len(d) if isinstance(d,list) else d}')" 2>/dev/null || echo "Response: $ENTRIES_RESP"
 
 # === 4. NEUE PRIVATKUNDEN-ROUTER ===
 echo ""
 echo "=== 4. NEUE ROUTER ==="
-for ep in "finance/expenses" "finance/contracts" \
-          "inventory/items" "family/lists" \
-          "notifications" "onboarding/status" "gdpr/export"; do
+for ep in "finance/transactions" "finance/contracts" "finance/invoices" \
+          "inventory/items" "inventory/warranties" \
+          "family/workspaces" \
+          "notifications" "onboarding/status" "gdpr/data-export" "gdpr/consents"; do
   CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
     -H "Authorization: Bearer $TOKEN" "$APP_URL/$ep")
   echo "$ep → $CODE"
@@ -141,9 +168,10 @@ done
 # === 5. STATIC ASSETS DER PWA ===
 echo ""
 echo "=== 5. STATIC ASSETS ==="
-for asset in "static/app.js" "static/style.css" "static/css/app.css" \
+for asset in "static/css/app.css" \
              "static/js/app.js" "static/js/router.js" "static/js/api.js" \
-             "app/sw.js" "static/manifest.json" "static/sw.js"; do
+             "static/js/offlineQueue.js" \
+             "static/sw.js" "static/manifest.json" "app/sw.js"; do
   CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$APP_URL/$asset")
   echo "$asset → $CODE"
 done
