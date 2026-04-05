@@ -251,11 +251,11 @@ const OnboardingView = (() => {
     `;
     document.getElementById('ob-doc-scan-btn')?.addEventListener('click', () => {
       if (typeof CameraCapture !== 'undefined') {
-        CameraCapture.open((file) => {
+        CameraCapture.open({ onCapture: (file) => {
           if (file) {
             Toast.show('Dokument erfasst: ' + file.name, 'success');
           }
-        });
+        } });
       } else {
         window.location.hash = '#/documents';
       }
