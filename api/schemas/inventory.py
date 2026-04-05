@@ -107,3 +107,15 @@ class DocumentSearchResult(BaseModel):
     scanned_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class InventoryWidgetSummary(BaseModel):
+    expiring_warranties_count: int
+    unprocessed_documents_count: int
+    next_deadline: Optional[str] = None
+    next_deadline_doc: Optional[str] = None
+
+
+class InventoryHealthOut(BaseModel):
+    status: str
+    module: str
