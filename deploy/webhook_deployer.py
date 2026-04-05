@@ -157,7 +157,7 @@ def _deploy_inner() -> tuple[bool, str]:
     for attempt in range(6):
         time.sleep(5)
         try:
-            resp = urllib.request.urlopen("http://localhost:8000/health", timeout=5)
+            resp = urllib.request.urlopen("http://localhost:8000/status", timeout=5)
             if resp.status == 200:
                 api_healthy = True
                 logger.info("Health-Check OK (Versuch %d)", attempt + 1)
