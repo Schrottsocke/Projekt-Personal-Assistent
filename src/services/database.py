@@ -61,6 +61,8 @@ class UserProfile(Base):
     enabled_features = Column(Text, nullable=True)
     # User Preferences: JSON-Blob fuer Nav, Dashboard-Widgets, Appearance etc.
     preferences_json = Column(Text, nullable=True)
+    # Password hash fuer Test-User mit Passwort-Auth (PBKDF2-SHA256)
+    password_hash = Column(String, nullable=True)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at = Column(
         DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc)
