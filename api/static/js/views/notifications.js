@@ -1,12 +1,15 @@
 /**
- * Notifications View – Benachrichtigungen & Einstellungen
+ * Notifications View – Benachrichtigungs-Kanal-Wahl pro Alert-Typ
  * Issue #685: Notifications-Center-View
+ * Issue #721: Per alert-type channel selection (Push/Telegram/E-Mail/None)
  */
 const NotificationsView = (() => {
   let activeTab = 'notifications';
   let notifications = [];
   let settings = {};
+  let channelSetup = { push: false, telegram: false, email: false };
   let savingSettings = false;
+  let testingChannel = null;
 
   const CATEGORY_ICONS = {
     finance:   'account_balance',
@@ -25,6 +28,22 @@ const NotificationsView = (() => {
     system:    'System',
     family:    'Familie',
   };
+
+  // Alert types for per-type channel selection (#721)
+  const ALERT_TYPES = [
+    { id: 'contract_deadline', icon: 'gavel', label: 'Vertragsfrist' },
+    { id: 'invoice_due', icon: 'receipt_long', label: 'Rechnung f\u00e4llig' },
+    { id: 'warranty_expiry', icon: 'verified_user', label: 'Garantieablauf' },
+    { id: 'budget_warning', icon: 'account_balance_wallet', label: 'Budget-Warnung' },
+    { id: 'document_reminder', icon: 'description', label: 'Dokument-Erinnerung' },
+  ];
+
+  const CHANNELS = [
+    { id: 'push', icon: 'notifications', label: 'Push' },
+    { id: 'telegram', icon: 'send', label: 'Telegram' },
+    { id: 'email', icon: 'email', label: 'E-Mail' },
+    { id: 'none', icon: 'notifications_off', label: 'Keine' },
+  ];
 
   function esc(str) {
     if (str == null) return '';
@@ -55,7 +74,7 @@ const NotificationsView = (() => {
     return CATEGORY_ICONS[category] || 'notifications';
   }
 
-  /* ── Render ──────────────────────────────────────────────── */
+  /* -- Render -- */
 
   async function render(container) {
     activeTab = 'notifications';
@@ -68,6 +87,8 @@ const NotificationsView = (() => {
         <div class="tabs mb-8" id="notifications-tabs">
           <button class="tab active" data-tab="notifications"
                   onclick="NotificationsView.switchTab('notifications')">Benachrichtigungen</button>
+          <button class="tab" data-tab="channels"
+                  onclick="NotificationsView.switchTab('channels')">Kan\u00e4le</button>
           <button class="tab" data-tab="settings"
                   onclick="NotificationsView.switchTab('settings')">Einstellungen</button>
         </div>
@@ -88,12 +109,14 @@ const NotificationsView = (() => {
     });
     if (tab === 'notifications') {
       await loadNotifications();
+    } else if (tab === 'channels') {
+      await loadChannelSettings();
     } else {
       await loadSettings();
     }
   }
 
-  /* ── Notifications Tab ───────────────────────────────────── */
+  /* -- Notifications Tab -- */
 
   async function loadNotifications() {
     const el = document.getElementById('notifications-content');
@@ -175,7 +198,7 @@ const NotificationsView = (() => {
             </div>
             <button class="btn btn-sm btn-danger" style="flex-shrink:0;padding:4px 8px;"
                     onclick="event.stopPropagation(); NotificationsView.deleteNotification(${n.id})"
-                    title="Löschen">
+                    title="L\u00f6schen">
               <span class="material-symbols-outlined mi-sm">delete</span>
             </button>
           </div>
@@ -221,13 +244,215 @@ const NotificationsView = (() => {
       await Api.delete(`/notifications/${id}`);
       notifications = notifications.filter(n => n.id !== id);
       renderNotificationsList(null);
-      Toast.show('Benachrichtigung gelöscht', 'success');
+      Toast.show('Benachrichtigung gel\u00f6scht', 'success');
     } catch (err) {
-      Toast.show('Fehler beim Löschen: ' + err.message, 'error');
+      Toast.show('Fehler beim L\u00f6schen: ' + err.message, 'error');
     }
   }
 
-  /* ── Settings Tab ────────────────────────────────────────── */
+  /* -- Channels Tab (per alert-type selection, #721) -- */
+
+  async function loadChannelSettings() {
+    const el = document.getElementById('notifications-content');
+    if (!el) return;
+    el.innerHTML = `
+      <div class="skeleton skeleton-card"></div>
+      <div class="skeleton skeleton-card"></div>
+    `;
+    try {
+      settings = await Api.get('/notifications/settings') || {};
+      // Detect channel setup status
+      channelSetup = {
+        push: settings._channel_status?.push || false,
+        telegram: settings._channel_status?.telegram || false,
+        email: settings._channel_status?.email || false,
+      };
+    } catch {
+      settings = {};
+      channelSetup = { push: false, telegram: false, email: false };
+    }
+    renderChannelsTab();
+  }
+
+  function renderChannelsTab() {
+    const el = document.getElementById('notifications-content');
+    if (!el) return;
+
+    // Channel setup section
+    let setupHtml = `
+      <div class="card mb-16">
+        <div class="card-title"><span class="material-symbols-outlined mi-sm">settings</span> Kanal-Einrichtung</div>
+        <p class="text-muted mb-12" style="font-size:0.85rem">Richte deine Benachrichtigungskan\u00e4le ein, bevor du sie pro Alert-Typ konfigurierst.</p>
+        <div class="notif-channel-setup">
+          <div class="notif-channel-setup-item">
+            <div class="notif-channel-setup-info">
+              <span class="material-symbols-outlined" style="color:var(--accent)">notifications</span>
+              <div>
+                <strong>Push</strong>
+                <div class="text-muted" style="font-size:0.8rem">${channelSetup.push ? 'Aktiviert' : 'Browser-Berechtigung erforderlich'}</div>
+              </div>
+            </div>
+            <div class="notif-channel-setup-actions">
+              ${channelSetup.push
+                ? '<span class="badge badge-success">Aktiv</span>'
+                : '<button class="btn btn-sm btn-secondary" onclick="NotificationsView.setupPush()">Aktivieren</button>'}
+              <button class="btn btn-sm btn-secondary" onclick="NotificationsView.testChannel('push')" ${testingChannel === 'push' ? 'disabled' : ''}>
+                <span class="material-symbols-outlined mi-sm">send</span> Test
+              </button>
+            </div>
+          </div>
+          <div class="notif-channel-setup-item">
+            <div class="notif-channel-setup-info">
+              <span class="material-symbols-outlined" style="color:var(--accent)">send</span>
+              <div>
+                <strong>Telegram</strong>
+                <div class="text-muted" style="font-size:0.8rem">${channelSetup.telegram ? 'Verbunden' : 'Chat-ID erforderlich'}</div>
+              </div>
+            </div>
+            <div class="notif-channel-setup-actions">
+              ${channelSetup.telegram
+                ? '<span class="badge badge-success">Aktiv</span>'
+                : `<div class="notif-telegram-setup">
+                    <input type="text" id="notif-telegram-chatid" class="input" placeholder="Chat-ID" style="width:120px;font-size:0.85rem" />
+                    <button class="btn btn-sm btn-primary" onclick="NotificationsView.setupTelegram()">Verbinden</button>
+                  </div>`}
+              <button class="btn btn-sm btn-secondary" onclick="NotificationsView.testChannel('telegram')" ${testingChannel === 'telegram' ? 'disabled' : ''}>
+                <span class="material-symbols-outlined mi-sm">send</span> Test
+              </button>
+            </div>
+          </div>
+          <div class="notif-channel-setup-item">
+            <div class="notif-channel-setup-info">
+              <span class="material-symbols-outlined" style="color:var(--accent)">email</span>
+              <div>
+                <strong>E-Mail</strong>
+                <div class="text-muted" style="font-size:0.8rem">${channelSetup.email ? 'Konfiguriert (aus Profil)' : 'Wird aus Profil \u00fcbernommen'}</div>
+              </div>
+            </div>
+            <div class="notif-channel-setup-actions">
+              ${channelSetup.email
+                ? '<span class="badge badge-success">Aktiv</span>'
+                : '<span class="badge badge-muted">Auto</span>'}
+              <button class="btn btn-sm btn-secondary" onclick="NotificationsView.testChannel('email')" ${testingChannel === 'email' ? 'disabled' : ''}>
+                <span class="material-symbols-outlined mi-sm">send</span> Test
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Per alert-type channel selection
+    let alertTypeHtml = `
+      <div class="card mb-16">
+        <div class="card-title"><span class="material-symbols-outlined mi-sm">tune</span> Kanal pro Alert-Typ</div>
+        <p class="text-muted mb-12" style="font-size:0.85rem">W\u00e4hle f\u00fcr jeden Alert-Typ den bevorzugten Benachrichtigungskanal.</p>
+        <div class="notif-alert-type-list">
+    `;
+
+    ALERT_TYPES.forEach(at => {
+      const currentChannel = (settings.alert_channels && settings.alert_channels[at.id]) || 'none';
+      alertTypeHtml += `
+        <div class="notif-alert-type-row">
+          <div class="notif-alert-type-info">
+            <span class="material-symbols-outlined mi-sm" style="color:var(--accent)">${at.icon}</span>
+            <span>${esc(at.label)}</span>
+          </div>
+          <div class="notif-alert-type-channels">
+            ${CHANNELS.map(ch => `
+              <label class="notif-channel-radio ${currentChannel === ch.id ? 'selected' : ''}">
+                <input type="radio" name="alert-${at.id}" value="${ch.id}" ${currentChannel === ch.id ? 'checked' : ''}
+                  onchange="NotificationsView.onAlertChannelChange('${at.id}', '${ch.id}')">
+                <span class="material-symbols-outlined mi-sm">${ch.icon}</span>
+                <span class="notif-channel-radio-label">${ch.label}</span>
+              </label>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    });
+
+    alertTypeHtml += `
+        </div>
+        <div style="margin-top:16px;text-align:right;">
+          <button class="btn btn-primary" onclick="NotificationsView.saveChannelSettings()">
+            <span class="material-symbols-outlined mi-sm">save</span> Speichern
+          </button>
+        </div>
+      </div>
+    `;
+
+    el.innerHTML = setupHtml + alertTypeHtml;
+  }
+
+  function onAlertChannelChange(alertType, channel) {
+    if (!settings.alert_channels) settings.alert_channels = {};
+    settings.alert_channels[alertType] = channel;
+    // Update visual selection
+    const row = document.querySelector(`input[name="alert-${alertType}"][value="${channel}"]`);
+    if (row) {
+      row.closest('.notif-alert-type-row')?.querySelectorAll('.notif-channel-radio').forEach(r => {
+        r.classList.toggle('selected', r.querySelector('input')?.value === channel);
+      });
+    }
+  }
+
+  async function saveChannelSettings() {
+    try {
+      await Api.patch('/notifications/settings', settings);
+      Toast.show('Kanal-Einstellungen gespeichert', 'success');
+    } catch (err) {
+      Toast.show('Fehler beim Speichern: ' + err.message, 'error');
+    }
+  }
+
+  async function setupPush() {
+    try {
+      const result = await Notification.requestPermission();
+      if (result === 'granted') {
+        channelSetup.push = true;
+        renderChannelsTab();
+        Toast.show('Push-Berechtigung erteilt', 'success');
+      } else {
+        Toast.show('Push-Berechtigung abgelehnt', 'warning');
+      }
+    } catch {
+      Toast.show('Push-Berechtigung konnte nicht angefragt werden', 'error');
+    }
+  }
+
+  async function setupTelegram() {
+    const chatIdEl = document.getElementById('notif-telegram-chatid');
+    const chatId = chatIdEl ? chatIdEl.value.trim() : '';
+    if (!chatId) {
+      Toast.show('Bitte Chat-ID eingeben', 'error');
+      return;
+    }
+    try {
+      await Api.patch('/notifications/settings', { telegram_chat_id: chatId });
+      channelSetup.telegram = true;
+      renderChannelsTab();
+      Toast.show('Telegram verbunden', 'success');
+    } catch (err) {
+      Toast.show('Fehler: ' + err.message, 'error');
+    }
+  }
+
+  async function testChannel(channel) {
+    testingChannel = channel;
+    renderChannelsTab();
+    try {
+      await Api.post(`/notifications/test/${channel}`, {});
+      Toast.show(`Test-Benachrichtigung via ${channel} gesendet`, 'success');
+    } catch (err) {
+      Toast.show(`Test fehlgeschlagen: ${err.message}`, 'error');
+    } finally {
+      testingChannel = null;
+      // Don't re-render to avoid losing state
+    }
+  }
+
+  /* -- Settings Tab (category-level, existing) -- */
 
   async function loadSettings() {
     const el = document.getElementById('notifications-content');
@@ -340,7 +565,6 @@ const NotificationsView = (() => {
   }
 
   function onToggleChange() {
-    // live capture into settings object so saveSettings can read current state
     document.querySelectorAll('.notification-toggle').forEach(input => {
       const cat = input.dataset.category;
       const channel = input.dataset.channel;
@@ -355,10 +579,9 @@ const NotificationsView = (() => {
     const btn = document.getElementById('save-settings-btn');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span class="material-symbols-outlined mi-sm">hourglass_empty</span> Speichern…';
+      btn.innerHTML = '<span class="material-symbols-outlined mi-sm">hourglass_empty</span> Speichern\u2026';
     }
 
-    // Collect current toggle state
     const payload = {};
     document.querySelectorAll('.notification-toggle').forEach(input => {
       const cat = input.dataset.category;
@@ -382,7 +605,7 @@ const NotificationsView = (() => {
     }
   }
 
-  /* ── Public API ──────────────────────────────────────────── */
+  /* -- Public API -- */
 
   return {
     render,
@@ -392,5 +615,11 @@ const NotificationsView = (() => {
     handleNotificationClick,
     onToggleChange,
     saveSettings,
+    // Channel settings (#721)
+    onAlertChannelChange,
+    saveChannelSettings,
+    setupPush,
+    setupTelegram,
+    testChannel,
   };
 })();
