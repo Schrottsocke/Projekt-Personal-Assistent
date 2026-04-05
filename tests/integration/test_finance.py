@@ -87,8 +87,67 @@ class TestTransactions:
             )
         assert resp.status_code == 201
         data = resp.json()
-        assert len(data) == 10
-        assert data[0]["source"] == "csv"
+        assert data["imported"] == 10
+        assert data["skipped_duplicates"] == 0
+        assert data["total_rows"] == 10
+
+    def test_csv_duplicate_detection(self, client, auth_headers):
+        """#645: Zweiter CSV-Import erkennt Duplikate."""
+        csv_path = Path(__file__).parent.parent / "fixtures" / "sample_transactions.csv"
+        # First import
+        with open(csv_path, "rb") as f:
+            resp1 = client.post(
+                "/finance/transactions/csv",
+                files={"file": ("test.csv", f, "text/csv")},
+                headers=auth_headers,
+            )
+        assert resp1.json()["imported"] == 10
+        # Second import — all should be duplicates
+        with open(csv_path, "rb") as f:
+            resp2 = client.post(
+                "/finance/transactions/csv",
+                files={"file": ("test.csv", f, "text/csv")},
+                headers=auth_headers,
+            )
+        assert resp2.status_code == 201
+        data = resp2.json()
+        assert data["imported"] == 0
+        assert data["skipped_duplicates"] == 10
+
+    def test_csv_auto_categorization(self, client, auth_headers):
+        """#645: CSV-Zeilen ohne Kategorie werden auto-kategorisiert."""
+        csv_content = "date;amount;description\n2026-01-15;-42,50;REWE Schwerin\n2026-01-16;-15,99;Netflix Abo\n"
+        resp = client.post(
+            "/finance/transactions/csv",
+            files={"file": ("auto.csv", csv_content.encode(), "text/csv")},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        assert resp.json()["imported"] == 2
+        # Check that categories were assigned
+        txns = client.get("/finance/transactions", headers=auth_headers).json()
+        csv_txns = [t for t in txns if t["source"] == "csv"]
+        categories = [t["category"] for t in csv_txns]
+        assert "Lebensmittel" in categories  # REWE → Lebensmittel
+        assert "Unterhaltung" in categories  # Netflix → Unterhaltung
+
+    def test_transactions_by_category(self, client, auth_headers):
+        """#645: Aggregation nach Kategorie."""
+        client.post(
+            "/finance/transactions",
+            json={"date": "2026-03-10T10:00:00", "amount": -50.0, "category": "Essen"},
+            headers=auth_headers,
+        )
+        client.post(
+            "/finance/transactions",
+            json={"date": "2026-03-11T10:00:00", "amount": -30.0, "category": "Essen"},
+            headers=auth_headers,
+        )
+        resp = client.get("/finance/transactions/by-category?year=2026&month=3", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "Essen" in data["categories"]
+        assert data["categories"]["Essen"] == 80.0
 
     def test_user_isolation(self, client, auth_headers, auth_headers_nina):
         client.post(
@@ -194,6 +253,50 @@ class TestContracts:
         assert "total_monthly_cost" in resp.json()
 
 
+class TestContractDetection:
+    """#646: Vertrags-Erkennung und Deadline-Berechnung."""
+
+    def test_calculate_deadlines(self, client, auth_headers):
+        create = client.post(
+            "/finance/contracts",
+            json={
+                "name": "Fitness Studio",
+                "amount": 29.99,
+                "interval": "monthly",
+                "start_date": "2025-01-01",
+                "cancellation_days": 30,
+                "end_date": "2026-12-31",
+            },
+            headers=auth_headers,
+        )
+        cid = create.json()["id"]
+        resp = client.post(f"/finance/contracts/{cid}/calculate-deadlines", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["next_billing"] is not None
+        assert data["cancellation_deadline"] is not None
+
+    def test_detect_from_transactions(self, client, auth_headers):
+        # Create recurring transactions
+        for month in range(1, 5):
+            client.post(
+                "/finance/transactions",
+                json={
+                    "date": f"2026-{month:02d}-15T10:00:00",
+                    "amount": -9.99,
+                    "description": "Spotify Premium",
+                    "category": "Unterhaltung",
+                },
+                headers=auth_headers,
+            )
+        resp = client.get("/finance/contracts/detect-from-transactions?min_occurrences=3", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) >= 1
+        assert data[0]["description"] == "Spotify Premium"
+        assert data[0]["amount"] == 9.99
+
+
 class TestFinanceInvoices:
     def test_create_invoice(self, client, auth_headers):
         resp = client.post(
@@ -203,6 +306,92 @@ class TestFinanceInvoices:
         )
         assert resp.status_code == 201
         assert resp.json()["recipient"] == "Kunde A"
+
+    def test_auto_invoice_number(self, client, auth_headers):
+        """#647: Auto-generierte Rechnungsnummer."""
+        resp = client.post(
+            "/finance/invoices",
+            json={"recipient": "Auto-Nr Test", "total": 100.0, "due_date": "2026-06-01"},
+            headers=auth_headers,
+        )
+        assert resp.status_code == 201
+        data = resp.json()
+        assert data["invoice_number"].startswith("RE-2026-")
+
+    def test_sequential_invoice_numbers(self, client, auth_headers):
+        """#647: Fortlaufende Rechnungsnummern."""
+        resp1 = client.post(
+            "/finance/invoices",
+            json={"recipient": "Seq1", "total": 100.0, "due_date": "2026-06-01"},
+            headers=auth_headers,
+        )
+        resp2 = client.post(
+            "/finance/invoices",
+            json={"recipient": "Seq2", "total": 200.0, "due_date": "2026-06-15"},
+            headers=auth_headers,
+        )
+        nr1 = resp1.json()["invoice_number"]
+        nr2 = resp2.json()["invoice_number"]
+        seq1 = int(nr1.split("-")[-1])
+        seq2 = int(nr2.split("-")[-1])
+        assert seq2 == seq1 + 1
+
+    def test_mark_invoice_paid(self, client, auth_headers):
+        """#647: Rechnung als bezahlt markieren."""
+        create = client.post(
+            "/finance/invoices",
+            json={"recipient": "PayTest", "total": 500.0, "due_date": "2026-06-01", "status": "open"},
+            headers=auth_headers,
+        )
+        iid = create.json()["id"]
+        resp = client.post(f"/finance/invoices/{iid}/mark-paid", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "paid"
+        assert data["payment_date"] is not None
+
+    def test_mark_already_paid_fails(self, client, auth_headers):
+        """#647: Doppelt-bezahlt-Schutz."""
+        create = client.post(
+            "/finance/invoices",
+            json={"recipient": "DblPay", "total": 100.0, "due_date": "2026-06-01", "status": "open"},
+            headers=auth_headers,
+        )
+        iid = create.json()["id"]
+        client.post(f"/finance/invoices/{iid}/mark-paid", headers=auth_headers)
+        resp = client.post(f"/finance/invoices/{iid}/mark-paid", headers=auth_headers)
+        assert resp.status_code == 400
+
+    def test_mark_invoice_overdue(self, client, auth_headers):
+        """#647: Rechnung als ueberfaellig markieren."""
+        create = client.post(
+            "/finance/invoices",
+            json={"recipient": "OverdueTest", "total": 100.0, "due_date": "2026-01-01", "status": "open"},
+            headers=auth_headers,
+        )
+        iid = create.json()["id"]
+        resp = client.post(f"/finance/invoices/{iid}/mark-overdue", headers=auth_headers)
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "overdue"
+
+    def test_invoice_stats(self, client, auth_headers):
+        """#647: Rechnungsstatistik."""
+        client.post(
+            "/finance/invoices",
+            json={"recipient": "StatA", "total": 100.0, "due_date": "2026-06-01", "status": "open"},
+            headers=auth_headers,
+        )
+        client.post(
+            "/finance/invoices",
+            json={"recipient": "StatB", "total": 200.0, "due_date": "2026-06-01", "status": "draft"},
+            headers=auth_headers,
+        )
+        resp = client.get("/finance/invoices/stats", headers=auth_headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "open" in data
+        assert "paid" in data
+        assert "draft" in data
 
     def test_list_invoices(self, client, auth_headers):
         client.post(
