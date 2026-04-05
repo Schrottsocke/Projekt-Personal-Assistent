@@ -81,6 +81,14 @@ class WarrantyOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class ReceiptLinkRequest(BaseModel):
+    document_id: int
+
+
+class RoomListOut(BaseModel):
+    rooms: list[str]
+
+
 class DocumentScanResult(BaseModel):
     document_id: int
     category: Optional[str]
