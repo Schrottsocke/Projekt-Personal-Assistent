@@ -8,6 +8,14 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from api.dependencies import get_current_user
+from api.schemas.gdpr import (
+    ConsentUpdateResponse,
+    ConsentsResponse,
+    DataExportResponse,
+    DeleteAccountResponse,
+    DeleteCategoryResponse,
+    GdprHealthResponse,
+)
 from config.settings import settings
 from src.services.database import (
     Budget,
@@ -48,12 +56,12 @@ def _serialize(obj) -> dict:
     return result
 
 
-@router.get("/health")
+@router.get("/health", response_model=GdprHealthResponse)
 async def health():
     return {"status": "ok", "module": "gdpr"}
 
 
-@router.get("/data-export")
+@router.get("/data-export", response_model=DataExportResponse)
 async def data_export(user_key: Annotated[str, Depends(get_current_user)]):
     with get_db()() as db:
         uid = _resolve_user_id(db, user_key)
@@ -88,7 +96,7 @@ async def data_export(user_key: Annotated[str, Depends(get_current_user)]):
         return {"user_key": user_key, "user_id": uid, "data": data}
 
 
-@router.delete("/account")
+@router.delete("/account", response_model=DeleteAccountResponse)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def delete_account(request: Request, user_key: Annotated[str, Depends(get_current_user)]):
     with get_db()() as db:
@@ -132,7 +140,7 @@ async def delete_account(request: Request, user_key: Annotated[str, Depends(get_
         return {"deleted": True, "user_key": user_key, "counts": counts}
 
 
-@router.delete("/data/{category}")
+@router.delete("/data/{category}", response_model=DeleteCategoryResponse)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def delete_category(
     request: Request,
@@ -176,7 +184,7 @@ async def delete_category(
         return {"category": category, "deleted": True, "counts": counts}
 
 
-@router.get("/consents")
+@router.get("/consents", response_model=ConsentsResponse)
 async def list_consents(user_key: Annotated[str, Depends(get_current_user)]):
     with get_db()() as db:
         profile = db.query(UserProfile).filter(UserProfile.user_key == user_key).first()
@@ -191,7 +199,7 @@ async def list_consents(user_key: Annotated[str, Depends(get_current_user)]):
         return {"user_key": user_key, "consents": features}
 
 
-@router.post("/consents/{feature}")
+@router.post("/consents/{feature}", response_model=ConsentUpdateResponse)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def grant_consent(
     request: Request,
@@ -214,7 +222,7 @@ async def grant_consent(
         return {"feature": feature, "consented": True}
 
 
-@router.delete("/consents/{feature}")
+@router.delete("/consents/{feature}", response_model=ConsentUpdateResponse)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def revoke_consent(
     request: Request,

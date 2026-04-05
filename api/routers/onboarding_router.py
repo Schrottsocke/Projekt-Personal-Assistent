@@ -85,7 +85,7 @@ async def get_status(user_key: Annotated[str, Depends(get_current_user)]):
         )
 
 
-@router.post("/profile", response_model=OnboardingStatus)
+@router.post("/profile", response_model=OnboardingStatus, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def set_profile(
     request: Request,
@@ -115,7 +115,7 @@ async def set_profile(
         )
 
 
-@router.post("/product-lines", response_model=OnboardingStatus)
+@router.post("/product-lines", response_model=OnboardingStatus, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def set_product_lines(
     request: Request,
@@ -146,7 +146,7 @@ async def set_product_lines(
         )
 
 
-@router.post("/first-action", response_model=OnboardingStatus)
+@router.post("/first-action", response_model=OnboardingStatus, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def set_first_action(
     request: Request,
@@ -177,7 +177,7 @@ async def set_first_action(
         )
 
 
-@router.post("/dashboard", response_model=OnboardingStatus)
+@router.post("/dashboard", response_model=OnboardingStatus, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def set_dashboard(
     request: Request,
@@ -215,7 +215,7 @@ async def set_dashboard(
         )
 
 
-@router.post("/complete", response_model=OnboardingStatus)
+@router.post("/complete", response_model=OnboardingStatus, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def complete_onboarding(
     request: Request,
@@ -242,7 +242,7 @@ async def complete_onboarding(
         )
 
 
-@router.post("/restart", response_model=OnboardingStatus)
+@router.post("/restart", response_model=OnboardingStatus, status_code=201)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def restart_onboarding(
     request: Request,

@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 
 from api.dependencies import get_current_user
-from api.schemas.preferences import PreferencesUpdateSchema
+from api.schemas.preferences import PreferencesOut, PreferencesUpdateSchema, RegistryOut
 from src.services.preferences_service import (
     get_preferences,
     update_preferences,
@@ -14,13 +14,13 @@ from src.services.preferences_service import (
 router = APIRouter()
 
 
-@router.get("")
+@router.get("", response_model=PreferencesOut)
 async def read_preferences(user_key: str = Depends(get_current_user)):
     """Gibt die aktuellen User-Preferences zurueck (mit Defaults gemergt)."""
     return get_preferences(user_key)
 
 
-@router.patch("")
+@router.patch("", response_model=PreferencesOut)
 async def patch_preferences(
     body: PreferencesUpdateSchema,
     user_key: str = Depends(get_current_user),
@@ -32,7 +32,7 @@ async def patch_preferences(
         raise HTTPException(status_code=422, detail=str(e))
 
 
-@router.get("/registry")
+@router.get("/registry", response_model=RegistryOut)
 async def read_registry(user_key: str = Depends(get_current_user)):
     """Gibt die verfuegbaren Nav-Items und Dashboard-Widgets zurueck."""
     return {

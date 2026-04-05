@@ -10,7 +10,7 @@ from slowapi.util import get_remote_address
 
 from api.dependencies import get_current_user, get_calendar_service, get_calendar_service_optional
 from api.routers.shifts import get_shift_events_for_range
-from api.schemas.calendar import CalendarEventCreate
+from api.schemas.calendar import CalendarCreateResponse, CalendarDayResponse, CalendarEventCreate, CalendarEventOut
 from config.settings import settings
 
 router = APIRouter()
@@ -37,7 +37,7 @@ def _to_out(event: dict) -> dict:
     }
 
 
-@router.get("/today")
+@router.get("/today", response_model=CalendarDayResponse)
 async def calendar_today(
     user_key: Annotated[str, Depends(get_current_user)],
     cal_svc=Depends(get_calendar_service_optional),
@@ -60,7 +60,7 @@ async def calendar_today(
     return {"connected": connected, "events": events}
 
 
-@router.get("/week")
+@router.get("/week", response_model=CalendarDayResponse)
 async def calendar_week(
     user_key: Annotated[str, Depends(get_current_user)],
     cal_svc=Depends(get_calendar_service_optional),
@@ -86,7 +86,7 @@ async def calendar_week(
     return {"connected": connected, "events": events}
 
 
-@router.post("/events")
+@router.post("/events", status_code=201, response_model=CalendarCreateResponse)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def create_event(
     request: Request,
@@ -107,7 +107,7 @@ async def create_event(
     return {"created": True, "event": result}
 
 
-@router.patch("/events/{event_id}")
+@router.patch("/events/{event_id}", response_model=CalendarEventOut)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def update_event(
     request: Request,

@@ -32,3 +32,26 @@ class PreferencesUpdateSchema(BaseModel):
     nav: NavConfigSchema | None = None
     dashboard: DashboardConfigSchema | None = None
     appearance: AppearanceSchema | None = None
+
+
+class PreferencesOut(BaseModel):
+    nav: NavConfigSchema | None = None
+    dashboard: DashboardConfigSchema | None = None
+    appearance: AppearanceSchema | None = None
+
+    model_config = {"extra": "allow"}
+
+
+class RegistryItemOut(BaseModel):
+    id: str
+    label: str | None = None
+    icon: str | None = None
+
+    model_config = {"extra": "allow"}
+
+
+class RegistryOut(BaseModel):
+    nav_items: list[RegistryItemOut] = []
+    dashboard_widgets: list[RegistryItemOut] = []
+
+    model_config = {"extra": "allow"}
