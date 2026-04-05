@@ -69,6 +69,10 @@ const Router = (() => {
     // Render view
     const container = document.getElementById('view-container');
     if (container) {
+      // Restore default padding when leaving landing/login page
+      if (currentView === '#/login' && hash !== '#/login') {
+        container.style.padding = '';
+      }
       currentView = hash;
       await renderFn(container);
     }
