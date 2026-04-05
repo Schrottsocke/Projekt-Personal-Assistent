@@ -15,14 +15,19 @@ from api.schemas.finance import (
     BudgetAlert,
     BudgetCreate,
     BudgetOut,
+    CategoryBreakdown,
     ContractCreate,
     ContractOut,
     ContractSummary,
     ContractUpdate,
     CsvImportResult,
+    DetectedContract,
     FinanceInvoiceCreate,
     FinanceInvoiceOut,
     FinanceInvoiceUpdate,
+    FinanceWidgetSummary,
+    HealthOut,
+    InvoiceStats,
     MonthlyOverview,
     TransactionCreate,
     TransactionOut,
@@ -96,7 +101,7 @@ def _resolve_user_id(db, user_key: str) -> int:
 # --- Health ---
 
 
-@router.get("/health")
+@router.get("/health", response_model=HealthOut)
 async def health():
     return {"status": "ok", "module": "finance"}
 
@@ -104,7 +109,7 @@ async def health():
 # --- Widget Summary ---
 
 
-@router.get("/widget-summary")
+@router.get("/widget-summary", response_model=FinanceWidgetSummary)
 async def widget_summary(
     user_key: Annotated[str, Depends(get_current_user)],
 ):
@@ -246,7 +251,7 @@ async def monthly_overview(
         )
 
 
-@router.get("/transactions/by-category")
+@router.get("/transactions/by-category", response_model=CategoryBreakdown)
 async def transactions_by_category(
     user_key: Annotated[str, Depends(get_current_user)],
     year: Optional[int] = None,
@@ -470,7 +475,7 @@ async def calculate_contract_deadlines(
         return c
 
 
-@router.get("/contracts/detect-from-transactions")
+@router.get("/contracts/detect-from-transactions", response_model=list[DetectedContract])
 async def detect_contracts_from_transactions(
     user_key: Annotated[str, Depends(get_current_user)],
     min_occurrences: int = 3,
@@ -616,7 +621,7 @@ async def overdue_invoices(
         )
 
 
-@router.get("/invoices/stats")
+@router.get("/invoices/stats", response_model=InvoiceStats)
 async def invoice_stats(
     user_key: Annotated[str, Depends(get_current_user)],
 ):

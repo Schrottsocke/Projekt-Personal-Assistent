@@ -9,6 +9,7 @@ Erweitert um:
 - Deadline-/Fristen-Extraktion aus OCR-Text
 """
 
+import asyncio
 import logging
 import os
 import re
@@ -16,6 +17,17 @@ from datetime import date, datetime
 from typing import Optional
 
 from config.settings import settings
+
+# Concurrency semaphore – limits parallel OCR jobs
+_ocr_semaphore: asyncio.Semaphore | None = None
+
+
+def _get_ocr_semaphore() -> asyncio.Semaphore:
+    """Lazy-init semaphore (must be created inside a running event loop)."""
+    global _ocr_semaphore
+    if _ocr_semaphore is None:
+        _ocr_semaphore = asyncio.Semaphore(settings.OCR_MAX_PARALLEL_JOBS)
+    return _ocr_semaphore
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +91,8 @@ class OcrService:
         """
         Extrahiert Text aus image_bytes.
 
+        Respects OCR_TIMEOUT_SECONDS and OCR_MAX_PARALLEL_JOBS from settings.
+
         Returns:
             {
                 "text": str,
@@ -87,6 +101,21 @@ class OcrService:
                 "words_data": dict | None   # pytesseract image_to_data output
             }
         """
+        semaphore = _get_ocr_semaphore()
+        timeout = settings.OCR_TIMEOUT_SECONDS
+
+        try:
+            async with semaphore:
+                return await asyncio.wait_for(
+                    self._extract_text_inner(image_bytes, ai_service),
+                    timeout=timeout,
+                )
+        except asyncio.TimeoutError:
+            logger.error("OCR-Timeout nach %d Sekunden.", timeout)
+            return {"text": "", "confidence": 0.0, "method": "none", "words_data": None}
+
+    async def _extract_text_inner(self, image_bytes: bytes, ai_service=None) -> dict:
+        """Inner extraction logic (called within semaphore + timeout)."""
         if self._tesseract_available:
             result = await self._extract_tesseract(image_bytes)
             if result and result["confidence"] >= self.confidence_threshold:

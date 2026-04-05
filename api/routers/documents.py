@@ -18,7 +18,7 @@ from api.dependencies import (
     get_pdf_service,
     get_task_service,
 )
-from api.schemas.documents import DocumentListResponse, DocumentOut
+from api.schemas.documents import DocumentActionResponse, DocumentListResponse, DocumentOut
 from config.settings import settings
 
 logger = logging.getLogger(__name__)
@@ -109,6 +109,14 @@ async def upload_document(
     image_bytes = await file.read()
     if not image_bytes:
         raise HTTPException(status_code=400, detail="Leere Datei.")
+
+    # File size check (MAX_UPLOAD_SIZE_MB)
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    if len(image_bytes) > max_bytes:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Datei zu gross ({len(image_bytes) / 1024 / 1024:.1f} MB). Maximum: {settings.MAX_UPLOAD_SIZE_MB} MB.",
+        )
 
     # 1. OCR via OcrService (Tesseract -> Vision-Fallback)
     ocr_result = await ocr_service.extract_text(image_bytes, ai_service)
@@ -219,6 +227,16 @@ async def upload_multi_page(
 
     if not files:
         raise HTTPException(status_code=400, detail="Keine Dateien hochgeladen.")
+
+    # File size check per file (MAX_UPLOAD_SIZE_MB)
+    max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+    for f in files:
+        size = f.size if f.size is not None else 0
+        if size > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Datei '{f.filename}' zu gross ({size / 1024 / 1024:.1f} MB). Maximum: {settings.MAX_UPLOAD_SIZE_MB} MB.",
+            )
 
     all_ocr_texts = []
     page_pdfs = []
@@ -343,7 +361,7 @@ Text:
     return result
 
 
-@router.post("/{doc_id}/actions")
+@router.post("/{doc_id}/actions", response_model=DocumentActionResponse)
 @limiter.limit(settings.RATE_LIMIT_WRITE)
 async def trigger_document_action(
     request: Request,
