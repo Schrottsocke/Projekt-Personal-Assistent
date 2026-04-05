@@ -65,4 +65,4 @@ async def check_document_deadlines():
 
         logger.info("Document-Deadline-Check: %d Benachrichtigungen erstellt.", len(upcoming))
     except Exception as e:
-        logger.error("Document-Deadline-Check-Fehler: %s", e)
+        logger.error("Document-Deadline-Check-Fehler: %s", e, exc_info=True)

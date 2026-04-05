@@ -1,0 +1,148 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+# Prevent concurrent staging deploys
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Lint + Tests ─────────────────────────────────────────────
+  validate:
+    name: Lint & Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - name: Lint
+        run: |
+          ruff check .
+          ruff format --check .
+      - name: Run tests
+        run: |
+          python -m pytest tests/ \
+            --cov=src --cov=api \
+            --cov-report=term-missing \
+            --cov-fail-under=50 \
+            -v --tb=short
+
+  # ── Docker Build ─────────────────────────────────────────────
+  docker-build:
+    name: Docker Build (Staging)
+    runs-on: ubuntu-latest
+    needs: validate
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build staging Docker image
+        run: docker build -t personal-assistant:staging .
+
+  # ── Deploy to Staging VPS ────────────────────────────────────
+  deploy:
+    name: Deploy to Staging VPS
+    runs-on: ubuntu-latest
+    needs: [validate, docker-build]
+    timeout-minutes: 10
+    environment: staging
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Deploy via SSH
+        env:
+          STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_USER: ${{ secrets.STAGING_USER }}
+        run: |
+          if [ -z "$STAGING_HOST" ] || [ -z "$STAGING_SSH_KEY" ]; then
+            echo "::warning::Staging SSH credentials not configured, skipping deploy"
+            exit 0
+          fi
+
+          # Write SSH key
+          mkdir -p ~/.ssh
+          echo "$STAGING_SSH_KEY" > ~/.ssh/staging_key
+          chmod 600 ~/.ssh/staging_key
+          ssh-keyscan -H "$STAGING_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+          # Copy deploy script and execute
+          scp -i ~/.ssh/staging_key deploy/deploy_staging.sh \
+            "${STAGING_USER}@${STAGING_HOST}:/tmp/deploy_staging.sh"
+
+          ssh -i ~/.ssh/staging_key "${STAGING_USER}@${STAGING_HOST}" \
+            "bash /tmp/deploy_staging.sh"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/staging_key
+
+  # ── Health Check ─────────────────────────────────────────────
+  health-check:
+    name: Staging Health Check
+    runs-on: ubuntu-latest
+    needs: deploy
+    timeout-minutes: 3
+    steps:
+      - name: Wait for startup
+        run: sleep 15
+
+      - name: Check staging health
+        env:
+          STAGING_HEALTH_URL: ${{ secrets.STAGING_HEALTH_URL }}
+        run: |
+          if [ -z "$STAGING_HEALTH_URL" ]; then
+            echo "::warning::STAGING_HEALTH_URL not set, skipping health check"
+            exit 0
+          fi
+
+          echo "=== Staging Health Check ==="
+          for i in 1 2 3; do
+            HEALTH=$(curl -sf --max-time 15 "$STAGING_HEALTH_URL" 2>&1) && {
+              echo "$HEALTH"
+              echo "=== Staging is healthy ==="
+              exit 0
+            }
+            echo "Attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+
+          echo "::error::Staging health check failed after 3 attempts"
+          exit 1
+
+  # ── Notification ─────────────────────────────────────────────
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [validate, docker-build, deploy, health-check]
+    if: always()
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "## Staging Deployment Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Step | Status |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|------|--------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Lint & Tests | ${{ needs.validate.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Docker Build | ${{ needs.docker-build.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Deploy | ${{ needs.deploy.result }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Health Check | ${{ needs.health-check.result }} |" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Fail on error
+        if: |
+          needs.validate.result == 'failure' ||
+          needs.deploy.result == 'failure' ||
+          needs.health-check.result == 'failure'
+        run: |
+          echo "::error::Staging deployment failed"
+          exit 1
