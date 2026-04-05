@@ -149,7 +149,9 @@ SHIFTS_RESP=$(curl -s --max-time 10 "$APP_URL/shifts/types" \
   -H "Authorization: Bearer $TOKEN")
 echo "$SHIFTS_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Shift Types: {len(d) if isinstance(d,list) else d}')" 2>/dev/null || echo "Response: $SHIFTS_RESP"
 
-ENTRIES_RESP=$(curl -s --max-time 10 "$APP_URL/shifts/entries" \
+START=$(date -u +%Y-%m-01T00:00:00)
+END=$(date -u -d "+1 month" +%Y-%m-01T00:00:00 2>/dev/null || date -u -v+1m +%Y-%m-01T00:00:00)
+ENTRIES_RESP=$(curl -s --max-time 10 "$APP_URL/shifts/entries?start=$START&end=$END" \
   -H "Authorization: Bearer $TOKEN")
 echo "$ENTRIES_RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Shift Entries: {len(d) if isinstance(d,list) else d}')" 2>/dev/null || echo "Response: $ENTRIES_RESP"
 
