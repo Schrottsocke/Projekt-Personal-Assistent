@@ -96,8 +96,8 @@ Umsetzung aller Findings aus `docs/konzept-review-2026-04-05.md`.
 - 480px, 600px, 640px sind komponenten-spezifisch und funktional korrekt
 - Konsolidierung auf 768px wuerde Issue-Labels, Shift-Reports und Kanban-Boards brechen
 
-## Offene TODOs
+## Erledigte TODOs (Folge-Commit)
 
-- [ ] Screenshot-Platzhalter durch echte App-Screenshots ersetzen
-- [ ] `dm_theme` Praeferenz in ProfileView als Toggle anbieten (aktuell nur via localStorage)
-- [ ] Service-Worker `SHELL_ASSETS` um fehlende View-Dateien ergaenzen (finance, inventory, family, etc.)
+- [x] Service-Worker `SHELL_ASSETS`: 12 fehlende Views + 2 Components ergaenzt, Cache v12
+- [x] Theme-Toggle: localStorage-Key auf `dm_theme` vereinheitlicht, Legacy-Migration, Sync mit Auto-Detection
+- [x] Screenshots: realistische Mockups fuer Dashboard und Finanzen generiert (Pillow)
