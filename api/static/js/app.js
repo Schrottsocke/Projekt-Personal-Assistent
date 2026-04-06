@@ -160,6 +160,12 @@
 
   // ── Theme: auto-detect from system, respect user override ──
   function initTheme() {
+    // Migrate legacy key
+    const legacy = localStorage.getItem('dualmind-theme');
+    if (legacy && !localStorage.getItem('dm_theme')) {
+      localStorage.setItem('dm_theme', legacy);
+      localStorage.removeItem('dualmind-theme');
+    }
     const saved = localStorage.getItem('dm_theme');
     if (saved) {
       document.documentElement.setAttribute('data-theme', saved);

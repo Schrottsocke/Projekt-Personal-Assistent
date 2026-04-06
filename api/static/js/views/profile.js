@@ -625,13 +625,13 @@ const ProfileView = (() => {
   /* ── Theme ── */
 
   function getTheme() {
-    return localStorage.getItem('dualmind-theme') || 'dark';
+    return localStorage.getItem('dm_theme') || document.documentElement.getAttribute('data-theme') || 'dark';
   }
 
   function toggleTheme(isLight) {
     const theme = isLight ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('dualmind-theme', theme);
+    localStorage.setItem('dm_theme', theme);
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = isLight ? '#f5f5f7' : '#7c4dff';
     if (window.AppPreferences) {
