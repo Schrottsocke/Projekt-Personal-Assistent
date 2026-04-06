@@ -158,8 +158,34 @@
 
   // Ctrl+K wird vom AssistantSheet selbst gehandelt (in assistantSheet.js init)
 
+  // ── Theme: auto-detect from system, respect user override ──
+  function initTheme() {
+    // Migrate legacy key
+    const legacy = localStorage.getItem('dualmind-theme');
+    if (legacy && !localStorage.getItem('dm_theme')) {
+      localStorage.setItem('dm_theme', legacy);
+      localStorage.removeItem('dualmind-theme');
+    }
+    const saved = localStorage.getItem('dm_theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+      return;
+    }
+    // No user override → follow system preference
+    const preferLight = window.matchMedia('(prefers-color-scheme: light)');
+    document.documentElement.setAttribute('data-theme', preferLight.matches ? 'light' : 'dark');
+    preferLight.addEventListener('change', (e) => {
+      // Only auto-switch if user hasn't set an explicit preference
+      if (!localStorage.getItem('dm_theme')) {
+        document.documentElement.setAttribute('data-theme', e.matches ? 'light' : 'dark');
+      }
+    });
+  }
+
   // Init router on DOM ready, then load preferences + Quick Capture
   async function startup() {
+    // Apply theme before any rendering
+    initTheme();
     // Feste 4-Tab Navigation aufbauen
     buildNav();
     Router.init();
